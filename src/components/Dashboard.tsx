@@ -302,7 +302,12 @@ export default function Dashboard() {
           {activePage === "profile" && <Profile userData={userData} onUpdateUserData={setUserData} />}
           {activePage === "resume" && <ResumeBuilder />}
           {activePage === "jobs" && <JobFinder />}
-          {activePage === "interview" && <AIInterview onGoToDashboard={() => setActivePage("dashboard")} />}
+          {activePage === "interview" && (
+            <AIInterview
+              onGoToDashboard={() => setActivePage("dashboard")}
+              onNavigateToTab={(tabId) => setActivePage(tabId)}
+            />
+          )}
           {activePage === "scholarships" && <Scholarships />}
           {activePage === "learn" && <LearnPractice />}
         </div>
