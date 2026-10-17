@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "../../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import Dashboard from "../../components/Dashboard";
+import { APP_ROUTES } from "@/constants/endpoints";
+
+export const dynamic = "force-dynamic";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -13,7 +16,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
-        router.replace("/auth");
+        router.replace(APP_ROUTES.AUTH);
       } else {
         setLoading(false);
       }

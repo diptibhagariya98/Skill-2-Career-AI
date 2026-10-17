@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { auth, db } from "../lib/firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  updateProfile,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
@@ -22,9 +23,9 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
 
   // Field-specific validation states
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const validateField = (field, value) => {
+  const validateField = (field: string, value: string) => {
     let errorMsg = "";
     const cleanValue = (value || "").trim();
 
@@ -61,11 +62,15 @@ export default function Auth() {
     return !errorMsg;
   };
 
-  const handleBlur = (field, value) => {
+  const handleBlur = (field: string, value: string) => {
     validateField(field, value);
   };
 
-  const handleChange = (field, value, setter) => {
+  const handleChange = (
+    field: string,
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<string>>
+  ) => {
     setter(value);
     if (errors[field]) {
       setErrors((prev) => {
@@ -76,7 +81,7 @@ export default function Auth() {
     }
   };
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const isEmailValid = validateField("email", email);
     if (!isEmailValid || !password) {
@@ -87,14 +92,14 @@ export default function Auth() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast.success("Successfully logged in!");
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error.message || "Invalid email or password.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegister = async (e) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const isNameValid = validateField("fullName", fullName);
     const isEmailValid = validateField("email", email);
@@ -114,15 +119,17 @@ export default function Auth() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
       await setDoc(doc(db, "users", user.uid), {
         name: fullName,
         email: user.email,
         createdAt: new Date().toISOString(),
       });
 
+      await updateProfile(user, { displayName: fullName });
+
       toast.success("Registration successful! Logging you in...");
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error.message || "Error creating account.");
     } finally {
       setLoading(false);
@@ -138,7 +145,7 @@ export default function Auth() {
     try {
       await sendPasswordResetEmail(auth, email);
       toast.success("Password reset email sent! Please check your inbox.");
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error.message || "Failed to send reset email.");
     } finally {
       setLoading(false);
@@ -155,7 +162,7 @@ export default function Auth() {
           </div>
           <h2 className="text-2xl font-bold text-center mb-1 text-gray-900">Welcome Back!</h2>
           <p className="text-center text-gray-500 mb-8">Please login to access your portal.</p>
-          
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
               <Mail className="absolute top-3.5 left-4 h-5 w-5 text-gray-400" />
@@ -172,7 +179,7 @@ export default function Auth() {
               />
               {errors.email && <p className="text-red-500 text-xs mt-1 font-semibold">{errors.email}</p>}
             </div>
-            
+
             <div className="relative">
               <Lock className="absolute top-3.5 left-4 h-5 w-5 text-gray-400" />
               <input

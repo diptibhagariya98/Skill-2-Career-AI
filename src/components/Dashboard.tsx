@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { auth, db } from "../lib/firebase";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -24,10 +24,12 @@ import JobFinder from "./JobFinder";
 import AIInterview from "./AIInterview";
 import Scholarships from "./Scholarships";
 import LearnPractice from "./LearnPractice";
+import { UserData } from "../types/user";
+import { getInitials } from "../lib/imageUtils";
 
 export default function Dashboard() {
-  const [activePage, setActivePage] = useState("dashboard"); // dashboard, profile, resume, jobs, interview, scholarships, learn
-  const [userData, setUserData] = useState(null);
+  const [activePage, setActivePage] = useState("dashboard");
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [greeting, setGreeting] = useState("Good Day");
   const [loading, setLoading] = useState(true);
 
@@ -40,9 +42,9 @@ export default function Dashboard() {
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setUserData(docSnap.data());
+          setUserData(docSnap.data() as UserData);
         } else {
-          setUserData({ name: "Student", email: user.email });
+          setUserData({ name: user.displayName || "Student", email: user.email || "" });
         }
       } catch (error) {
         // user profile fetch error
@@ -113,14 +115,15 @@ export default function Dashboard() {
     );
   }
 
-  const displayName = userData?.name || "Student";
+  const displayName = userData?.name || auth.currentUser?.displayName || "Student";
+  const initials = getInitials(displayName);
 
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-800">
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-white shadow-md flex-shrink-0 flex flex-col border-r border-gray-100">
         <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center">
+          <div className="flex items-center cursor-pointer" onClick={() => setActivePage("dashboard")}>
             <GraduationCap className="h-8 w-8 text-indigo-500" />
             <span className="ml-3 font-bold text-xl text-gray-900">ResuMentor</span>
           </div>
@@ -168,14 +171,23 @@ export default function Dashboard() {
               <span className="block font-bold text-gray-800 text-base">{displayName}</span>
               <span className="block text-xs text-gray-400 font-medium">{auth.currentUser?.email}</span>
             </div>
-            <img
-              className="h-12 w-12 rounded-full ring-2 ring-offset-2 ring-indigo-400 object-cover"
-              src="/Images/Photo.png"
-              alt="Student avatar"
-              onError={(e) => {
-                e.target.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256";
-              }}
-            />
+            {userData?.photoURL ? (
+              <img
+                className="h-12 w-12 rounded-full ring-2 ring-offset-2 ring-indigo-400 object-cover cursor-pointer hover:opacity-90 transition shadow-sm"
+                src={userData.photoURL}
+                alt={`${displayName}'s avatar`}
+                title="View Profile Settings"
+                onClick={() => setActivePage("profile")}
+              />
+            ) : (
+              <div
+                onClick={() => setActivePage("profile")}
+                className="h-12 w-12 rounded-full ring-2 ring-offset-2 ring-indigo-400 bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-base cursor-pointer hover:opacity-90 transition shadow-sm tracking-wide"
+                title="View Profile Settings"
+              >
+                {initials}
+              </div>
+            )}
           </div>
         </header>
 

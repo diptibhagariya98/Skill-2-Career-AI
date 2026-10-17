@@ -1,22 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { auth, db } from "../lib/firebase";
-import { updatePassword } from "firebase/auth";
+import { updatePassword, updateProfile } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
-import { Calendar } from "lucide-react";
+import { Calendar, Camera, Trash2, Loader2 } from "lucide-react";
+import { processAvatarImage, getInitials } from "../lib/imageUtils";
+import { UserData } from "../types/user";
 
-export default function Profile({ userData, onUpdateUserData }) {
+interface ProfileProps {
+  userData: UserData | null;
+  onUpdateUserData: (data: UserData) => void;
+}
+
+export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
   const [fullName, setFullName] = useState(userData?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Validation errors
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (userData?.name) {
@@ -24,7 +34,7 @@ export default function Profile({ userData, onUpdateUserData }) {
     }
   }, [userData]);
 
-  const validateField = (field, value) => {
+  const validateField = (field: string, value: string) => {
     let errorMsg = "";
     const cleanValue = (value || "").trim();
 
@@ -56,11 +66,15 @@ export default function Profile({ userData, onUpdateUserData }) {
     return !errorMsg;
   };
 
-  const handleBlur = (field, value) => {
+  const handleBlur = (field: string, value: string) => {
     validateField(field, value);
   };
 
-  const handleChange = (field, value, setter) => {
+  const handleChange = (
+    field: string,
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<string>>
+  ) => {
     setter(value);
     if (errors[field]) {
       setErrors((prev) => {
@@ -71,7 +85,7 @@ export default function Profile({ userData, onUpdateUserData }) {
     }
   };
 
-  const handleProfileUpdate = async (e) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
     if (!user) {
@@ -89,16 +103,77 @@ export default function Profile({ userData, onUpdateUserData }) {
       await updateDoc(userRef, {
         name: fullName,
       });
+      if (user) {
+        await updateProfile(user, { displayName: fullName });
+      }
       onUpdateUserData({ ...userData, name: fullName });
       toast.success("Profile name updated successfully!");
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error.message || "Failed to update profile name.");
     } finally {
       setUpdatingProfile(false);
     }
   };
 
-  const handlePasswordUpdate = async (e) => {
+  const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const user = auth.currentUser;
+    if (!user) {
+      toast.error("You must be logged in to update your profile photo.");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const compressedDataUrl = await processAvatarImage(file, 256, 0.85);
+
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        photoURL: compressedDataUrl,
+      });
+
+      // Update Firebase Auth user profile
+      await updateProfile(user, { photoURL: compressedDataUrl });
+
+      // Update state in app
+      onUpdateUserData({ ...userData, photoURL: compressedDataUrl });
+      toast.success("Profile photo updated successfully!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to process and upload profile image.");
+    } finally {
+      setUploadingAvatar(false);
+      // Reset input value so re-selecting same file triggers change
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    setUploadingAvatar(true);
+    try {
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        photoURL: "",
+      });
+
+      await updateProfile(user, { photoURL: "" });
+
+      onUpdateUserData({ ...userData, photoURL: "" });
+      toast.success("Profile photo removed.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove photo.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
     if (!user) {
@@ -122,7 +197,7 @@ export default function Profile({ userData, onUpdateUserData }) {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error) {
+    } catch (error: any) {
       toast.error(
         error.message || "Failed to change password. Sensitive actions may require you to re-authenticate."
       );
@@ -138,6 +213,9 @@ export default function Profile({ userData, onUpdateUserData }) {
         year: "numeric",
       })
     : "Nov 01, 2025";
+
+  const userDisplayName = userData?.name || auth.currentUser?.displayName || "Student";
+  const avatarInitials = getInitials(userDisplayName);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -252,16 +330,76 @@ export default function Profile({ userData, onUpdateUserData }) {
 
       <div className="lg:col-span-1">
         <div className="bg-white p-6 rounded-xl shadow-md text-center">
-          <img
-            className="h-24 w-24 rounded-full ring-4 ring-indigo-200 mx-auto object-cover"
-            src="/Images/Photo.png"
-            alt="Student avatar"
-            onError={(e) => {
-              e.target.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256";
-            }}
-          />
-          <h3 className="mt-4 text-xl font-bold text-gray-900">{userData?.name || "Saikiran"}</h3>
-          <p className="text-sm text-gray-500">{auth.currentUser?.email || "saikiran@bmu.edu.in"}</p>
+          {/* Avatar Container with Upload Trigger */}
+          <div className="relative group mx-auto h-28 w-28 rounded-full">
+            {userData?.photoURL ? (
+              <img
+                className="h-28 w-28 rounded-full ring-4 ring-indigo-200 mx-auto object-cover shadow-sm"
+                src={userData.photoURL}
+                alt={`${userDisplayName}'s profile avatar`}
+              />
+            ) : (
+              <div className="h-28 w-28 rounded-full ring-4 ring-indigo-200 mx-auto bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-sm tracking-wider">
+                {avatarInitials}
+              </div>
+            )}
+
+            {/* Hover overlay with Camera action */}
+            <button
+              type="button"
+              disabled={uploadingAvatar}
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Upload profile photo"
+              className="absolute inset-0 rounded-full bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 backdrop-blur-[2px] cursor-pointer disabled:cursor-not-allowed"
+            >
+              {uploadingAvatar ? (
+                <Loader2 className="h-6 w-6 animate-spin text-white" />
+              ) : (
+                <>
+                  <Camera className="h-6 w-6 text-white mb-1" />
+                  <span className="text-[11px] font-semibold tracking-wide">Change</span>
+                </>
+              )}
+            </button>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handleAvatarFileSelected}
+            />
+          </div>
+
+          {/* Action buttons below avatar */}
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              disabled={uploadingAvatar}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition disabled:opacity-50"
+            >
+              <Camera className="h-3.5 w-3.5" />
+              {userData?.photoURL ? "Change Photo" : "Upload Photo"}
+            </button>
+
+            {userData?.photoURL && (
+              <button
+                type="button"
+                disabled={uploadingAvatar}
+                onClick={handleRemoveAvatar}
+                title="Remove photo"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-full transition disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Remove
+              </button>
+            )}
+          </div>
+
+          <h3 className="mt-4 text-xl font-bold text-gray-900">{userDisplayName}</h3>
+          <p className="text-sm text-gray-500 break-all">{auth.currentUser?.email || "student@example.com"}</p>
           <div className="mt-6 text-left space-y-3 pt-6 border-t border-gray-100">
             <p className="text-sm text-gray-700 flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-500" />

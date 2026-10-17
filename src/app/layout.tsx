@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
@@ -8,12 +9,16 @@ const geistSans = localFont({
   weight: "100 900",
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "ResuMentor",
   description: "Your personalized AI-powered career assistant with Resume Builder, Job Finder, AI Interview, and Scholarship eligibility check.",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} font-sans bg-gray-100 text-gray-800 antialiased`}>

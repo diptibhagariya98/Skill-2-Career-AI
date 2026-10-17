@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { EXTERNAL_API } from "@/constants/endpoints";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { contents, generationConfig } = body;
@@ -12,7 +13,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Gemini API key is not configured on the server." }, { status: 500 });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const geminiUrl = EXTERNAL_API.getGeminiUrl(apiKey);
 
     const response = await fetch(geminiUrl, {
       method: "POST",
@@ -35,7 +36,7 @@ export async function POST(request) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }

@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { APP_ROUTES } from "@/constants/endpoints";
 
 export default function LoginPageRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/");
+    router.replace(APP_ROUTES.HOME);
   }, [router]);
 
   return (

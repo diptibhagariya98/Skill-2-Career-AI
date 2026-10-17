@@ -37,7 +37,7 @@ export default function ResumeBuilder() {
   const [languages, setLanguages] = useState("");
 
   // Validation state
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // AI analysis state
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -493,9 +493,9 @@ ${JSON.stringify(resumePayload, null, 2)}`
       const opt = {
         margin: 0.4,
         filename: fileName,
-        image: { type: "jpeg", quality: 0.98 },
+        image: { type: "jpeg" as const, quality: 0.98 },
         html2canvas: { scale: 2.5, useCORS: true, logging: false },
-        jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+        jsPDF: { unit: "in", format: "letter", orientation: "portrait" as const },
       };
 
       element.classList.add("pdf-render-fixed-width");

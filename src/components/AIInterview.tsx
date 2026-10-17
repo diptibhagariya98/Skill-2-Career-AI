@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { ArrowLeft, BookOpen, Send, UserCheck, MessageSquare, Award } from "lucide-react";
+import { API_ROUTES } from "../constants/endpoints";
 
 export default function AIInterview({ onGoToDashboard }) {
   const [role, setRole] = useState("");
@@ -29,7 +30,7 @@ export default function AIInterview({ onGoToDashboard }) {
 
     contents.push({ role: "user", parts: [{ text: promptText }] });
 
-    const response = await fetch("/app/api/gemini" ? "/api/gemini" : "/api/gemini", {
+    const response = await fetch(API_ROUTES.GEMINI, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contents }),

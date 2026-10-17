@@ -1,21 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Search, MapPin, Briefcase, Calendar } from "lucide-react";
+import { API_ROUTES } from "../constants/endpoints";
+
+interface JobItem {
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  tags: string[];
+  url?: string;
+  postDate?: string;
+}
 
 export default function JobFinder() {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
-  const [jobs, setJobs] = useState([]);
+  const [jobs, setJobs] = useState<JobItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchJobs = async (searchQuery, searchLocation = "") => {
+  const fetchJobs = async (searchQuery: string, searchLocation = "") => {
     setLoading(true);
     setError(null);
     try {
-      const url = `/api/jobs?query=${encodeURIComponent(searchQuery)}&location=${encodeURIComponent(searchLocation)}`;
+      const url = `${API_ROUTES.JOBS}?query=${encodeURIComponent(searchQuery)}&location=${encodeURIComponent(searchLocation)}`;
       const res = await fetch(url);
       if (!res.ok) {
         const errorData = await res.json();
@@ -24,7 +35,7 @@ export default function JobFinder() {
       const data = await res.json();
       const apiJobs = data.data || [];
 
-      const mapped = apiJobs.map((job) => ({
+      const mapped: JobItem[] = apiJobs.map((job: any) => ({
         title: job.job_title,
         company: job.employer_name || "N/A",
         location: `${job.job_city || ""}, ${job.job_country || ""}`.replace(/^, |^, $/, "") || "Remote",
@@ -35,7 +46,7 @@ export default function JobFinder() {
       }));
 
       setJobs(mapped);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message);
       toast.error(err.message || "Failed to fetch jobs.");
     } finally {
@@ -44,11 +55,10 @@ export default function JobFinder() {
   };
 
   useEffect(() => {
-    // Initial fetch on mount
     fetchJobs("Developer in India");
   }, []);
 
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) {
       toast.error("Please enter a keyword to search.");
@@ -57,7 +67,6 @@ export default function JobFinder() {
     fetchJobs(keyword, location);
   };
 
-  // Recommended jobs are just the first 2 from the current list
   const recommendedJobs = jobs.slice(0, 2);
   const allJobs = jobs.slice(2);
 
@@ -154,12 +163,11 @@ export default function JobFinder() {
   );
 }
 
-function JobCard({ job, isRecommended }) {
+function JobCard({ job, isRecommended }: { job: JobItem; isRecommended: boolean }) {
   const postDateFormatted = job.postDate
     ? new Date(job.postDate).toLocaleDateString()
     : "Recently";
 
-  // Check type for badge color
   let badgeColorClass = "bg-blue-100 text-blue-800";
   if (job.type === "Full-time") badgeColorClass = "bg-green-100 text-green-800";
   else if (job.type === "Internship") badgeColorClass = "bg-yellow-100 text-yellow-800";
@@ -197,14 +205,16 @@ function JobCard({ job, isRecommended }) {
         ))}
       </div>
       <div className="mt-5 pt-4 border-t border-gray-100 text-right">
-        <a
-          href={job.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 text-sm transition"
-        >
-          Apply Now
-        </a>
+        {job.url && (
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 text-sm transition"
+          >
+            Apply Now
+          </a>
+        )}
       </div>
     </div>
   );

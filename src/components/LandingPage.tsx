@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
+import { APP_ROUTES } from "../constants/endpoints";
 import { 
   Briefcase, 
   MessageSquare, 
@@ -169,13 +171,13 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-4">
             <Link 
-              href="/auth" 
+              href={APP_ROUTES.AUTH} 
               className="text-sm font-semibold text-gray-600 hover:text-teal-600 transition hidden sm:inline"
             >
               Sign In
             </Link>
             <Link 
-              href="/auth" 
+              href={APP_ROUTES.AUTH} 
               className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-teal-600/15 hover:shadow-teal-600/25 transition duration-150"
             >
               Get Started
@@ -201,7 +203,7 @@ export default function LandingPage() {
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link 
-              href="/auth" 
+              href={APP_ROUTES.AUTH} 
               className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-bold px-8 py-4 rounded-xl shadow-xl shadow-teal-600/20 hover:shadow-teal-600/35 transition flex items-center justify-center gap-2 group"
             >
               Get Started
@@ -435,7 +437,7 @@ export default function LandingPage() {
               <textarea 
                 placeholder="Your Message" 
                 required 
-                rows="4" 
+                rows={4} 
                 className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white text-gray-900"
               />
             </div>
