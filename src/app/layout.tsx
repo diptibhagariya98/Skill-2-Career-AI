@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
@@ -13,6 +13,12 @@ const geistSans = localFont({
 export const metadata: Metadata = {
   title: "ResuMentor",
   description: "Your personalized AI-powered career assistant with Resume Builder, Job Finder, AI Interview, and Scholarship eligibility check.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
