@@ -3,8 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Send,
-  Mic,
-  MicOff,
   SkipForward,
   Pause,
   StopCircle,
@@ -52,7 +50,6 @@ export default function InterviewThread({
   const [turns, setTurns] = useState<InterviewTurn[]>([]);
   const [userText, setUserText] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [openCompareData, setOpenCompareData] = useState<{
     question: BankQuestion;
@@ -64,7 +61,6 @@ export default function InterviewThread({
   const [sensitiveWarning, setSensitiveWarning] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
 
   const currentQuestion = questions[currentIdx];
   const isLastQuestion = currentIdx >= questions.length - 1;
@@ -84,76 +80,11 @@ export default function InterviewThread({
     }
   }, [userText]);
 
-  // Setup Web Speech API if supported
-  useEffect(() => {
-    if (typeof window !== "undefined" && config.enableVoiceInput) {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = "en-US";
-
-        recognition.onresult = (event: any) => {
-          let transcript = "";
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-          }
-          if (transcript) {
-            setUserText((prev) => (prev ? `${prev} ${transcript}` : transcript));
-          }
-        };
-
-        recognition.onerror = () => {
-          setIsRecording(false);
-        };
-
-        recognition.onend = () => {
-          setIsRecording(false);
-        };
-
-        recognitionRef.current = recognition;
-      }
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, [config.enableVoiceInput]);
-
-  const toggleRecording = () => {
-    if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in this browser. Please use text typing.");
-      return;
-    }
-
-    if (isRecording) {
-      recognitionRef.current.stop();
-      setIsRecording(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setIsRecording(true);
-      } catch (err) {
-        setIsRecording(false);
-      }
-    }
-  };
-
   // Submit Answer handler
   const handleSubmitAnswer = async () => {
     if (sensitiveWarning) {
       alert(sensitiveWarning);
       return;
-    }
-
-    // Stop recording if active
-    if (isRecording && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsRecording(false);
     }
 
     const isChoice =
@@ -610,26 +541,11 @@ export default function InterviewThread({
                 <textarea
                   value={userText}
                   onChange={(e) => setUserText(e.target.value)}
-                  placeholder="Type your response here or tap the microphone to dictate..."
+                  placeholder="Type your response here..."
                   rows={3}
                   maxLength={3000}
-                  className="w-full p-3.5 pr-12 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm text-gray-900 bg-white shadow-2xs resize-none"
+                  className="w-full p-3.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm text-gray-900 bg-white shadow-2xs resize-none"
                 />
-                {/* Live Mic Button inside Textarea */}
-                {config.enableVoiceInput && (
-                  <button
-                    type="button"
-                    onClick={toggleRecording}
-                    className={`absolute right-3 top-3 p-2 rounded-xl transition-all ${
-                      isRecording
-                        ? "bg-red-500 text-white animate-pulse shadow-md"
-                        : "bg-gray-100 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600"
-                    }`}
-                    title={isRecording ? "Stop voice dictation" : "Start voice dictation"}
-                  >
-                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </button>
-                )}
               </div>
             )}
 

@@ -5,7 +5,6 @@ import {
   Briefcase,
   Sparkles,
   Zap,
-  Mic,
   Clock,
   ShieldCheck,
   CheckCircle2,
@@ -38,7 +37,6 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
   const [difficulty, setDifficulty] = useState<InterviewDifficulty>("standard");
   const [feedbackTiming, setFeedbackTiming] = useState<FeedbackTiming>("instant");
   const [interviewMode, setInterviewMode] = useState<InterviewMode>("full_ai");
-  const [enableVoiceInput, setEnableVoiceInput] = useState(true);
   const [useResume, setUseResume] = useState(false);
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [showConsentModal, setShowConsentModal] = useState(false);
@@ -83,7 +81,6 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
       feedbackTiming,
       interviewMode,
       useResume,
-      enableVoiceInput,
     };
 
     if (interviewMode === "full_ai" && !hasConsented) {
@@ -114,7 +111,6 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
       feedbackTiming,
       interviewMode,
       useResume,
-      enableVoiceInput,
     };
     onStartSession(config);
   };
@@ -350,25 +346,9 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
           </div>
         </div>
 
-        {/* Toggles: Voice & Resume */}
-        <div className="pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
-            <input
-              type="checkbox"
-              checked={enableVoiceInput}
-              onChange={(e) => setEnableVoiceInput(e.target.checked)}
-              className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-            />
-            <div className="flex items-center gap-2">
-              <Mic className="w-4 h-4 text-indigo-600" />
-              <div>
-                <span className="text-xs font-bold text-gray-800 block">Voice Dictation (Speech-to-Text)</span>
-                <span className="text-2xs text-gray-500">Dictate answers using device microphone</span>
-              </div>
-            </div>
-          </label>
-
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
+        {/* Toggle: Resume integration */}
+        <div className="pt-2 border-t border-gray-100">
+          <label className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
             <input
               type="checkbox"
               checked={useResume}
@@ -379,7 +359,7 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
               <FileText className="w-4 h-4 text-purple-600" />
               <div>
                 <span className="text-xs font-bold text-gray-800 block">Use My Saved Resume</span>
-                <span className="text-2xs text-gray-500">Ground questions in your projects and work</span>
+                <span className="text-2xs text-gray-500">Ground questions in your portfolio projects and experience</span>
               </div>
             </div>
           </label>
@@ -416,7 +396,7 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
               </p>
               <ul className="list-disc pl-4 space-y-1">
                 <li>No personal identification numbers or financial data are accepted.</li>
-                <li>Your voice audio stays on your device; only verified text is sent.</li>
+                <li>Your answers are processed as text directly for evaluation; no audio or biometric data is captured.</li>
                 <li>The evaluations and scorecards are <strong>practice aids</strong>, not hiring decisions.</li>
                 <li>You can delete your session data at any time from your history.</li>
               </ul>

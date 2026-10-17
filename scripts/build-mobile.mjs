@@ -6,38 +6,76 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
-
 const apiDir = path.join(projectRoot, "src", "app", "api");
-const backupApiDir = path.join(projectRoot, "src", ".api-backup");
 
-function restoreApi() {
-  if (fs.existsSync(backupApiDir)) {
-    if (fs.existsSync(apiDir)) {
-      fs.rmSync(apiDir, { recursive: true, force: true });
+function findRouteFiles(dir, fileList = []) {
+  if (!fs.existsSync(dir)) return fileList;
+  const files = fs.readdirSync(dir);
+  for (const file of files) {
+    const fullPath = path.join(dir, file);
+    if (fs.statSync(fullPath).isDirectory()) {
+      findRouteFiles(fullPath, fileList);
+    } else if (file === "route.ts" || file === "route.js") {
+      fileList.push(fullPath);
     }
-    fs.renameSync(backupApiDir, apiDir);
-    console.log("[build:mobile] Restored src/app/api from backup.");
+  }
+  return fileList;
+}
+
+const originalContents = new Map();
+
+function stubRoutes() {
+  const routeFiles = findRouteFiles(apiDir);
+  console.log(`[build:mobile] Stubbing ${routeFiles.length} server API routes for static export...`);
+
+  for (const filePath of routeFiles) {
+    const content = fs.readFileSync(filePath, "utf8");
+    originalContents.set(filePath, content);
+
+    // Replace with static export safe stub
+    const stub = `// Auto-generated build-time stub for Next.js static mobile export\nexport const dynamic = "force-static";\nexport async function GET() {\n  return new Response(JSON.stringify({ status: "mobile-export" }), {\n    headers: { "Content-Type": "application/json" },\n  });\n}\n`;
+    fs.writeFileSync(filePath, stub, "utf8");
+  }
+}
+
+function restoreRoutes() {
+  if (originalContents.size > 0) {
+    for (const [filePath, content] of originalContents.entries()) {
+      try {
+        fs.writeFileSync(filePath, content, "utf8");
+      } catch (err) {
+        console.error(`[build:mobile] Failed to restore ${filePath}:`, err.message);
+      }
+    }
+    console.log(`[build:mobile] Restored all ${originalContents.size} server API routes.`);
+    originalContents.clear();
   }
 }
 
 process.on("SIGINT", () => {
-  restoreApi();
+  restoreRoutes();
   process.exit(1);
 });
 process.on("SIGTERM", () => {
-  restoreApi();
+  restoreRoutes();
   process.exit(1);
 });
 process.on("uncaughtException", (err) => {
   console.error("[build:mobile] Uncaught exception:", err);
-  restoreApi();
+  restoreRoutes();
   process.exit(1);
 });
 
 async function runCommand(command, args, env = {}) {
   return new Promise((resolve, reject) => {
     const isWindows = process.platform === "win32";
-    const cmd = isWindows ? `${command}.cmd` : command;
+    let cmd = command;
+    if (command === "node") {
+      cmd = process.execPath;
+    } else if (isWindows && !command.endsWith(".bat") && !command.endsWith(".cmd") && !command.endsWith(".exe")) {
+      cmd = `${command}.cmd`;
+    }
+
     const proc = spawn(cmd, args, {
       cwd: projectRoot,
       stdio: "inherit",
@@ -53,16 +91,8 @@ async function runCommand(command, args, env = {}) {
 }
 
 async function main() {
-  let moved = false;
   try {
-    if (fs.existsSync(apiDir)) {
-      if (fs.existsSync(backupApiDir)) {
-        fs.rmSync(backupApiDir, { recursive: true, force: true });
-      }
-      fs.renameSync(apiDir, backupApiDir);
-      moved = true;
-      console.log("[build:mobile] Temporarily moved src/app/api to exclude server routes from static export.");
-    }
+    stubRoutes();
 
     console.log("[build:mobile] Cleaning previous build artifacts...");
     const nextDir = path.join(projectRoot, ".next");
@@ -75,9 +105,7 @@ async function main() {
     console.log("[build:mobile] Static export succeeded -> ./out directory ready.");
 
   } finally {
-    if (moved) {
-      restoreApi();
-    }
+    restoreRoutes();
   }
 
   // After export and API restore, run Capacitor sync

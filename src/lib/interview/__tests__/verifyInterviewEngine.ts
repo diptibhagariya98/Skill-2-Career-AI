@@ -125,7 +125,6 @@ console.log("=== RUNNING PHASE 4 MOCK INTERVIEW ENGINE TEST SUITE ===");
     feedbackTiming: "instant",
     interviewMode: "quick_practice",
     useResume: false,
-    enableVoiceInput: true,
   };
 
   const selection1 = selectQuestionsForSession(config, 12345);

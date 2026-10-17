@@ -60,7 +60,7 @@ export default function LandingPage() {
     },
     {
       title: "Realistic AI interview practice",
-      desc: "Mock HR + technical rounds (voice/video). Instant feedback on content, clarity, and pace for Freshers.",
+      desc: "Mock HR + technical rounds with instant rubric evaluation on content, clarity, and relevance for Freshers.",
       tag: "For Freshers",
       bg: "bg-indigo-50/50 border-indigo-100"
     },
@@ -82,7 +82,7 @@ export default function LandingPage() {
     {
       icon: MessageSquare,
       title: "AI Interview Coach",
-      desc: "Mock HR + technical rounds (voice/video). Instant feedback on content, clarity, pace.",
+      desc: "Mock HR + technical rounds with real-time feedback on content, structure, and keyword coverage.",
       color: "text-indigo-600 bg-indigo-50"
     },
     {
@@ -137,7 +137,7 @@ export default function LandingPage() {
     },
     {
       q: "How does the AI interview coach work?",
-      a: "You interact via voice or chat with an AI that simulates HR and technical roles, receiving instant, detailed feedback on your performance."
+      a: "You participate in simulated HR and technical rounds with an AI interviewer, answering realistic questions and receiving instant rubric evaluations and model answers."
     },
     {
       q: "Which scholarships do you support?",

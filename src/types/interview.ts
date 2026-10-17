@@ -123,7 +123,6 @@ export interface InterviewSetupConfig {
   interviewMode: InterviewMode;
   useResume: boolean;
   answerTimeLimitSeconds?: number; // 0 for off, or 60, 120, 180
-  enableVoiceInput: boolean;
 }
 
 export interface SkillCoverage {
