@@ -1,0 +1,27 @@
+import type { CapacitorConfig } from "@capacitor/cli";
+
+const config: CapacitorConfig = {
+  appId: "com.resumentor.app",
+  appName: "ResuMentor",
+  webDir: "out",
+  server: {
+    androidScheme: "https",
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 1500,
+      launchAutoHide: true,
+      backgroundColor: "#4f46e5",
+      androidScaleType: "CENTER_CROP",
+      showSpinner: false,
+    },
+    StatusBar: {
+      backgroundColor: "#4f46e5",
+    },
+    Keyboard: {
+      resizeOnFullScreen: true,
+    },
+  },
+};
+
+export default config;
