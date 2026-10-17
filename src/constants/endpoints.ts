@@ -9,6 +9,7 @@
 export const API_ROUTES = {
   GEMINI: "/api/gemini",
   JOBS: "/api/jobs",
+  RESUME_ANALYZE: "/api/resume/analyze",
 } as const;
 
 export type ApiRouteKey = keyof typeof API_ROUTES;
