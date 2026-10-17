@@ -5,11 +5,16 @@
  * Always import and reference from this file.
  */
 
+// API Base URL prefix for remote mobile APK builds vs relative web dev
+const API_BASE = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL)
+  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")
+  : "";
+
 // Internal client-side API endpoints
 export const API_ROUTES = {
-  GEMINI: "/api/gemini",
-  JOBS: "/api/jobs",
-  RESUME_ANALYZE: "/api/resume/analyze",
+  GEMINI: `${API_BASE}/api/gemini`,
+  JOBS: `${API_BASE}/api/jobs`,
+  RESUME_ANALYZE: `${API_BASE}/api/resume/analyze`,
 } as const;
 
 export type ApiRouteKey = keyof typeof API_ROUTES;

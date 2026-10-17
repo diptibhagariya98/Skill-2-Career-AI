@@ -9,6 +9,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.resumentor.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildToolsVersion = rootProject.ext.buildToolsVersion
     defaultConfig {
         applicationId "com.resumentor.app"
         minSdkVersion rootProject.ext.minSdkVersion
