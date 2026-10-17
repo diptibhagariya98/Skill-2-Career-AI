@@ -73,10 +73,10 @@ export default function JobFinder() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Search Form */}
-      <div className="bg-white p-6 rounded-xl shadow-md">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-xs border border-gray-100">
+        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 items-end">
           <div className="md:col-span-2">
-            <label htmlFor="job-keyword" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="job-keyword" className="block text-xs sm:text-sm font-semibold text-gray-700">
               Keywords (Title, Skill)
             </label>
             <input
@@ -85,11 +85,11 @@ export default function JobFinder() {
               placeholder="e.g., React Developer"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+              className="mt-1 block w-full border border-gray-300 rounded-lg shadow-2xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base text-gray-900"
             />
           </div>
           <div>
-            <label htmlFor="job-location" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="job-location" className="block text-xs sm:text-sm font-semibold text-gray-700">
               Location
             </label>
             <input
@@ -98,13 +98,13 @@ export default function JobFinder() {
               placeholder="e.g., Mumbai, Remote"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+              className="mt-1 block w-full border border-gray-300 rounded-lg shadow-2xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base text-gray-900"
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-50 h-[42px]"
+            className="w-full bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-50 min-h-[44px] text-xs sm:text-sm shadow-xs active:scale-[0.98]"
           >
             <Search className="h-4 w-4" /> {loading ? "Searching..." : "Search Jobs"}
           </button>
@@ -174,43 +174,43 @@ function JobCard({ job, isRecommended }: { job: JobItem; isRecommended: boolean 
 
   return (
     <div
-      className={`bg-white p-5 rounded-xl shadow-md border hover:border-indigo-500 transition-all ${
-        isRecommended ? "border-indigo-200 ring-2 ring-indigo-500 ring-opacity-10" : "border-transparent"
+      className={`bg-white p-4 sm:p-5 rounded-xl shadow-xs border hover:border-indigo-400 transition-all min-w-0 ${
+        isRecommended ? "border-indigo-200 ring-2 ring-indigo-500/10" : "border-gray-200"
       }`}
     >
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-bold text-lg text-gray-900">{job.title}</h3>
-          <p className="text-sm text-gray-600 font-medium">{job.company}</p>
+      <div className="flex justify-between items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-base sm:text-lg text-gray-900 break-words leading-snug">{job.title}</h3>
+          <p className="text-xs sm:text-sm text-gray-600 font-medium truncate mt-0.5">{job.company}</p>
         </div>
-        <span className={`text-xs font-semibold py-1 px-3 rounded-full whitespace-nowrap ${badgeColorClass}`}>
+        <span className={`text-[11px] font-semibold py-0.5 px-2.5 rounded-full whitespace-nowrap shrink-0 ${badgeColorClass}`}>
           {job.type}
         </span>
       </div>
-      <p className="text-sm text-gray-500 mt-2 flex items-center gap-1.5 font-medium">
-        <MapPin className="h-4 w-4 text-gray-400" /> {job.location}
+      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1.5 font-medium truncate">
+        <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" /> {job.location}
       </p>
 
       {job.postDate && (
-        <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-          <Calendar className="h-3.5 w-3.5" /> Posted: {postDateFormatted}
+        <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
+          <Calendar className="h-3 w-3 shrink-0" /> Posted: {postDateFormatted}
         </p>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-1.5">
         {job.tags.map((tag, idx) => (
-          <span key={idx} className="text-xs bg-indigo-50 text-indigo-700 font-medium py-1 px-2 rounded-full">
+          <span key={idx} className="text-[11px] bg-indigo-50 text-indigo-700 font-medium py-0.5 px-2 rounded-md">
             {tag}
           </span>
         ))}
       </div>
-      <div className="mt-5 pt-4 border-t border-gray-100 text-right">
+      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
         {job.url && (
           <a
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 text-sm transition"
+            className="inline-flex items-center justify-center bg-indigo-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-indigo-700 text-xs sm:text-sm transition min-h-[44px] shadow-xs active:scale-[0.98]"
           >
             Apply Now
           </a>

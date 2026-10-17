@@ -377,10 +377,10 @@ export default function ResumeBuilder() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-20 lg:pb-8">
+    <div className="min-h-dvh bg-gray-50 flex flex-col pb-24 lg:pb-8">
       {/* Top Action Toolbar */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-30 shadow-xs flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3 sticky top-0 z-20 shadow-xs flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <input
             type="text"
             value={resume.meta.title}
@@ -390,12 +390,38 @@ export default function ResumeBuilder() {
                 meta: { ...resume.meta, title: e.target.value },
               })
             }
-            className="font-bold text-gray-900 text-sm sm:text-base border-b border-transparent hover:border-gray-300 focus:border-indigo-600 focus:outline-none px-1 py-0.5 rounded max-w-[180px] sm:max-w-xs truncate"
+            className="font-bold text-gray-900 text-sm sm:text-base border-b border-transparent hover:border-gray-300 focus:border-indigo-600 focus:outline-none px-1 py-0.5 rounded max-w-[140px] sm:max-w-xs truncate"
             title="Rename Resume"
           />
           <span className="text-[11px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full hidden sm:inline">
             {saveStatus}
           </span>
+
+          {/* Mobile Segmented Toggle (Edit vs Preview) */}
+          <div className="flex lg:hidden bg-gray-100 p-0.5 rounded-xl border border-gray-200">
+            <button
+              type="button"
+              onClick={() => setMobileTab("edit")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition min-h-[32px] ${
+                mobileTab === "edit"
+                  ? "bg-white text-indigo-600 shadow-xs"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("preview")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition min-h-[32px] ${
+                mobileTab === "preview"
+                  ? "bg-white text-indigo-600 shadow-xs"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              Preview
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -479,14 +505,14 @@ export default function ResumeBuilder() {
       />
 
       {/* Main Workspace: Two-pane Desktop (Form Left, Live Preview Right) */}
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex-1 flex flex-col lg:flex-row gap-8 items-start">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 flex-1 flex flex-col lg:flex-row gap-4 lg:gap-8 items-start">
         {/* LEFT PANE: Form Sections (Visible on Desktop OR when mobileTab === 'edit') */}
         <div
-          className={`w-full lg:w-1/2 flex flex-col space-y-6 ${
+          className={`w-full lg:w-1/2 flex flex-col space-y-4 sm:space-y-6 ${
             mobileTab === "preview" ? "hidden lg:flex" : "flex"
           }`}
         >
-          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-gray-200 shadow-xs">
             {activeSection === "contact" && (
               <ContactSection
                 data={resume.contact}

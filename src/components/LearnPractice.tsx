@@ -67,41 +67,41 @@ export default function LearnPractice() {
   return (
     <div className="space-y-6 animate-fade-in">
       {subPage === "hub" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div
             onClick={() => setSubPage("roadmaps")}
-            className="p-6 bg-white rounded-xl shadow-md cursor-pointer hover:shadow-lg hover:border-indigo-500 border border-transparent transition-all"
+            className="p-4 sm:p-5 bg-white rounded-xl shadow-xs hover:shadow-md hover:border-indigo-400 border border-gray-100 transition-all cursor-pointer active:scale-[0.98]"
           >
-            <Map className="h-8 w-8 text-indigo-500 mb-3" />
-            <h3 className="font-bold text-lg text-gray-900">Career Roadmaps</h3>
-            <p className="text-sm text-gray-600 mt-1">Get a high-level overview of different career paths.</p>
+            <Map className="h-6 w-6 text-indigo-500 mb-2" />
+            <h3 className="font-bold text-base text-gray-900">Career Roadmaps</h3>
+            <p className="text-xs text-gray-500 mt-0.5">High-level paths & milestones.</p>
           </div>
 
           <div
             onClick={() => setSubPage("resources-category")}
-            className="p-6 bg-white rounded-xl shadow-md cursor-pointer hover:shadow-lg hover:border-indigo-500 border border-transparent transition-all"
+            className="p-4 sm:p-5 bg-white rounded-xl shadow-xs hover:shadow-md hover:border-indigo-400 border border-gray-100 transition-all cursor-pointer active:scale-[0.98]"
           >
-            <BookCopy className="h-8 w-8 text-indigo-500 mb-3" />
-            <h3 className="font-bold text-lg text-gray-900">Free Learning Resources</h3>
-            <p className="text-sm text-gray-600 mt-1">Dive into topic-wise videos, articles, and courses.</p>
+            <BookCopy className="h-6 w-6 text-indigo-500 mb-2" />
+            <h3 className="font-bold text-base text-gray-900">Learning Resources</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Topic-wise videos, articles, and courses.</p>
           </div>
 
           <div
             onClick={() => setSubPage("quizzes")}
-            className="p-6 bg-white rounded-xl shadow-md cursor-pointer hover:shadow-lg hover:border-indigo-500 border border-transparent transition-all"
+            className="p-4 sm:p-5 bg-white rounded-xl shadow-xs hover:shadow-md hover:border-indigo-400 border border-gray-100 transition-all cursor-pointer active:scale-[0.98]"
           >
-            <Edit className="h-8 w-8 text-indigo-500 mb-3" />
-            <h3 className="font-bold text-lg text-gray-900">Practice Quizzes</h3>
-            <p className="text-sm text-gray-600 mt-1">Test your knowledge with short, topic-based quizzes.</p>
+            <Edit className="h-6 w-6 text-indigo-500 mb-2" />
+            <h3 className="font-bold text-base text-gray-900">Practice Quizzes</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Test knowledge with rapid topic quizzes.</p>
           </div>
 
           <div
             onClick={() => setSubPage("notes")}
-            className="p-6 bg-white rounded-xl shadow-md cursor-pointer hover:shadow-lg hover:border-indigo-500 border border-transparent transition-all"
+            className="p-4 sm:p-5 bg-white rounded-xl shadow-xs hover:shadow-md hover:border-indigo-400 border border-gray-100 transition-all cursor-pointer active:scale-[0.98]"
           >
-            <FileText className="h-8 w-8 text-indigo-500 mb-3" />
-            <h3 className="font-bold text-lg text-gray-900">Downloadable Notes</h3>
-            <p className="text-sm text-gray-600 mt-1">Get quick-reference PDFs and notes.</p>
+            <FileText className="h-6 w-6 text-indigo-500 mb-2" />
+            <h3 className="font-bold text-base text-gray-900">Downloadable Notes</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Quick-reference cheat sheets & study notes.</p>
           </div>
         </div>
       )}
@@ -337,11 +337,12 @@ export default function LearnPractice() {
 
       {/* Quiz Modal */}
       {quizOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-8 rounded-xl shadow-xl w-full max-w-2xl mx-auto animate-fade-in text-gray-800 relative">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white p-4 sm:p-7 rounded-2xl shadow-2xl w-full max-w-xl mx-auto animate-fade-in text-gray-800 relative max-h-[90dvh] overflow-y-auto">
             <button
               onClick={() => setQuizOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-xl"
+              aria-label="Close quiz"
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center text-lg font-bold"
             >
               ✕
             </button>

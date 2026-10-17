@@ -232,7 +232,7 @@ export default function InterviewThread({
   };
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-120px)] min-h-[550px] bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden">
+    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100dvh-130px)] sm:h-[calc(100dvh-140px)] bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-md sm:shadow-xl overflow-hidden">
       {/* Top Header Bar */}
       <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
@@ -499,9 +499,9 @@ export default function InterviewThread({
         </div>
       )}
 
-      {/* Bottom Sticky Interactive Answer Box */}
+      {/* Bottom Sticky Interactive Answer Box (UX-05 Safe Area) */}
       {!hasUnreadFeedback && !openCompareData && currentQuestion && (
-        <div className="p-3 sm:p-4 bg-gray-50 border-t border-gray-200 shrink-0">
+        <div className="p-3 sm:p-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-gray-50 border-t border-gray-200 shrink-0">
           {/* Multiple Choice / Situational Selection Options */}
           {(currentQuestion.type === "multiple_choice_single" ||
             currentQuestion.type === "situational_judgement") && (
@@ -544,7 +544,7 @@ export default function InterviewThread({
                   placeholder="Type your response here..."
                   rows={3}
                   maxLength={3000}
-                  className="w-full p-3.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm text-gray-900 bg-white shadow-2xs resize-none"
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base text-gray-900 bg-white shadow-2xs resize-none"
                 />
               </div>
             )}

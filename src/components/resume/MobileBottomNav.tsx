@@ -17,7 +17,7 @@ export default function MobileBottomNav({
   onExport,
 }: MobileBottomNavProps) {
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-6 py-2 flex items-center justify-around shadow-lg">
+    <div className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-30 bg-white/95 backdrop-blur-md border border-gray-200/90 px-3 py-1 flex items-center gap-1 rounded-full shadow-xl">
       <button
         onClick={() => onChangeTab("edit")}
         className={`flex flex-col items-center justify-center min-h-[44px] min-w-[64px] rounded-lg transition-colors ${
