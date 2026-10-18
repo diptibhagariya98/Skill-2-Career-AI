@@ -20,6 +20,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
+import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
 
 export type AuthMode = "login" | "register" | "otp" | "forgot" | "reset-password";
 
@@ -542,14 +543,9 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
       <div className="w-full max-w-md bg-white/95 backdrop-blur-md p-7 sm:p-10 rounded-3xl shadow-2xl shadow-indigo-100/50 border border-slate-100/80 transition-all duration-300 relative z-10">
         
         {/* Brand Banner Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center bg-indigo-600 text-white p-3 rounded-2xl shadow-md shadow-indigo-200 mb-3">
-            <GraduationCap className="h-8 w-8" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            ResuMentor
-          </h1>
-          <p className="text-xs font-medium text-slate-500 mt-0.5">
+        <div className="text-center mb-6 flex flex-col items-center">
+          <ResuMentorBrandLogo variant="A" size={48} showWordmark={true} theme="light" />
+          <p className="text-xs font-semibold text-slate-500 mt-2">
             AI-Powered Career &amp; Student Portal
           </p>
         </div>

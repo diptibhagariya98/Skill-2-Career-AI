@@ -22,6 +22,7 @@ import {
   ChevronRight,
   TrendingUp,
 } from "lucide-react";
+import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
 
 // Sub-components
 import Profile from "./Profile";
@@ -179,7 +180,7 @@ export default function Dashboard() {
       case "profile":
         return "Profile Settings";
       case "resume":
-        return "Resume Builder";
+        return "Resume";
       case "jobs":
         return "Job Finder";
       case "interview":
@@ -244,17 +245,7 @@ export default function Dashboard() {
             className="flex items-center cursor-pointer transition hover:opacity-85"
             onClick={() => setActivePage("dashboard")}
           >
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-200">
-              <GraduationCap className="h-5 w-5" />
-            </div>
-            <div className="ml-2.5">
-              <span className="font-extrabold text-lg text-gray-900 tracking-tight leading-none block">
-                ResuMentor
-              </span>
-              <span className="text-[10px] text-gray-400 font-semibold tracking-wider uppercase">
-                Career AI
-              </span>
-            </div>
+            <ResuMentorBrandLogo variant="A" size="md" showWordmark={true} theme="light" />
           </div>
         </div>
 
@@ -294,7 +285,7 @@ export default function Dashboard() {
         {/* Compact Sticky Top App Header with Safe Area Notch padding */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[56px] pt-[max(env(safe-area-inset-top,0px),0.5rem)] pb-2 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2 min-w-0">
-            {activePage !== "dashboard" ? (
+            {!["dashboard", "resume", "jobs", "interview", "learn"].includes(activePage) || (activePage === "interview" && interviewTab !== "setup") || (activePage === "learn" && learnSubPage !== "hub") ? (
               <button
                 onClick={handleTopBarBack}
                 aria-label="Back"
@@ -302,16 +293,7 @@ export default function Dashboard() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-            ) : (
-              <div
-                className="md:hidden flex items-center cursor-pointer mr-1"
-                onClick={() => navigateToSection("dashboard")}
-              >
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs">
-                  <GraduationCap className="h-4 w-4" />
-                </div>
-              </div>
-            )}
+            ) : null}
             <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 truncate">
               {getPageTitle()}
             </h1>
@@ -360,7 +342,7 @@ export default function Dashboard() {
         </header>
 
         {/* Scrollable Page Body with Compact Mobile Edge-to-Edge Margins & Safe Bottom Offset */}
-        <div className="flex-1 p-1 sm:p-4 md:p-6 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-8 overflow-y-auto overflow-x-hidden min-w-0">
+        <div className="flex-1 p-1 sm:p-4 md:p-6 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 overflow-y-auto overflow-x-hidden min-w-0">
           <div className="animate-fade-in">
             {activePage === "dashboard" && (
               <div className="space-y-4 sm:space-y-6">

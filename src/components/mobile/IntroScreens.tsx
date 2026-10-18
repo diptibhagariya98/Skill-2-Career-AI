@@ -18,6 +18,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
+import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
 import { hapticLight } from "@/shared/platform";
 import { APP_ROUTES } from "@/constants/endpoints";
 
@@ -360,14 +361,7 @@ export default function IntroScreens({
       {/* Top Safe Area & Top Bar (~8% height) */}
       <header className="w-full pt-[calc(0.75rem+env(safe-area-inset-top,0px))] px-5 pb-2 flex items-center justify-between z-20">
         {/* Brand Logo & Name */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-200">
-            <GraduationCap className="h-4.5 w-4.5" />
-          </div>
-          <span className="font-extrabold text-base tracking-tight text-gray-900">
-            ResuMentor
-          </span>
-        </div>
+        <ResuMentorBrandLogo variant="A" size="sm" showWordmark={true} theme="light" />
 
         {/* Skip or Close Button */}
         {isReplayModal ? (

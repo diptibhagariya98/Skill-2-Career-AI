@@ -484,118 +484,120 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
 
   return (
     <div className="min-h-dvh bg-gray-50 flex flex-col pb-6 lg:pb-8">
-      {/* Top Action Toolbar: Sleek, compact on mobile, spacious on desktop */}
-      <header className="bg-white border-b border-gray-200 px-2 sm:px-4 py-2 sm:py-3 sticky top-0 z-20 shadow-xs flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-          <input
-            type="text"
-            value={resume.meta.title}
-            onChange={(e) =>
-              handleUpdateResume({
-                ...resume,
-                meta: { ...resume.meta, title: e.target.value },
-              })
-            }
-            className="font-bold text-gray-900 text-xs sm:text-base border-b border-transparent hover:border-gray-300 focus:border-indigo-600 focus:outline-none px-1 py-0.5 rounded max-w-[110px] sm:max-w-xs truncate"
-            title="Rename Resume"
-          />
-          <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full hidden sm:inline">
-            {saveStatus}
-          </span>
+      {/* Top Action Toolbar: Clean layout without overlaps, full-width toggle on mobile */}
+      <header className="bg-white border-b border-gray-200 px-3 sm:px-6 py-2.5 sm:py-3 sticky top-0 z-20 shadow-xs flex flex-col lg:flex-row gap-2 lg:items-center justify-between">
+        {/* Row 1: Document title & Action buttons */}
+        <div className="flex items-center justify-between gap-2 w-full lg:w-auto">
+          <div className="flex items-center gap-2 min-w-0">
+            <input
+              type="text"
+              value={resume.meta.title}
+              onChange={(e) =>
+                handleUpdateResume({
+                  ...resume,
+                  meta: { ...resume.meta, title: e.target.value },
+                })
+              }
+              className="font-bold text-gray-900 text-sm sm:text-base border-b border-transparent hover:border-gray-300 focus:border-indigo-600 focus:outline-none px-1 py-0.5 rounded truncate max-w-[130px] sm:max-w-xs"
+              title="Rename Resume"
+            />
+            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full hidden sm:inline">
+              {saveStatus}
+            </span>
+          </div>
 
-          {/* Mobile Segmented Toggle (Edit vs Preview) */}
-          <div className="flex lg:hidden bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0">
+          {/* Action buttons (Analyze AI, Data, Export) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* AI ATS Analysis Action */}
             <button
               type="button"
-              onClick={() => setMobileTab("edit")}
-              className={`px-2 py-1 rounded-lg text-xs font-bold transition min-h-[30px] ${
-                mobileTab === "edit"
-                  ? "bg-white text-indigo-600 shadow-xs"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
+              disabled={analysisLoading}
+              onClick={triggerAnalysisPipeline}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl transition shadow-xs disabled:opacity-50 min-h-[36px] sm:min-h-[40px]"
+              title="Evaluate ATS score and improvement tips with Gemini AI"
             >
-              Edit
+              {analysisLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5 text-purple-200" />
+              )}
+              <span>Analyze</span>
             </button>
+
             <button
               type="button"
-              onClick={() => setMobileTab("preview")}
-              className={`px-2 py-1 rounded-lg text-xs font-bold transition min-h-[30px] ${
-                mobileTab === "preview"
-                  ? "bg-white text-indigo-600 shadow-xs"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
+              onClick={() => setShowDataModal(true)}
+              className="inline-flex items-center justify-center text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 p-2 sm:px-3 sm:py-2 rounded-xl transition min-h-[36px] min-w-[36px] sm:min-h-[40px]"
+              title="Import/Export JSON or revision history"
             >
-              Preview
+              <Database className="h-4 w-4" />
+              <span className="hidden md:inline ml-1">Data</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrintBrowser}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl transition min-h-[40px] hidden md:inline-flex"
+              title="Print via browser"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Print</span>
+            </button>
+
+            {/* One-Click Export PDF Button */}
+            <button
+              type="button"
+              disabled={exportState === "preparing"}
+              onClick={() => handleExportPDF(false)}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition shadow-sm min-h-[36px] sm:min-h-[40px] ${
+                exportState === "done"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : exportState === "failed"
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
+              } disabled:opacity-50`}
+            >
+              {exportState === "preparing" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              <span>
+                {exportState === "preparing"
+                  ? "Exporting..."
+                  : exportState === "done"
+                  ? "Exported"
+                  : exportState === "failed"
+                  ? "Retry"
+                  : "Export"}
+              </span>
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Phase 2: AI ATS Analysis Action */}
+        {/* Row 2 (Mobile only): Full-width high-contrast Edit vs Preview Segmented Control */}
+        <div className="grid grid-cols-2 lg:hidden w-full bg-gray-100 p-1 rounded-xl border border-gray-200">
           <button
             type="button"
-            disabled={analysisLoading}
-            onClick={triggerAnalysisPipeline}
-            className="inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-xl transition shadow-xs disabled:opacity-50 min-h-[34px] sm:min-h-[40px]"
-            title="Evaluate ATS score and improvement tips with Gemini AI"
+            onClick={() => setMobileTab("edit")}
+            className={`py-1.5 text-center text-xs font-bold rounded-lg transition min-h-[34px] ${
+              mobileTab === "edit"
+                ? "bg-white text-indigo-700 shadow-xs"
+                : "text-gray-700 hover:text-gray-900"
+            }`}
           >
-            {analysisLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5 text-purple-200" />
-            )}
-            <span className="hidden xs:inline sm:inline">{analysisLoading ? "Analyzing..." : "Analyze"}</span>
-            <span className="hidden sm:inline">Resume</span>
+            Edit
           </button>
-
           <button
             type="button"
-            onClick={() => setShowDataModal(true)}
-            className="inline-flex items-center justify-center text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 p-1.5 sm:px-3 sm:py-2 rounded-xl transition min-h-[34px] sm:min-h-[40px] min-w-[34px]"
-            title="Import/Export JSON or revision history"
+            onClick={() => setMobileTab("preview")}
+            className={`py-1.5 text-center text-xs font-bold rounded-lg transition min-h-[34px] ${
+              mobileTab === "preview"
+                ? "bg-white text-indigo-700 shadow-xs"
+                : "text-gray-700 hover:text-gray-900"
+            }`}
           >
-            <Database className="h-4 w-4" />
-            <span className="hidden md:inline">Data</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handlePrintBrowser}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl transition min-h-[40px] hidden md:inline-flex"
-            title="Print via browser"
-          >
-            <Printer className="h-4 w-4" />
-            <span>Print</span>
-          </button>
-
-          {/* Part B: One-Click Export PDF Button */}
-          <button
-            type="button"
-            disabled={exportState === "preparing"}
-            onClick={() => handleExportPDF(false)}
-            className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition shadow-sm min-h-[34px] sm:min-h-[40px] ${
-              exportState === "done"
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                : exportState === "failed"
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-indigo-600 hover:bg-indigo-700 text-white"
-            } disabled:opacity-50`}
-          >
-            {exportState === "preparing" ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Download className="h-3.5 w-3.5" />
-            )}
-            <span>
-              {exportState === "preparing"
-                ? "Exporting..."
-                : exportState === "done"
-                ? "Exported"
-                : exportState === "failed"
-                ? "Retry"
-                : "Export"}
-            </span>
-            <span className="hidden sm:inline">PDF</span>
+            Preview
           </button>
         </div>
       </header>
@@ -613,14 +615,14 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
       />
 
       {/* Main Workspace: Full width mobile, Two-pane Desktop */}
-      <div className="max-w-7xl mx-auto w-full px-1 sm:px-4 lg:px-6 py-2 sm:py-5 flex-1 flex flex-col lg:flex-row gap-2.5 sm:gap-4 lg:gap-8 items-start">
+      <div className="max-w-7xl mx-auto w-full px-1.5 sm:px-4 lg:px-6 py-2 sm:py-5 flex-1 flex flex-col lg:flex-row gap-2.5 sm:gap-4 lg:gap-8 items-start">
         {/* LEFT PANE: Form Sections (Visible on Desktop OR when mobileTab === 'edit') */}
         <div
           className={`w-full lg:w-1/2 flex flex-col space-y-3 sm:space-y-6 ${
             mobileTab === "preview" ? "hidden lg:flex" : "flex"
           }`}
         >
-          <div className="bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-6 lg:p-7 border border-gray-150 shadow-xs">
+          <div className="bg-transparent sm:bg-white rounded-2xl sm:rounded-3xl p-0 sm:p-6 lg:p-7 border-0 sm:border sm:border-gray-150 shadow-none sm:shadow-xs">
             {activeSection === "contact" && (
               <ContactSection
                 data={resume.contact}

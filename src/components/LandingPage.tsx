@@ -20,6 +20,7 @@ import {
   Layers,
   ChevronRight
 } from "lucide-react";
+import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
 
 export default function LandingPage() {
   const [activeFaq, setActiveFaq] = useState(null);
@@ -150,12 +151,10 @@ export default function LandingPage() {
       {/* Sticky Header Navigation (UX-05 Safe Area & Compact Mobile Header) */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs transition-all duration-300 pt-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            <div className="bg-teal-600 p-1.5 sm:p-2 rounded-xl text-white shadow-md shadow-teal-600/10 shrink-0">
-              <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6" />
-            </div>
-            <span className="font-extrabold text-lg sm:text-xl tracking-tight text-gray-900 truncate">
-              ResuMentor <span className="text-teal-600">+ AI</span>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <ResuMentorBrandLogo variant="A" size="md" showWordmark={true} theme="light" />
+            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full hidden sm:inline-block">
+              + AI
             </span>
           </div>
 
@@ -456,10 +455,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Brand */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-teal-400" />
-              <span className="font-extrabold text-xl text-white">
-                ResuMentor <span className="text-teal-400">+ AI</span>
+            <div className="flex items-center gap-3">
+              <ResuMentorBrandLogo variant="A" size="lg" showWordmark={true} theme="dark" />
+              <span className="text-[11px] font-bold text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2 py-0.5 rounded-full">
+                + AI
               </span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed max-w-sm">

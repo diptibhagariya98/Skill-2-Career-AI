@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { GraduationCap, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import ResuMentorBrandLogo from "./ResuMentorBrandLogo";
 
 export interface PremiumTransitionLoaderProps {
   /** Main title or greeting */
@@ -45,13 +45,8 @@ export function PremiumTransitionLoader({
         
         {/* Glowing Brand Icon Capsule */}
         <div className="relative mb-5">
-          {/* Animated Glow Ring */}
-          <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 to-teal-400 rounded-3xl blur-md opacity-30 animate-pulse" />
-          
-          <div className="relative w-16 h-16 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-300/50">
-            <GraduationCap className="w-8 h-8 drop-shadow" />
-            <Sparkles className="w-3.5 h-3.5 absolute -top-1 -right-1 text-amber-300 animate-bounce" />
-          </div>
+          <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 to-cyan-400 rounded-3xl blur-md opacity-30 animate-pulse" />
+          <ResuMentorBrandLogo variant="A" size={64} showWordmark={false} />
         </div>
 
         {/* Brand & Loading Labels */}
