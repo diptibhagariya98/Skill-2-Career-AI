@@ -353,36 +353,22 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
       const cleanEmail = email.trim().toLowerCase();
       const cleanName = fullName.trim();
 
-      const { data, error } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: {
-          data: {
-            name: cleanName,
-            full_name: cleanName,
-          },
-        },
+      const response = await fetch(API_ROUTES.AUTH_REGISTER, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+          name: cleanName,
+        }),
       });
 
-      if (error) throw error;
-
-      // Automatically send the 6-digit verification code using our custom Nodemailer SMTP route
-      try {
-        await fetch(API_ROUTES.AUTH_SEND_OTP, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: cleanEmail,
-            userId: data.user?.id,
-            name: cleanName,
-            purpose: "EMAIL_VERIFY",
-          }),
-        });
-      } catch (sendErr: any) {
-        console.warn("[Send OTP Client Notice]:", sendErr);
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create account.");
       }
 
-      setPendingUserId(data.user?.id || "");
+      setPendingUserId(result.userId || "");
       setPendingEmail(cleanEmail);
       setPendingPassword(password);
       setPendingName(cleanName);
