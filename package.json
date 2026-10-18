@@ -17,7 +17,8 @@
     "db:migrate": "node scripts/migrate.mjs",
     "seed:admin": "node scripts/seed-super-admin.mjs",
     "test": "node scripts/test-auth-flow.mjs",
-    "test:auth": "node scripts/test-auth-flow.mjs"
+    "test:auth": "node scripts/test-auth-flow.mjs",
+    "test:blackbox": "tsx blackbox-testing/v1/auth/verify_auth_password_reset_blackbox.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

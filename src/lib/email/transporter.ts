@@ -65,8 +65,9 @@ export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailO
       simulated: false,
       messageId: info.messageId,
     };
-  } catch (error: any) {
-    console.error(`[Nodemailer Error] Failed to send email to ${to}:`, error.message);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error || "");
+    console.error(`[Nodemailer Error] Failed to send email to ${to}:`, errorMsg);
     throw error;
   }
 }

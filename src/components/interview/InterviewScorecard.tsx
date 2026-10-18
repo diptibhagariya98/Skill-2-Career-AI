@@ -70,7 +70,7 @@ export default function InterviewScorecard({
       };
 
       await html2pdf().set(opt).from(printableRef.current).save();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("PDF export failed:", err);
       window.print();
     } finally {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Network, ConnectionStatus } from "@capacitor/network";
+import type { PluginListenerHandle } from "@capacitor/core";
 import { isNative } from "./device";
 
 export interface NetworkState {
@@ -47,7 +48,7 @@ export function useNetworkStatus(): NetworkState {
     checkInitialStatus();
 
     // Listeners
-    let networkListener: any = null;
+    let networkListener: PluginListenerHandle | null = null;
 
     if (isNative()) {
       Network.addListener("networkStatusChange", (change: ConnectionStatus) => {

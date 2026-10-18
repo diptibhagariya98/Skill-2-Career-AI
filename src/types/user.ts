@@ -1,6 +1,7 @@
 import { UserRole } from "@/constants/roles";
 
 export interface UserData {
+  id?: string;
   name?: string;
   email?: string;
   photoURL?: string;

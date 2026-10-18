@@ -134,6 +134,23 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
 
     setUpdatingProfile(true);
     try {
+      const isGuest = !userData?.id || userData.id === "guest-user" || userData.id.startsWith("guest-");
+      const cleanName = fullName.trim();
+
+      if (isGuest) {
+        onUpdateUserData({
+          ...(userData || {
+            id: "guest-user",
+            email: "guest@resumentor.app",
+            photoURL: "",
+            role: UserRole.STUDENT,
+          }),
+          name: cleanName,
+        });
+        toast.success("Profile name updated successfully (Guest Mode)!");
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -142,7 +159,6 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
         return;
       }
 
-      const cleanName = fullName.trim();
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -172,6 +188,23 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
 
     setUploadingAvatar(true);
     try {
+      const isGuest = !userData?.id || userData.id === "guest-user" || userData.id.startsWith("guest-");
+      const compressedDataUrl = await processAvatarImage(file, 256, 0.85);
+
+      if (isGuest) {
+        onUpdateUserData({
+          ...(userData || {
+            id: "guest-user",
+            email: "guest@resumentor.app",
+            photoURL: "",
+            role: UserRole.STUDENT,
+          }),
+          photoURL: compressedDataUrl,
+        });
+        toast.success("Profile photo updated successfully (Guest Mode)!");
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -179,8 +212,6 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
         toast.error("You must be logged in to update your profile photo.");
         return;
       }
-
-      const compressedDataUrl = await processAvatarImage(file, 256, 0.85);
 
       const { error } = await supabase
         .from("profiles")
@@ -214,6 +245,21 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
   const handleRemoveAvatar = async () => {
     setUploadingAvatar(true);
     try {
+      const isGuest = !userData?.id || userData.id === "guest-user" || userData.id.startsWith("guest-");
+      if (isGuest) {
+        onUpdateUserData({
+          ...(userData || {
+            id: "guest-user",
+            email: "guest@resumentor.app",
+            photoURL: "",
+            role: UserRole.STUDENT,
+          }),
+          photoURL: "",
+        });
+        toast.success("Profile photo removed.");
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -244,6 +290,11 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const isGuest = !userData?.id || userData.id === "guest-user" || userData.id.startsWith("guest-");
+    if (isGuest) {
+      toast.error("Password change is not available in Guest mode. Please create an account to secure your profile.");
+      return;
+    }
     if (!currentPassword) {
       toast.error(AUTH_MESSAGES.CURRENT_PASSWORD_REQUIRED);
       return;

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ScholarshipScheme, StudentProfile } from "../../types/scholarships";
+import { Gender, ScholarshipScheme, SocialCategory, StudentProfile, StudyLevel } from "../../types/scholarships";
 import { evaluateScheme, isSchemeStale } from "../../lib/scholarships/engine";
 import {
   Terminal,
@@ -24,20 +24,20 @@ export default function AdminConsole({ schemes }: AdminConsoleProps) {
   const [testState, setTestState] = useState<string>("Gujarat");
   const [testIncome, setTestIncome] = useState<number>(500000);
   const [testScore, setTestScore] = useState<number>(85);
-  const [testCategory, setTestCategory] = useState<string>("General");
-  const [testGender, setTestGender] = useState<string>("female");
-  const [testLevel, setTestLevel] = useState<string>("undergraduate");
+  const [testCategory, setTestCategory] = useState<SocialCategory>("General");
+  const [testGender, setTestGender] = useState<Gender>("female");
+  const [testLevel, setTestLevel] = useState<StudyLevel>("undergraduate");
 
   const selectedScheme = schemes.find((s) => s.id === selectedSchemeId) || schemes[0];
 
   const testProfile: StudentProfile = {
     domicileState: testState,
-    socialCategory: testCategory as any,
+    socialCategory: testCategory,
     annualIncome: testIncome,
-    studyLevel: testLevel as any,
+    studyLevel: testLevel,
     scoreType: "percentage",
     scoreValue: testScore,
-    gender: testGender as any,
+    gender: testGender,
   };
 
   const startTime = typeof performance !== "undefined" ? performance.now() : 0;
@@ -128,7 +128,7 @@ export default function AdminConsole({ schemes }: AdminConsoleProps) {
               <label className="block text-xs font-bold text-gray-600 mb-1">Category</label>
               <select
                 value={testCategory}
-                onChange={(e) => setTestCategory(e.target.value)}
+                onChange={(e) => setTestCategory(e.target.value as SocialCategory)}
                 className="w-full p-2 rounded-lg border border-gray-200 text-xs bg-white"
               >
                 <option value="General">General</option>
@@ -167,7 +167,7 @@ export default function AdminConsole({ schemes }: AdminConsoleProps) {
               <label className="block text-xs font-bold text-gray-600 mb-1">Gender</label>
               <select
                 value={testGender}
-                onChange={(e) => setTestGender(e.target.value)}
+                onChange={(e) => setTestGender(e.target.value as Gender)}
                 className="w-full p-2 rounded-lg border border-gray-200 text-xs bg-white"
               >
                 <option value="female">Female</option>
@@ -179,7 +179,7 @@ export default function AdminConsole({ schemes }: AdminConsoleProps) {
               <label className="block text-xs font-bold text-gray-600 mb-1">Study Level</label>
               <select
                 value={testLevel}
-                onChange={(e) => setTestLevel(e.target.value)}
+                onChange={(e) => setTestLevel(e.target.value as StudyLevel)}
                 className="w-full p-2 rounded-lg border border-gray-200 text-xs bg-white"
               >
                 <option value="undergraduate">Undergraduate</option>

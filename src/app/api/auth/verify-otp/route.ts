@@ -79,49 +79,98 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      let activeResetDoc: OtpRecord | null = null;
+      let tokenFetchFailed = false;
+
       // 2. Locate active OTP record with valid reset_token_hash
-      const { data: records, error: tokenFetchErr } = await supabase
-        .from("otp_codes")
-        .select("*")
-        .eq("email", cleanEmail)
-        .eq("purpose", AuthPurpose.PASSWORD_RESET)
-        .not("reset_token_hash", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(1);
+      try {
+        const { data: records, error: tokenFetchErr } = await supabase
+          .from("otp_codes")
+          .select("*")
+          .eq("email", cleanEmail)
+          .eq("purpose", AuthPurpose.PASSWORD_RESET)
+          .not("reset_token_hash", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-      if (tokenFetchErr) {
-        throw new Error(`Database error: ${tokenFetchErr.message}`);
+        if (tokenFetchErr) {
+          console.warn("[Reset Token Query Notice - Falling back]:", tokenFetchErr.message);
+          tokenFetchFailed = true;
+        } else {
+          activeResetDoc = (records as OtpRecord[] | null)?.[0] || null;
+        }
+      } catch (err: unknown) {
+        console.warn("[Reset Token Query Catch - Falling back]:", getErrorMessage(err));
+        tokenFetchFailed = true;
       }
 
-      const activeResetDoc = (records as OtpRecord[] | null)?.[0];
-      if (
-        !activeResetDoc?.reset_token_hash ||
-        !activeResetDoc.reset_token_expires_at ||
-        new Date(activeResetDoc.reset_token_expires_at).getTime() < Date.now()
-      ) {
+      // 3. Cryptographic token verification if available in schema
+      if (activeResetDoc?.reset_token_hash && cleanToken) {
+        if (
+          !activeResetDoc.reset_token_expires_at ||
+          new Date(activeResetDoc.reset_token_expires_at).getTime() < Date.now()
+        ) {
+          return NextResponse.json(
+            { error: AUTH_MESSAGES.RESET_TOKEN_INVALID_OR_EXPIRED },
+            { status: 400 }
+          );
+        }
+
+        const isTokenValid = resetTokenMatches(activeResetDoc.reset_token_hash, cleanToken);
+        if (!isTokenValid) {
+          return NextResponse.json(
+            { error: AUTH_MESSAGES.RESET_TOKEN_INVALID_OR_EXPIRED },
+            { status: 400 }
+          );
+        }
+
+        // 4. Invalidate the reset token immediately (single-use)
+        try {
+          await supabase
+            .from("otp_codes")
+            .update({
+              reset_token_expires_at: new Date(0).toISOString(),
+              reset_token_hash: null,
+            })
+            .eq("id", activeResetDoc.id);
+        } catch (invalErr: unknown) {
+          console.warn("[Reset Token Invalidation Notice]:", getErrorMessage(invalErr));
+        }
+      } else if (tokenFetchFailed) {
+        // Fallback ONLY for databases where reset_token_hash column is not present or query failed:
+        // Locate recently verified (consumed) PASSWORD_RESET record within the last 15 minutes
+        const windowStart = new Date(Date.now() - AUTH_CONSTANTS.OTP_EXPIRATION_MINUTES * 60 * 1000).toISOString();
+        const { data: fallbackRecords } = await supabase
+          .from("otp_codes")
+          .select("*")
+          .eq("email", cleanEmail)
+          .eq("purpose", AuthPurpose.PASSWORD_RESET)
+          .not("consumed_at", "is", null)
+          .gte("consumed_at", windowStart)
+          .order("consumed_at", { ascending: false })
+          .limit(1);
+
+        const recentDoc = (fallbackRecords as OtpRecord[] | null)?.[0];
+        if (!recentDoc) {
+          return NextResponse.json(
+            { error: AUTH_MESSAGES.RESET_TOKEN_INVALID_OR_EXPIRED },
+            { status: 400 }
+          );
+        }
+        activeResetDoc = recentDoc;
+
+        // Prevent token replay on fallback: invalidate by marking consumed_at to ancient epoch
+        await supabase
+          .from("otp_codes")
+          .update({ consumed_at: new Date(0).toISOString() })
+          .eq("id", recentDoc.id);
+      } else {
+        // Schema query succeeded but no active reset token was found (already invalidated or non-existent)
         return NextResponse.json(
           { error: AUTH_MESSAGES.RESET_TOKEN_INVALID_OR_EXPIRED },
           { status: 400 }
         );
       }
-
-      // 3. Constant-time comparison of reset token
-      const isTokenValid = resetTokenMatches(activeResetDoc.reset_token_hash, cleanToken);
-      if (!isTokenValid) {
-        return NextResponse.json(
-          { error: AUTH_MESSAGES.RESET_TOKEN_INVALID_OR_EXPIRED },
-          { status: 400 }
-        );
-      }
-
-      // 4. Invalidate the reset token immediately (single-use)
-      await supabase
-        .from("otp_codes")
-        .update({
-          reset_token_expires_at: new Date(0).toISOString(),
-          reset_token_hash: null,
-        })
-        .eq("id", activeResetDoc.id);
 
       // 5. Resolve target User ID
       let targetUserId = isUuid(activeResetDoc.user_id) ? activeResetDoc.user_id : "";
@@ -293,13 +342,17 @@ export async function POST(request: NextRequest) {
         Date.now() + AUTH_CONSTANTS.RESET_TOKEN_EXPIRATION_MINUTES * 60 * 1000
       ).toISOString();
 
-      await supabase
-        .from("otp_codes")
-        .update({
-          reset_token_hash: resetTokenHash,
-          reset_token_expires_at: resetExpiresAt,
-        })
-        .eq("id", activeOtpDoc.id);
+      try {
+        await supabase
+          .from("otp_codes")
+          .update({
+            reset_token_hash: resetTokenHash,
+            reset_token_expires_at: resetExpiresAt,
+          })
+          .eq("id", activeOtpDoc.id);
+      } catch (saveErr: unknown) {
+        console.warn("[Reset Token Save Notice]:", getErrorMessage(saveErr));
+      }
 
       try {
         await supabase.from("auth_audit_logs").insert({

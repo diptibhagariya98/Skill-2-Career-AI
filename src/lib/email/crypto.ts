@@ -1,11 +1,14 @@
 import { randomInt, randomBytes, createHmac, createHash, timingSafeEqual } from "crypto";
 import { AuthPurpose } from "@/constants/auth";
 
-const SERVER_AUTH_SECRET =
-  process.env.AUTH_SECRET ||
-  process.env.NEXTAUTH_SECRET ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "resumentor-production-secure-hmac-salt-key-2026";
+export function getServerAuthSecret(): string {
+  return (
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "resumentor-production-secure-hmac-salt-key-2026"
+  );
+}
 
 /**
  * Generate a cryptographically secure 6-digit numeric OTP.
@@ -23,13 +26,14 @@ export function hashOtp(
   code: string,
   identifier: string,
   purpose: AuthPurpose | string,
-  secret: string = SERVER_AUTH_SECRET
+  secret?: string
 ): string {
+  const effectiveSecret = secret || getServerAuthSecret();
   const normalizedId = String(identifier || "").trim().toLowerCase();
   const normalizedPurpose = String(purpose || "").trim().toUpperCase();
   const normalizedCode = String(code || "").trim();
 
-  return createHmac("sha256", secret)
+  return createHmac("sha256", effectiveSecret)
     .update(`${normalizedId}:${normalizedPurpose}:${normalizedCode}`)
     .digest("hex");
 }
@@ -42,10 +46,11 @@ export function otpMatches(
   code: string,
   identifier: string,
   purpose: AuthPurpose | string,
-  secret: string = SERVER_AUTH_SECRET
+  secret?: string
 ): boolean {
   try {
-    const computedHex = hashOtp(code, identifier, purpose, secret);
+    const effectiveSecret = secret || getServerAuthSecret();
+    const computedHex = hashOtp(code, identifier, purpose, effectiveSecret);
     const a = Buffer.from(computedHex, "hex");
     const b = Buffer.from(storedHex, "hex");
     return a.length === b.length && timingSafeEqual(a, b);

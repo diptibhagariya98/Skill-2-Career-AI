@@ -24,11 +24,12 @@ export async function shareContent(options: ShareOptions): Promise<boolean> {
         });
         return true;
       }
-    } catch (e: any) {
-      if (e.message?.includes("canceled") || e.message?.includes("cancelled")) {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e || "");
+      if (msg.includes("canceled") || msg.includes("cancelled")) {
         return false;
       }
-      console.warn("[Share Native Notice]:", e.message);
+      console.warn("[Share Native Notice]:", msg);
     }
   }
 

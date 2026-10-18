@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { App } from "@capacitor/app";
+import type { PluginListenerHandle } from "@capacitor/core";
 import { isNative } from "./device";
 
 export interface BackButtonOptions {
@@ -20,7 +21,7 @@ export function useAndroidBackButton({ onBack }: BackButtonOptions = {}) {
   useEffect(() => {
     if (!isNative()) return;
 
-    let listenerHandle: any = null;
+    let listenerHandle: PluginListenerHandle | null = null;
 
     App.addListener("backButton", ({ canGoBack }) => {
       if (onBack) {

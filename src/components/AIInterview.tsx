@@ -21,14 +21,16 @@ import {
   selectQuestionsForSession,
 } from "../lib/interview/engine";
 import { generateAIInterviewPlan } from "../lib/interview/geminiService";
-import { loadLocalResume } from "@/lib/resume/storage";
+import { loadLocalResume } from "../lib/resume/storage";
+import { toast } from "react-hot-toast";
+import { UserRole } from "@/constants/roles";
 import InterviewSetup from "./interview/InterviewSetup";
 import InterviewThread from "./interview/InterviewThread";
 import InterviewScorecard from "./interview/InterviewScorecard";
 import InterviewHistory from "./interview/InterviewHistory";
 
 interface AIInterviewProps {
-  user?: { id?: string; name?: string; email?: string; [key: string]: any } | null;
+  user?: { id?: string; name?: string; email?: string; role?: UserRole | string; [key: string]: unknown } | null;
   onGoToDashboard?: () => void;
   onNavigateToTab?: (tabId: string) => void;
   tab?: "setup" | "session" | "scorecard" | "history";
@@ -66,7 +68,7 @@ export default function AIInterview({
       } else {
         setSessions([]);
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.warn("Failed to read session history from localStorage", e);
     }
   }, [historyKey]);
@@ -75,7 +77,7 @@ export default function AIInterview({
     setSessions(updated);
     try {
       localStorage.setItem(historyKey, JSON.stringify(updated));
-    } catch (e) {
+    } catch (e: unknown) {
       console.warn("Failed to persist session history", e);
     }
   };
@@ -118,7 +120,7 @@ export default function AIInterview({
             estimatedSeconds: 120,
           }));
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn("Falling back to local bank", err);
       }
     }
@@ -169,7 +171,7 @@ export default function AIInterview({
     };
 
     saveSessions([sessionRecord, ...sessions.filter((s) => s.id !== currentSessionId)]);
-    alert("Interview paused. Your progress has been saved to History.");
+    toast.success("Interview paused. Your progress has been saved to History.");
     setActiveTab("history");
   };
 

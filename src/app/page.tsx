@@ -41,7 +41,7 @@ export default function Home() {
           router.replace(APP_ROUTES.DASHBOARD);
           return;
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn("[Mobile Auth Session Check Notice]:", err);
       }
 

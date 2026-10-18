@@ -156,7 +156,7 @@ export default function Dashboard() {
         if (isAdminUser) {
           setActivePage((prev) => (prev === "dashboard" ? "admin" : prev));
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // Fallback to guest user on any unexpected error
         setUserData({
           id: "guest-user",
@@ -194,7 +194,7 @@ export default function Dashboard() {
       await supabase.auth.signOut();
       toast.success("Successfully logged out!");
       window.location.href = "/auth";
-    } catch (error) {
+    } catch (error: unknown) {
       window.location.href = "/auth";
     }
   };

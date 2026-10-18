@@ -7,6 +7,20 @@ import { API_ROUTES } from "../constants/endpoints";
 import { hapticLight } from "@/shared/platform";
 import { Skeleton, SkeletonCard } from "@/shared/ui";
 
+interface RawApiJob {
+  job_title?: string;
+  employer_name?: string;
+  job_city?: string;
+  job_country?: string;
+  job_employment_type?: string;
+  job_highlights?: {
+    Responsibilities?: string[];
+    Qualifications?: string[];
+  };
+  job_apply_link?: string;
+  job_posted_at_datetime_utc?: string;
+}
+
 interface JobItem {
   title: string;
   company: string;
@@ -45,9 +59,8 @@ export default function JobFinder() {
       }
       const data = await res.json();
       const apiJobs = data.data || [];
-
-      const mapped: JobItem[] = apiJobs.map((job: any) => ({
-        title: job.job_title,
+      const mapped: JobItem[] = (apiJobs as RawApiJob[]).map((job) => ({
+        title: job.job_title || "Untitled Position",
         company: job.employer_name || "N/A",
         location: `${job.job_city || ""}, ${job.job_country || ""}`.replace(/^, |^, $/, "") || "Remote",
         type: job.job_employment_type || "Full-time",
@@ -57,9 +70,10 @@ export default function JobFinder() {
       }));
 
       setJobs(mapped);
-    } catch (err: any) {
-      setError(err.message);
-      toast.error(err.message || "Failed to fetch jobs.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to fetch jobs.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

@@ -50,7 +50,7 @@ export function loadLocalResume(
     }
 
     return migrated;
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Failed to load local resume:", err);
     return createEmptyResume(defaultUser);
   }
@@ -85,7 +85,7 @@ export function saveLocalResume(data: ResumeData, userId?: string): void {
       revisions = revisions.slice(0, MAX_REVISIONS);
     }
     localStorage.setItem(revisionsKey, JSON.stringify(revisions));
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Failed to save local resume:", err);
   }
 }

@@ -92,7 +92,7 @@ OUTPUT JSON FORMAT:
     if (Array.isArray(parsed) && parsed.length >= 3) {
       return parsed.slice(0, config.questionCount);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn("AI plan generation failed, will fall back to local question bank.", error);
   }
 
@@ -187,7 +187,7 @@ OUTPUT STRICT VALID JSON ONLY:
         isAIEvaluated: true,
       };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn("AI evaluation call failed, fallback will be used.", error);
   }
 

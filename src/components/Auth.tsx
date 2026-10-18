@@ -471,7 +471,7 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
             if (!sessionErr && sessionData?.session) {
               sessionEstablished = true;
             }
-          } catch (tokErr) {
+          } catch (tokErr: unknown) {
             console.warn("[Token session warning]:", tokErr);
           }
         }
@@ -486,7 +486,7 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
             if (!signInErr && signInData?.session) {
               sessionEstablished = true;
             }
-          } catch (pwdErr) {
+          } catch (pwdErr: unknown) {
             console.warn("[Password sign in warning]:", pwdErr);
           }
         }

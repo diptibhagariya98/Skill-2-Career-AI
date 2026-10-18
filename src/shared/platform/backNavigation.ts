@@ -118,7 +118,7 @@ export async function dispatchBack(): Promise<boolean> {
       if (result === true) {
         return true;
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn(`[BackHandler ${item.id} error]:`, err);
     }
   }
@@ -196,7 +196,7 @@ import { useEffect, useRef } from "react";
 export function useBackHandler(
   priority: BackPriority,
   handle: () => boolean | Promise<boolean>,
-  deps: any[] = []
+  deps: readonly unknown[] = []
 ) {
   const handleRef = useRef(handle);
   handleRef.current = handle;

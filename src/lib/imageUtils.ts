@@ -42,7 +42,7 @@ export async function processAvatarImage(file: File, maxSize = 256, quality = 0.
           }
 
           resolve(dataUrl);
-        } catch (err) {
+        } catch (err: unknown) {
           reject(err);
         }
       };

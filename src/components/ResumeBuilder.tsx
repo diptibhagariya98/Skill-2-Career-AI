@@ -131,7 +131,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
             saveLocalResume(freshResume, activeId);
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn("[ResumeBuilder sync notice]:", err);
       }
     };

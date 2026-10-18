@@ -18,8 +18,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Server-side privileged client for backend operations
 export function getServiceSupabase() {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
-  return createClient(supabaseUrl, serviceKey, {
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    supabaseUrl;
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    supabaseAnonKey;
+
+  return createClient(url, serviceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

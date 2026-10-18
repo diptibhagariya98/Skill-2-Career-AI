@@ -34,7 +34,7 @@ type ActiveTab = "wizard" | "results" | "directory" | "scholars" | "admin";
 const LOCAL_STORAGE_PROFILE_KEY = "resumentor_scholarship_student_profile";
 
 interface ScholarshipsProps {
-  user?: { id?: string; name?: string; email?: string; [key: string]: any } | null;
+  user?: { id?: string; name?: string; email?: string; role?: UserRole | string; [key: string]: unknown } | null;
   tab?: ActiveTab;
   onTabChange?: (tab: ActiveTab) => void;
 }
