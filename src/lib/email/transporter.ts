@@ -15,9 +15,9 @@ export const transporter = hasSmtpConfig
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
+      pool: false,
+      connectionTimeout: 10000,
+      socketTimeout: 15000,
     })
   : null;
 
@@ -26,14 +26,17 @@ export interface SendEmailOptions {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
 }
 
 /**
  * Send branded transactional email.
  * Falls back to console output if SMTP credentials are not yet configured in .env.local.
  */
-export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
-  const from = `"${BRAND.name}" <${process.env.MAIL_FROM || process.env.SMTP_USER || "no-reply@resumentor.app"}>`;
+export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailOptions) {
+  // Authenticate from address with SMTP_USER for Gmail SPF/DKIM alignment, and route replies to MAIL_FROM
+  const from = `"${BRAND.name}" <${process.env.SMTP_USER || process.env.MAIL_FROM || "no-reply@resumentor.app"}>`;
+  const replyAddress = replyTo || process.env.MAIL_FROM || process.env.SMTP_USER;
 
   if (!transporter) {
     console.info(`[MailDev] [SMTP Not Configured] Email to: ${to} | Subject: "${subject}"`);
@@ -48,6 +51,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   try {
     const info = await transporter.sendMail({
       from,
+      replyTo: replyAddress,
       to,
       subject,
       html,
