@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { processAvatarImage, getInitials } from "../lib/imageUtils";
 import { UserData } from "../types/user";
+import { UserRole, isUserAdmin } from "@/constants/roles";
 import IntroScreens from "./mobile/IntroScreens";
 import {
   getErrorMessage,
@@ -538,14 +539,14 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
             <div className="mt-2.5">
               <span
                 className={`inline-block text-[11px] uppercase font-bold tracking-wider px-3 py-1 rounded-full ${
-                  userData?.role === "admin"
+                  isUserAdmin(userData?.role, userData?.email)
                     ? "bg-purple-100 text-purple-700 border border-purple-200"
-                    : userData?.role === "candidate"
+                    : userData?.role === UserRole.CANDIDATE
                     ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
                     : "bg-indigo-50 text-indigo-700 border border-indigo-200"
                 }`}
               >
-                Role: {userData?.role || "Student"}
+                Role: {isUserAdmin(userData?.role, userData?.email) ? "Super Admin" : (userData?.role || "Student")}
               </span>
             </div>
             <div className="mt-6 text-left space-y-3 pt-6 border-t border-gray-100">
@@ -637,14 +638,14 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
           <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
             <span
               className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full ${
-                userData?.role === "admin"
+                isUserAdmin(userData?.role, userData?.email)
                   ? "bg-purple-100 text-purple-700 border border-purple-200"
-                  : userData?.role === "candidate"
+                  : userData?.role === UserRole.CANDIDATE
                   ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
                   : "bg-indigo-50 text-indigo-700 border border-indigo-200"
               }`}
             >
-              Role: {userData?.role || "Student"}
+              Role: {isUserAdmin(userData?.role, userData?.email) ? "Super Admin" : (userData?.role || "Student")}
             </span>
             <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
               Joined {enrollmentDateStr}

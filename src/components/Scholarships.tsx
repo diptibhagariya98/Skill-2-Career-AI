@@ -17,6 +17,7 @@ import EvaluationResults from "./scholarships/EvaluationResults";
 import SchemeDirectory from "./scholarships/SchemeDirectory";
 import ScholarDirectory from "./scholarships/ScholarDirectory";
 import AdminConsole from "./scholarships/AdminConsole";
+import { UserRole, isUserAdmin } from "@/constants/roles";
 import {
   Award,
   BookOpen,
@@ -164,7 +165,7 @@ export default function Scholarships({
             <GraduationCap className="w-4 h-4" /> Verified Mentors ({scholars.length})
           </button>
 
-          {user?.role === "admin" && (
+          {isUserAdmin(user?.role, user?.email) && (
             <button
               onClick={() => setActiveTab("admin")}
               className={`px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-1.5 whitespace-nowrap ${

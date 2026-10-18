@@ -1,8 +1,10 @@
+import { UserRole } from "@/constants/roles";
+
 export interface UserData {
   name?: string;
   email?: string;
   photoURL?: string;
-  role?: "admin" | "student" | "candidate" | string;
+  role?: UserRole | string;
   enrolledAt?: string | number | { seconds: number; nanoseconds: number };
   createdAt?: string | number | { seconds: number; nanoseconds: number };
   created_at?: string;

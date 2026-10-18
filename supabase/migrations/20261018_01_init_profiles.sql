@@ -47,12 +47,13 @@ begin
     new.id,
     coalesce(new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'full_name', 'Student'),
     new.email,
-    'student',
+    coalesce(new.raw_user_meta_data->>'role', 'student'),
     coalesce(new.raw_user_meta_data->>'avatar_url', '')
   )
   on conflict (id) do update set
     name = coalesce(excluded.name, public.profiles.name),
     email = coalesce(excluded.email, public.profiles.email),
+    role = coalesce(excluded.role, public.profiles.role),
     updated_at = now();
   return new;
 end;

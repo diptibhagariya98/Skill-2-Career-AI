@@ -21,6 +21,7 @@ import {
   Sparkles,
   ChevronRight,
   TrendingUp,
+  ShieldCheck,
 } from "lucide-react";
 import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
 
@@ -31,7 +32,9 @@ import JobFinder from "./JobFinder";
 import AIInterview from "./AIInterview";
 import Scholarships from "./Scholarships";
 import LearnPractice from "./LearnPractice";
+import AdminDashboard from "./admin/AdminDashboard";
 import { UserData } from "../types/user";
+import { UserRole, isUserAdmin } from "@/constants/roles";
 import { getInitials } from "../lib/imageUtils";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useBackHandler, dispatchBack, hapticLight } from "@/shared/platform";
@@ -126,14 +129,22 @@ export default function Dashboard() {
           .eq("id", user.id)
           .single();
 
+        const rawRole = (profile?.role || user.user_metadata?.role || UserRole.STUDENT) as string;
+        const isAdminUser = isUserAdmin(rawRole, user.email);
+        const resolvedRole = isAdminUser ? UserRole.ADMIN : (rawRole as UserRole);
+
         setUserData({
           id: user.id,
-          name: profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || "Student",
+          name: profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || (isAdminUser ? "Super Admin" : "Student"),
           email: profile?.email || user.email || "",
           photoURL: profile?.photo_url || "",
-          role: profile?.role || user.user_metadata?.role || "student",
+          role: resolvedRole,
           ...profile,
         } as UserData);
+
+        if (isAdminUser) {
+          setActivePage((prev) => (prev === "dashboard" ? "admin" : prev));
+        }
       } catch (error) {
         // user profile fetch error
       } finally {
@@ -169,7 +180,12 @@ export default function Dashboard() {
     }
   };
 
+  const isAdmin = isUserAdmin(userData?.role, userData?.email);
+
   const menuItems = [
+    ...(isAdmin
+      ? [{ id: "admin", label: "Admin Hub", icon: ShieldCheck, badge: "SUPER" }]
+      : []),
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "resume", label: "Resume Builder", icon: FileText },
     { id: "interview", label: "AI Mock Interview", icon: MessageSquare },
@@ -181,7 +197,7 @@ export default function Dashboard() {
 
   // Mobile Bottom Navigation (5 distinct >=44px touch targets)
   const mobileNavItems = [
-    { id: "dashboard", label: "Home", icon: LayoutDashboard },
+    { id: isAdmin ? "admin" : "dashboard", label: isAdmin ? "Admin" : "Home", icon: isAdmin ? ShieldCheck : LayoutDashboard },
     { id: "resume", label: "Resume", icon: FileText },
     { id: "interview", label: "Interview", icon: MessageSquare },
     { id: "learn", label: "Practice", icon: BookOpen },
@@ -189,6 +205,12 @@ export default function Dashboard() {
   ];
 
   const moreMenuItems = [
+    ...(isAdmin
+      ? [
+          { id: "admin", label: "Admin Control Center", icon: ShieldCheck, desc: "Simulator & Compliance" },
+          { id: "dashboard", label: "Student Home", icon: LayoutDashboard, desc: "Student Dashboard View" },
+        ]
+      : []),
     { id: "scholarships", label: "Scholarships & Grants", icon: Award, desc: "Instant eligibility match" },
     { id: "jobs", label: "Job Finder", icon: Briefcase, desc: "Explore matching roles" },
     { id: "profile", label: "Profile Settings", icon: User, desc: "Manage personal details" },
@@ -196,6 +218,8 @@ export default function Dashboard() {
 
   const getPageTitle = () => {
     switch (activePage) {
+      case "admin":
+        return "Super Admin Control Center";
       case "dashboard":
         return "Dashboard";
       case "profile":
@@ -227,7 +251,7 @@ export default function Dashboard() {
     }
   };
 
-  const isMoreItemActive = ["scholarships", "jobs", "profile"].includes(activePage);
+  const isMoreItemActive = ["scholarships", "jobs", "profile", "admin"].includes(activePage);
 
   // Skeleton Loading State Shaped Like Final Content (UX-40)
   if (loading) {
@@ -278,14 +302,29 @@ export default function Dashboard() {
               <button
                 key={item.id}
                 onClick={() => navigateToSection(item.id)}
-                className={`w-full flex items-center px-3 py-2.5 text-xs sm:text-sm rounded-xl transition-all duration-150 font-medium ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 text-xs sm:text-sm rounded-xl transition-all duration-150 font-medium ${
                   isActive
-                    ? "bg-indigo-600 text-white font-bold shadow-xs shadow-indigo-200"
+                    ? item.id === "admin"
+                      ? "bg-purple-900 text-white font-bold shadow-xs shadow-purple-200"
+                      : "bg-indigo-600 text-white font-bold shadow-xs shadow-indigo-200"
+                    : item.id === "admin"
+                    ? "text-purple-700 bg-purple-50/80 hover:bg-purple-100 font-semibold border border-purple-200"
                     : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
                 }`}
               >
-                <IconComponent className={`mr-2.5 h-4 w-4 ${isActive ? "text-white" : "text-gray-400"}`} />
-                <span className="truncate">{item.label}</span>
+                <div className="flex items-center min-w-0">
+                  <IconComponent className={`mr-2.5 h-4 w-4 flex-shrink-0 ${
+                    isActive ? "text-white" : item.id === "admin" ? "text-purple-600" : "text-gray-400"
+                  }`} />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {"badge" in item && item.badge ? (
+                  <span className={`text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded ${
+                    isActive ? "bg-white/20 text-white" : "bg-purple-200 text-purple-800"
+                  }`}>
+                    {item.badge}
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -321,6 +360,17 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
+            {isAdmin && (
+              <button
+                onClick={() => navigateToSection(activePage === "admin" ? "dashboard" : "admin")}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition shadow-xs active:scale-95 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                title={activePage === "admin" ? "Switch to Student View" : "Open Super Admin Portal"}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                <span>{activePage === "admin" ? "Preview Student View" : "Admin Hub"}</span>
+              </button>
+            )}
+
             <div className="hidden sm:block text-right">
               <div className="flex items-center justify-end gap-1.5">
                 <span className="block font-semibold text-gray-800 text-xs sm:text-sm leading-tight">
@@ -328,14 +378,14 @@ export default function Dashboard() {
                 </span>
                 <span
                   className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${
-                    userData?.role === "admin"
+                    isAdmin
                       ? "bg-purple-100 text-purple-700 border border-purple-200"
-                      : userData?.role === "candidate"
+                      : userData?.role === UserRole.CANDIDATE
                       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
                       : "bg-indigo-50 text-indigo-700 border border-indigo-200"
                   }`}
                 >
-                  {userData?.role || "Student"}
+                  {isAdmin ? "Super Admin" : (userData?.role || "Student")}
                 </span>
               </div>
               <span className="block text-[11px] text-gray-400 font-medium truncate max-w-[150px]">
@@ -477,6 +527,9 @@ export default function Dashboard() {
               </div>
             )}
 
+            {activePage === "admin" && (
+              <AdminDashboard user={userData} onNavigateToSection={navigateToSection} />
+            )}
             {activePage === "profile" && <Profile userData={userData} onUpdateUserData={setUserData} />}
             {activePage === "resume" && <ResumeBuilder user={userData} />}
             {activePage === "jobs" && <JobFinder />}
