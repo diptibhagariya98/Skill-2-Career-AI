@@ -35,14 +35,10 @@ export interface SendEmailOptions {
  * Send branded transactional email.
  * Falls back to console output if SMTP credentials are not yet configured in .env.local.
  */
-export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
-  const isGmail = (process.env.SMTP_HOST || "").toLowerCase().includes("gmail");
-  const senderEmail = isGmail && process.env.SMTP_USER
-    ? process.env.SMTP_USER
-    : (process.env.MAIL_FROM || process.env.SMTP_USER || "no-reply@resumentor.app");
-
-  const from = `"${BRAND.name}" <${senderEmail}>`;
-  const replyTo = process.env.MAIL_FROM || senderEmail;
+export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailOptions) {
+  // Authenticate from address with SMTP_USER for Gmail SPF/DKIM alignment, and route replies to MAIL_FROM
+  const from = `"${BRAND.name}" <${process.env.SMTP_USER || process.env.MAIL_FROM || "no-reply@resumentor.app"}>`;
+  const replyAddress = replyTo || process.env.MAIL_FROM || process.env.SMTP_USER;
 
   if (!transporter) {
     console.info(`[MailDev] [SMTP Not Configured] Email to: ${to} | Subject: "${subject}"`);
@@ -59,7 +55,6 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       from,
       replyTo: replyAddress,
       to,
-      replyTo,
       subject,
       html,
       text,
