@@ -22,6 +22,34 @@ import {
 } from "../../types/interview";
 import { extractJobDescriptionSkills } from "../../lib/interview/engine";
 import { ROLE_PROFILES } from "../../constants/interviewData";
+import { PickerSelect, PickerOption, BottomSheet } from "@/shared/ui";
+
+const EXPERIENCE_OPTIONS: readonly PickerOption<ExperienceLevel>[] = [
+  { value: "fresher", label: "Student / Fresher (0 years)", description: "Core concepts, academic projects & fundamentals" },
+  { value: "junior", label: "Junior (1 - 2 years)", description: "Practical tools, execution & foundational experience" },
+  { value: "mid", label: "Mid-Level (3 - 5 years)", description: "Independent problem solving & feature ownership" },
+  { value: "senior", label: "Senior (5 - 8 years)", description: "Architecture, system trade-offs & technical guidance" },
+  { value: "lead", label: "Lead / Architect (8+ years)", description: "Cross-team impact, tech strategy & leadership" },
+];
+
+const INTERVIEW_TYPE_OPTIONS: readonly PickerOption<InterviewType>[] = [
+  { value: "mixed", label: "Mixed (Technical & Behavioural)", description: "Balanced assessment of practical skill and collaboration" },
+  { value: "technical", label: "Technical & Role Knowledge", description: "In-depth engineering, domain tools and system design" },
+  { value: "behavioral", label: "Behavioural & Situational (STAR)", description: "Team dynamics, conflict resolution and leadership" },
+  { value: "hr", label: "HR & Culture Fit", description: "Values, career motivations and workplace alignment" },
+];
+
+const DIFFICULTY_OPTIONS: readonly PickerOption<InterviewDifficulty>[] = [
+  { value: "friendly", label: "Friendly (Gentle prompts)", description: "Supportive tone with forgiving evaluations and helpful hints" },
+  { value: "standard", label: "Standard (Industry standard)", description: "Realistic interview bar expected at modern companies" },
+  { value: "tough", label: "Tough (Rigorous follow-ups)", description: "Challenging edge cases, deep probes and stricter rubric" },
+];
+
+const FEEDBACK_TIMING_OPTIONS: readonly PickerOption<FeedbackTiming>[] = [
+  { value: "instant", label: "Practice Mode (Instant Feedback)", description: "Instant scores and coaching after every question" },
+  { value: "deferred", label: "Realistic Mode (Scorecard at End)", description: "True mock interview; comprehensive scorecard upon completion" },
+];
+
 
 interface InterviewSetupProps {
   onStartSession: (config: InterviewSetupConfig) => void;
@@ -268,34 +296,21 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
 
         {/* Experience Level & Interview Type */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-bold text-gray-800 mb-2">Experience Level</label>
-            <select
-              value={experienceLevel}
-              onChange={(e) => setExperienceLevel(e.target.value as ExperienceLevel)}
-              className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-gray-900 bg-white"
-            >
-              <option value="fresher">Student / Fresher (0 years)</option>
-              <option value="junior">Junior (1 - 2 years)</option>
-              <option value="mid">Mid-Level (3 - 5 years)</option>
-              <option value="senior">Senior (5 - 8 years)</option>
-              <option value="lead">Lead / Architect (8+ years)</option>
-            </select>
-          </div>
+          <PickerSelect<ExperienceLevel>
+            label="Experience Level"
+            title="Select Experience Level"
+            value={experienceLevel}
+            options={EXPERIENCE_OPTIONS}
+            onChange={setExperienceLevel}
+          />
 
-          <div>
-            <label className="block text-sm font-bold text-gray-800 mb-2">Interview Focus</label>
-            <select
-              value={interviewType}
-              onChange={(e) => setInterviewType(e.target.value as InterviewType)}
-              className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-gray-900 bg-white"
-            >
-              <option value="mixed">Mixed (Technical & Behavioural)</option>
-              <option value="technical">Technical & Role Knowledge</option>
-              <option value="behavioral">Behavioural & Situational (STAR)</option>
-              <option value="hr">HR & Culture Fit</option>
-            </select>
-          </div>
+          <PickerSelect<InterviewType>
+            label="Interview Focus"
+            title="Select Interview Focus"
+            value={interviewType}
+            options={INTERVIEW_TYPE_OPTIONS}
+            onChange={setInterviewType}
+          />
         </div>
 
         {/* Question Count, Difficulty & Feedback Timing */}
@@ -320,30 +335,21 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-800 mb-2">Difficulty</label>
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as InterviewDifficulty)}
-              className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-gray-900 bg-white"
-            >
-              <option value="friendly">Friendly (Gentle prompts)</option>
-              <option value="standard">Standard (Industry standard)</option>
-              <option value="tough">Tough (Rigorous follow-ups)</option>
-            </select>
-          </div>
+          <PickerSelect<InterviewDifficulty>
+            label="Difficulty"
+            title="Select Difficulty"
+            value={difficulty}
+            options={DIFFICULTY_OPTIONS}
+            onChange={setDifficulty}
+          />
 
-          <div>
-            <label className="block text-sm font-bold text-gray-800 mb-2">Feedback Timing</label>
-            <select
-              value={feedbackTiming}
-              onChange={(e) => setFeedbackTiming(e.target.value as FeedbackTiming)}
-              className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-gray-900 bg-white"
-            >
-              <option value="instant">Practice Mode (Instant Feedback)</option>
-              <option value="deferred">Realistic Mode (Scorecard at End)</option>
-            </select>
-          </div>
+          <PickerSelect<FeedbackTiming>
+            label="Feedback Timing"
+            title="Select Feedback Timing"
+            value={feedbackTiming}
+            options={FEEDBACK_TIMING_OPTIONS}
+            onChange={setFeedbackTiming}
+          />
         </div>
 
         {/* Toggle: Resume integration */}
@@ -381,45 +387,47 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
         </div>
       </div>
 
-      {/* AI Privacy & Consent Modal */}
-      {showConsentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-gray-100 space-y-4 animate-in fade-in zoom-in-95">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">AI Interview Privacy Notice</h3>
-            <div className="text-xs text-gray-600 space-y-2 leading-relaxed">
-              <p>
-                To conduct your simulated interview, your target role, job description, and submitted answers
-                are processed securely by our AI service (Gemini).
-              </p>
-              <ul className="list-disc pl-4 space-y-1">
-                <li>No personal identification numbers or financial data are accepted.</li>
-                <li>Your answers are processed as text directly for evaluation; no audio or biometric data is captured.</li>
-                <li>The evaluations and scorecards are <strong>practice aids</strong>, not hiring decisions.</li>
-                <li>You can delete your session data at any time from your history.</li>
-              </ul>
-            </div>
-            <div className="pt-4 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowConsentModal(false)}
-                className="flex-1 py-3 border border-gray-300 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-50"
-              >
-                Not Now
-              </button>
-              <button
-                type="button"
-                onClick={handleAgreeConsent}
-                className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl text-sm hover:bg-indigo-700 shadow-md"
-              >
-                Agree & Start
-              </button>
-            </div>
+      {/* AI Privacy & Consent Modal: Mobile Bottom Sheet */}
+      <BottomSheet
+        isOpen={showConsentModal}
+        onClose={() => setShowConsentModal(false)}
+        title="AI Interview Privacy Notice"
+        maxHeightClass="max-h-[85vh]"
+      >
+        <div className="space-y-4 pt-1">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div className="text-xs text-gray-600 space-y-2.5 leading-relaxed">
+            <p>
+              To conduct your simulated interview, your target role, job description, and submitted answers
+              are processed securely by our AI service (Gemini).
+            </p>
+            <ul className="list-disc pl-4 space-y-1.5 text-gray-600">
+              <li>No personal identification numbers or financial data are accepted.</li>
+              <li>Your answers are processed as text directly for evaluation; no audio or biometric data is captured.</li>
+              <li>The evaluations and scorecards are <strong>practice aids</strong>, not hiring decisions.</li>
+              <li>You can delete your session data at any time from your history.</li>
+            </ul>
+          </div>
+          <div className="pt-2 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setShowConsentModal(false)}
+              className="flex-1 py-3.5 border border-gray-300 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-50 active:bg-gray-100 min-h-[48px] transition"
+            >
+              Not Now
+            </button>
+            <button
+              type="button"
+              onClick={handleAgreeConsent}
+              className="flex-1 py-3.5 bg-indigo-600 text-white font-bold rounded-xl text-sm hover:bg-indigo-700 active:bg-indigo-800 shadow-md min-h-[48px] transition"
+            >
+              Agree & Start
+            </button>
           </div>
         </div>
-      )}
+      </BottomSheet>
     </div>
   );
 }
