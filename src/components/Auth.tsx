@@ -19,6 +19,7 @@ import {
   Check,
   Sparkles,
   AlertCircle,
+  Compass,
 } from "lucide-react";
 import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
 import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
@@ -265,6 +266,16 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
 
     const nextIndex = Math.min(pastedData.length, 5);
     otpInputRefs.current[nextIndex]?.focus();
+  };
+
+  // --- Guest Entry Handler ---
+  const handleContinueAsGuest = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("resumentor_guest_mode", "true");
+      sessionStorage.setItem("resumentor_guest_mode", "true");
+    }
+    toast.success("Welcome, Guest! Entering app...");
+    router.replace(`${APP_ROUTES.DASHBOARD}?guest=true`);
   };
 
   // --- Login Handler ---
@@ -1374,6 +1385,21 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
                 </button>
               </form>
             )}
+
+            {/* Guest Entry Option */}
+            <div className="mt-5 pt-4 border-t border-slate-100 text-center">
+              <button
+                type="button"
+                onClick={handleContinueAsGuest}
+                className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:border-indigo-300 bg-slate-50 hover:bg-indigo-50/50 text-slate-700 hover:text-indigo-600 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2"
+              >
+                <Compass className="h-4 w-4 text-indigo-500" />
+                <span>Explore App as Guest &rarr;</span>
+              </button>
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                Browse roadmaps, scholarships, and jobs without an account
+              </p>
+            </div>
           </div>
         )}
       </div>

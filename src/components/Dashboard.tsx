@@ -121,7 +121,18 @@ export default function Dashboard() {
     const fetchUserProfile = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          // Guest User mode
+          setUserData({
+            id: "guest-user",
+            name: "Guest Explorer",
+            email: "guest@resumentor.app",
+            photoURL: "",
+            role: UserRole.STUDENT,
+          } as UserData);
+          setLoading(false);
+          return;
+        }
 
         const { data: profile } = await supabase
           .from("profiles")
@@ -146,7 +157,14 @@ export default function Dashboard() {
           setActivePage((prev) => (prev === "dashboard" ? "admin" : prev));
         }
       } catch (error) {
-        // user profile fetch error
+        // Fallback to guest user on any unexpected error
+        setUserData({
+          id: "guest-user",
+          name: "Guest Explorer",
+          email: "guest@resumentor.app",
+          photoURL: "",
+          role: UserRole.STUDENT,
+        } as UserData);
       } finally {
         setLoading(false);
       }
@@ -165,18 +183,19 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
       if (typeof window !== "undefined") {
-        // Clear un-scoped legacy test caches to prevent data leakage between users
+        localStorage.removeItem("resumentor_guest_mode");
+        sessionStorage.removeItem("resumentor_guest_mode");
         localStorage.removeItem("resumentor_resume_current");
         localStorage.removeItem("resumentor_resume_revisions");
         localStorage.removeItem("resumentor_scholarship_profile");
         localStorage.removeItem("resumentor_interview_history");
       }
+      await supabase.auth.signOut();
       toast.success("Successfully logged out!");
       window.location.href = "/auth";
     } catch (error) {
-      toast.error("Error logging out.");
+      window.location.href = "/auth";
     }
   };
 
@@ -333,9 +352,14 @@ export default function Dashboard() {
         <div className="p-3 border-t border-gray-100">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full px-3 py-2.5 text-xs sm:text-sm font-semibold text-red-500 rounded-xl hover:bg-red-50 hover:text-red-700 transition-all duration-150"
+            className={`flex items-center w-full px-3 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150 ${
+              userData?.id === "guest-user"
+                ? "text-indigo-600 hover:bg-indigo-50"
+                : "text-red-500 hover:bg-red-50 hover:text-red-700"
+            }`}
           >
-            <LogOut className="mr-2.5 h-4 w-4" /> Logout
+            <LogOut className="mr-2.5 h-4 w-4" />{" "}
+            {userData?.id === "guest-user" ? "Sign In / Register" : "Logout"}
           </button>
         </div>
       </aside>
@@ -380,12 +404,18 @@ export default function Dashboard() {
                   className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${
                     isAdmin
                       ? "bg-purple-100 text-purple-700 border border-purple-200"
+                      : userData?.id === "guest-user"
+                      ? "bg-amber-100 text-amber-800 border border-amber-200"
                       : userData?.role === UserRole.CANDIDATE
                       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
                       : "bg-indigo-50 text-indigo-700 border border-indigo-200"
                   }`}
                 >
-                  {isAdmin ? "Super Admin" : (userData?.role || "Student")}
+                  {isAdmin
+                    ? "Super Admin"
+                    : userData?.id === "guest-user"
+                    ? "Guest Mode"
+                    : userData?.role || "Student"}
                 </span>
               </div>
               <span className="block text-[11px] text-gray-400 font-medium truncate max-w-[150px]">

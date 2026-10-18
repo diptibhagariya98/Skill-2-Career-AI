@@ -14,22 +14,30 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) {
+    const checkAccess = (sessionUser: unknown) => {
+      const isGuest =
+        typeof window !== "undefined" &&
+        (localStorage.getItem("resumentor_guest_mode") === "true" ||
+          sessionStorage.getItem("resumentor_guest_mode") === "true" ||
+          window.location.search.includes("guest=true"));
+
+      if (!sessionUser && !isGuest) {
         router.replace(APP_ROUTES.AUTH);
       } else {
         setLoading(false);
       }
+    };
+
+    // 1. Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      checkAccess(session?.user);
     });
 
     // 2. Auth state subscription
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        router.replace(APP_ROUTES.AUTH);
-      } else {
-        setLoading(false);
-      }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      checkAccess(session?.user);
     });
 
     return () => {
