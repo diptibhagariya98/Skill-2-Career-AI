@@ -1,9 +1,9 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+// @ts-nocheck
 import { corsHeaders } from "../_shared/cors.ts";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

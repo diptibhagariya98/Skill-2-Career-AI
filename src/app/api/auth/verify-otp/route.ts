@@ -27,9 +27,19 @@ export async function POST(request: NextRequest) {
     // Look up Supabase Auth User ID if not provided as UUID
     if (!cleanUserId || cleanUserId.includes("@")) {
       try {
-        const { data: userList } = await supabase.auth.admin.listUsers();
-        const found = (userList?.users as any[])?.find((u: any) => u.email?.toLowerCase() === cleanEmail);
-        if (found) cleanUserId = found.id;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", cleanEmail)
+          .maybeSingle();
+
+        if (profile?.id) {
+          cleanUserId = profile.id;
+        } else {
+          const { data: userList } = await supabase.auth.admin.listUsers();
+          const found = (userList?.users as any[])?.find((u: any) => u.email?.toLowerCase() === cleanEmail);
+          if (found) cleanUserId = found.id;
+        }
       } catch {
         // fallback
       }
@@ -111,13 +121,26 @@ export async function POST(request: NextRequest) {
       .update({ consumed_at: nowIso })
       .eq("id", activeOtpDoc.id);
 
-    // 6. Confirm user email in Supabase Auth via Admin API
+    // 6. Confirm user email or update password in Supabase Auth via Admin API
     const targetUserId = activeOtpDoc.user_id?.includes("@") ? cleanUserId : activeOtpDoc.user_id;
     if (targetUserId && !targetUserId.includes("@")) {
+      const updatePayload: Record<string, any> = {
+        email_confirm: true,
+      };
+
+      if (validPurpose === "PASSWORD_RESET" && body.newPassword) {
+        updatePayload.password = String(body.newPassword);
+      }
+
       try {
-        await supabase.auth.admin.updateUserById(targetUserId, {
-          email_confirm: true,
-        });
+        const { error: authErr } = await supabase.auth.admin.updateUserById(targetUserId, updatePayload);
+        if (authErr) {
+          console.error("[Supabase Auth Admin Update Error]:", authErr.message);
+          return NextResponse.json(
+            { error: authErr.message || "Failed to update user security record." },
+            { status: 400 }
+          );
+        }
       } catch (authErr: any) {
         console.warn("[Supabase Auth Confirm Notice]:", authErr.message);
       }
@@ -154,7 +177,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Email successfully verified! Your account is now active.",
+      message: validPurpose === "PASSWORD_RESET"
+        ? "Password successfully reset! You can now log in with your new password."
+        : "Email successfully verified! Your account is now active.",
       status: "ACTIVE",
     });
   } catch (error: any) {
