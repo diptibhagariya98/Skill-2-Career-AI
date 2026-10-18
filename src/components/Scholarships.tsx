@@ -34,10 +34,21 @@ const LOCAL_STORAGE_PROFILE_KEY = "resumentor_scholarship_student_profile";
 
 interface ScholarshipsProps {
   user?: { id?: string; name?: string; email?: string; [key: string]: any } | null;
+  tab?: ActiveTab;
+  onTabChange?: (tab: ActiveTab) => void;
 }
 
-export default function Scholarships({ user }: ScholarshipsProps = {}) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("wizard");
+export default function Scholarships({
+  user,
+  tab: controlledTab,
+  onTabChange,
+}: ScholarshipsProps = {}) {
+  const [internalActiveTab, setInternalActiveTab] = useState<ActiveTab>("wizard");
+  const activeTab = controlledTab !== undefined ? controlledTab : internalActiveTab;
+  const setActiveTab = (newTab: ActiveTab) => {
+    if (onTabChange) onTabChange(newTab);
+    setInternalActiveTab(newTab);
+  };
   const [schemes, setSchemes] = useState<ScholarshipScheme[]>(SEED_SCHOLARSHIP_SCHEMES);
   const [scholars, setScholars] = useState<ScholarListing[]>(SEED_SCHOLARS);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);

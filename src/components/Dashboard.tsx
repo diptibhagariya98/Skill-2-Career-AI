@@ -37,25 +37,58 @@ import { useAndroidBackButton, hapticLight } from "@/shared/platform";
 
 export default function Dashboard() {
   const [activePage, setActivePage] = useState("dashboard");
+  const [learnSubPage, setLearnSubPage] = useState("hub");
+  const [interviewTab, setInterviewTab] = useState<"setup" | "session" | "scorecard" | "history">("setup");
+  const [scholarshipTab, setScholarshipTab] = useState<"wizard" | "results" | "directory" | "scholars" | "admin">("wizard");
   const [userData, setUserData] = useState<UserData | null>(null);
   const [greeting, setGreeting] = useState("Good Day");
   const [loading, setLoading] = useState(true);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const { isOnline, wasOffline } = useNetworkStatus();
 
-  // Android hardware/gesture back button handling
+  const navigateToSection = (pageId: string) => {
+    setActivePage(pageId);
+    if (pageId === "learn") setLearnSubPage("hub");
+    if (pageId === "interview") setInterviewTab("setup");
+    if (pageId === "scholarships") setScholarshipTab("wizard");
+  };
+
+  // Unified Mobile & Android hardware/gesture back button handling
+  const handleTopBarBack = () => {
+    hapticLight();
+    if (showMoreMenu) {
+      setShowMoreMenu(false);
+      return true;
+    }
+    // Sub-navigation within Learn & Practice
+    if (activePage === "learn" && learnSubPage !== "hub") {
+      if (learnSubPage === "resources-detail") {
+        setLearnSubPage("resources-category");
+      } else {
+        setLearnSubPage("hub");
+      }
+      return true;
+    }
+    // Sub-navigation within Interview simulator
+    if (activePage === "interview" && interviewTab !== "setup") {
+      setInterviewTab("setup");
+      return true;
+    }
+    // Sub-navigation within Scholarships
+    if (activePage === "scholarships" && scholarshipTab !== "wizard") {
+      setScholarshipTab("wizard");
+      return true;
+    }
+    // Return to dashboard from any top-level module
+    if (activePage !== "dashboard") {
+      setActivePage("dashboard");
+      return true;
+    }
+    return false;
+  };
+
   useAndroidBackButton({
-    onBack: () => {
-      if (showMoreMenu) {
-        setShowMoreMenu(false);
-        return true;
-      }
-      if (activePage !== "dashboard") {
-        setActivePage("dashboard");
-        return true;
-      }
-      return false;
-    },
+    onBack: handleTopBarBack,
   });
 
   // Fetch Supabase user profile
@@ -150,10 +183,22 @@ export default function Dashboard() {
       case "jobs":
         return "Job Finder";
       case "interview":
+        if (interviewTab === "session") return "Live Interview";
+        if (interviewTab === "scorecard") return "Interview Scorecard";
+        if (interviewTab === "history") return "Past Sessions";
         return "AI Mock Interview";
       case "scholarships":
-        return "Scholarships";
+        if (scholarshipTab === "results") return "Scholarship Matches";
+        if (scholarshipTab === "directory") return "All Scholarships";
+        if (scholarshipTab === "scholars") return "Verified Mentors";
+        if (scholarshipTab === "admin") return "Admin Console";
+        return "Scholarships & Grants";
       case "learn":
+        if (learnSubPage === "roadmaps") return "Career Roadmaps";
+        if (learnSubPage === "notes") return "Downloadable Notes";
+        if (learnSubPage === "quizzes") return "Practice Quizzes";
+        if (learnSubPage === "resources-category") return "Learning Resources";
+        if (learnSubPage === "resources-detail") return "Course Modules";
         return "Practice Hub";
       default:
         return "Dashboard";
@@ -220,7 +265,7 @@ export default function Dashboard() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActivePage(item.id)}
+                onClick={() => navigateToSection(item.id)}
                 className={`w-full flex items-center px-3 py-2.5 text-xs sm:text-sm rounded-xl transition-all duration-150 font-medium ${
                   isActive
                     ? "bg-indigo-600 text-white font-bold shadow-xs shadow-indigo-200"
@@ -251,8 +296,8 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 min-w-0">
             {activePage !== "dashboard" ? (
               <button
-                onClick={() => setActivePage("dashboard")}
-                aria-label="Back to dashboard"
+                onClick={handleTopBarBack}
+                aria-label="Back"
                 className="md:hidden p-1.5 -ml-1 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition active:scale-95 flex items-center min-w-[36px] min-h-[36px]"
               >
                 <ChevronLeft className="h-5 w-5" />
@@ -260,7 +305,7 @@ export default function Dashboard() {
             ) : (
               <div
                 className="md:hidden flex items-center cursor-pointer mr-1"
-                onClick={() => setActivePage("dashboard")}
+                onClick={() => navigateToSection("dashboard")}
               >
                 <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs">
                   <GraduationCap className="h-4 w-4" />
@@ -348,7 +393,7 @@ export default function Dashboard() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4">
                     <div
-                      onClick={() => setActivePage("resume")}
+                      onClick={() => navigateToSection("resume")}
                       className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-150 shadow-xs hover:shadow-md cursor-pointer hover:border-indigo-400 transition-all active:scale-[0.98] min-h-[96px] flex flex-col justify-between"
                     >
                       <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 mb-1.5">
@@ -361,7 +406,7 @@ export default function Dashboard() {
                     </div>
 
                     <div
-                      onClick={() => setActivePage("interview")}
+                      onClick={() => navigateToSection("interview")}
                       className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-150 shadow-xs hover:shadow-md cursor-pointer hover:border-indigo-400 transition-all active:scale-[0.98] min-h-[96px] flex flex-col justify-between"
                     >
                       <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 mb-1.5">
@@ -374,7 +419,7 @@ export default function Dashboard() {
                     </div>
 
                     <div
-                      onClick={() => setActivePage("learn")}
+                      onClick={() => navigateToSection("learn")}
                       className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-150 shadow-xs hover:shadow-md cursor-pointer hover:border-indigo-400 transition-all active:scale-[0.98] min-h-[96px] flex flex-col justify-between"
                     >
                       <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 mb-1.5">
@@ -387,7 +432,7 @@ export default function Dashboard() {
                     </div>
 
                     <div
-                      onClick={() => setActivePage("scholarships")}
+                      onClick={() => navigateToSection("scholarships")}
                       className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-150 shadow-xs hover:shadow-md cursor-pointer hover:border-indigo-400 transition-all active:scale-[0.98] min-h-[96px] flex flex-col justify-between"
                     >
                       <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 mb-1.5">
@@ -400,7 +445,7 @@ export default function Dashboard() {
                     </div>
 
                     <div
-                      onClick={() => setActivePage("jobs")}
+                      onClick={() => navigateToSection("jobs")}
                       className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-150 shadow-xs hover:shadow-md cursor-pointer hover:border-indigo-400 transition-all active:scale-[0.98] min-h-[96px] flex flex-col justify-between"
                     >
                       <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600 mb-1.5">
@@ -413,7 +458,7 @@ export default function Dashboard() {
                     </div>
 
                     <div
-                      onClick={() => setActivePage("profile")}
+                      onClick={() => navigateToSection("profile")}
                       className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-150 shadow-xs hover:shadow-md cursor-pointer hover:border-indigo-400 transition-all active:scale-[0.98] min-h-[96px] flex flex-col justify-between"
                     >
                       <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 mb-1.5">
@@ -435,12 +480,25 @@ export default function Dashboard() {
             {activePage === "interview" && (
               <AIInterview
                 user={userData}
-                onGoToDashboard={() => setActivePage("dashboard")}
-                onNavigateToTab={(tabId) => setActivePage(tabId)}
+                onGoToDashboard={() => navigateToSection("dashboard")}
+                onNavigateToTab={(tabId) => navigateToSection(tabId)}
+                tab={interviewTab}
+                onTabChange={setInterviewTab}
               />
             )}
-            {activePage === "scholarships" && <Scholarships user={userData} />}
-            {activePage === "learn" && <LearnPractice />}
+            {activePage === "scholarships" && (
+              <Scholarships
+                user={userData}
+                tab={scholarshipTab}
+                onTabChange={setScholarshipTab}
+              />
+            )}
+            {activePage === "learn" && (
+              <LearnPractice
+                subPage={learnSubPage}
+                onChangeSubPage={setLearnSubPage}
+              />
+            )}
           </div>
         </div>
       </main>
@@ -471,7 +529,7 @@ export default function Dashboard() {
                   <button
                     key={item.id}
                     onClick={() => {
-                      setActivePage(item.id);
+                      navigateToSection(item.id);
                       setShowMoreMenu(false);
                     }}
                     className={`w-full flex items-center justify-between py-3 px-2 rounded-xl text-left transition ${
@@ -527,7 +585,7 @@ export default function Dashboard() {
                 if (isMore) {
                   setShowMoreMenu(!showMoreMenu);
                 } else {
-                  setActivePage(item.id);
+                  navigateToSection(item.id);
                   setShowMoreMenu(false);
                 }
               }}

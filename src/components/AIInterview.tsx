@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  ArrowLeft,
   Sparkles,
   History,
   Award,
@@ -32,10 +31,23 @@ interface AIInterviewProps {
   user?: { id?: string; name?: string; email?: string; [key: string]: any } | null;
   onGoToDashboard?: () => void;
   onNavigateToTab?: (tabId: string) => void;
+  tab?: "setup" | "session" | "scorecard" | "history";
+  onTabChange?: (tab: "setup" | "session" | "scorecard" | "history") => void;
 }
 
-export default function AIInterview({ user, onGoToDashboard, onNavigateToTab }: AIInterviewProps) {
-  const [activeTab, setActiveTab] = useState<"setup" | "session" | "scorecard" | "history">("setup");
+export default function AIInterview({
+  user,
+  onGoToDashboard,
+  onNavigateToTab,
+  tab: controlledTab,
+  onTabChange,
+}: AIInterviewProps) {
+  const [internalActiveTab, setInternalActiveTab] = useState<"setup" | "session" | "scorecard" | "history">("setup");
+  const activeTab = controlledTab !== undefined ? controlledTab : internalActiveTab;
+  const setActiveTab = (newTab: "setup" | "session" | "scorecard" | "history") => {
+    if (onTabChange) onTabChange(newTab);
+    setInternalActiveTab(newTab);
+  };
   const [currentConfig, setCurrentConfig] = useState<InterviewSetupConfig | null>(null);
   const [currentQuestions, setCurrentQuestions] = useState<BankQuestion[]>([]);
   const [currentScorecard, setCurrentScorecard] = useState<InterviewScorecardData | null>(null);
@@ -187,90 +199,63 @@ export default function AIInterview({ user, onGoToDashboard, onNavigateToTab }: 
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-16">
-      {/* Top Navigation Bar */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {onGoToDashboard && (
-              <button
-                type="button"
-                onClick={onGoToDashboard}
-                className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
-                title="Back to Dashboard"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                <Sparkles className="w-5 h-5 text-amber-300" />
-              </div>
-              <div>
-                <h1 className="text-sm sm:text-base font-extrabold text-gray-900 leading-tight">
-                  AI Mock Interview
-                </h1>
-                <span className="text-2xs text-gray-400 font-medium">Phase 4 Simulator</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tab Navigation Controls */}
-          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+    <div className="space-y-6 animate-fade-in">
+      {/* Sub-Navigation Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-200">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full">
+          <button
+            type="button"
+            onClick={() => setActiveTab("setup")}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "setup"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" /> Setup & Role
+          </button>
+          {currentQuestions.length > 0 && (
             <button
               type="button"
-              onClick={() => setActiveTab("setup")}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                activeTab === "setup"
-                  ? "bg-white text-indigo-600 shadow-2xs"
-                  : "text-gray-600 hover:text-gray-900"
+              onClick={() => setActiveTab("session")}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "session"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                  : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
               }`}
             >
-              Setup
+              <Play className="w-4 h-4" /> Live Session
             </button>
-            {currentQuestions.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setActiveTab("session")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  activeTab === "session"
-                    ? "bg-white text-indigo-600 shadow-2xs"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Live
-              </button>
-            )}
-            {currentScorecard && (
-              <button
-                type="button"
-                onClick={() => setActiveTab("scorecard")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  activeTab === "scorecard"
-                    ? "bg-white text-indigo-600 shadow-2xs"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Scorecard
-              </button>
-            )}
+          )}
+          {currentScorecard && (
             <button
               type="button"
-              onClick={() => setActiveTab("history")}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                activeTab === "history"
-                  ? "bg-white text-indigo-600 shadow-2xs"
-                  : "text-gray-600 hover:text-gray-900"
+              onClick={() => setActiveTab("scorecard")}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "scorecard"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                  : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
               }`}
             >
-              History ({sessions.length})
+              <Award className="w-4 h-4" /> Scorecard
             </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setActiveTab("history")}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "history"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
+            }`}
+          >
+            <History className="w-4 h-4" /> Past Sessions ({sessions.length})
+          </button>
         </div>
       </div>
 
       {/* Main Content Body */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+      <div>
         {isInitializing && (
           <div className="bg-white rounded-3xl p-12 text-center max-w-md mx-auto border border-gray-200 shadow-sm animate-pulse space-y-3">
             <Sparkles className="w-8 h-8 text-indigo-600 mx-auto animate-spin" />
