@@ -130,7 +130,8 @@ This document captures the comprehensive engineering and design overhaul conduct
 ## 5. Android APK Build Result (COMPLETED & VERIFIED)
 
 The release build pipeline executed successfully (`exit code 0` in 7s):
-```
+
+```text
 ======================================================
   ✓ SUCCESS: Android APK Generated Successfully!
 ======================================================
@@ -140,146 +141,8 @@ The release build pipeline executed successfully (`exit code 0` in 7s):
 ```
 
 To install on your connected device:
+
 ```bash
 adb install -r android/app/build/outputs/apk/release/app-release.apk
 ```
-
----
-
-## 6. Comprehensive Log of Issues Faced & Resolutions
-
-Every technical challenge encountered across UI responsiveness, mobile layout collision, Android Gradle configuration, and SDK dependencies has been documented below with root cause and verified resolution.
-
----
-
-### Issue 1: Gradle Build Hanging for 24+ Minutes on Network Auto-Downloads
-- **Symptom**:
-  ```
-  Preparing "Install Android SDK Platform 36 (revision 2)".
-  <=============> 100% CONFIGURING [24m 44s]
-  > IDLE
-  ```
-- **Root Cause**: Gradle's `android.builder.sdkDownload` defaults to `true`. When network requests to Google repositories (`dl.google.com`) timed out or failed, the daemon hung indefinitely trying to download new revisions instead of using locally installed SDK components.
-- **Resolution**:
-  1. Configured `android.builder.sdkDownload=false` in `android/gradle.properties` to disable automatic network downloads.
-  2. Mapped `buildToolsVersion = '35.0.0'` in `android/variables.gradle` and `android/app/build.gradle` to force Gradle to bind directly to the installed build-tools.
-  3. Ran `gradlew.bat --stop` to terminate hung daemon processes.
-
----
-
-### Issue 2: Missing Android SDK Platform 35 (`Failed to find target with hash string 'android-35'`)
-- **Symptom**:
-  ```
-  FAILURE: Build failed with an exception.
-  * What went wrong:
-  Could not determine the dependencies of task ':capacitor-android:compileReleaseJavaWithJavac'.
-  > Failed to find target with hash string 'android-35' in: C:\Users\manis\AppData\Local\Android\Sdk
-  ```
-- **Root Cause**: The project was configured for `compileSdkVersion = 35`, but only `android-37.0` existed in the workstation's `platforms` directory.
-- **Resolution**:
-  Used the Android SDK CLI tool to install the exact platform:
-  ```powershell
-  echo y | & "C:\Users\manis\AppData\Local\Android\Sdk\cmdline-tools\latest\bin\android.exe" sdk install platforms/android-35
-  ```
-  Verified `android-35` installed under `C:\Users\manis\AppData\Local\Android\Sdk\platforms\android-35`.
-
----
-
-### Issue 3: CLI Semicolon Syntax Failure in PowerShell
-- **Symptom**:
-  ```
-  Package platforms not found.
-  Package android-35 not found.
-  ```
-- **Root Cause**: In PowerShell, semicolons `;` act as statement separators. Passing `platforms;android-35` split the argument into two separate commands (`sdkmanager platforms` followed by `android-35`).
-- **Resolution**:
-  Switched to the modern Android CLI executable (`cmdline-tools/latest/bin/android.exe`) with the forward-slash package convention: `android.exe sdk install platforms/android-35`.
-
----
-
-### Issue 4: AndroidX & Kotlin Standard Library Duplicate Class Incompatibilities
-- **Symptom**: Dependency resolution errors and duplicate class conflicts across Capacitor Android plugins when targeting SDK 35.
-- **Root Cause**: Disparate versions of AndroidX libraries (`core`, `activity`, `appcompat`) pulled incompatible transitive Kotlin standard library artifacts.
-- **Resolution**:
-  1. Aligned stable AndroidX dependencies in `android/variables.gradle`:
-     - `androidxActivityVersion = '1.9.3'`
-     - `androidxAppCompatVersion = '1.7.0'`
-     - `androidxCoordinatorLayoutVersion = '1.2.0'`
-     - `androidxCoreVersion = '1.15.0'`
-     - `androidxFragmentVersion = '1.8.5'`
-     - `coreSplashScreenVersion = '1.0.1'`
-     - `androidxWebkitVersion = '1.12.1'`
-     - `cordovaAndroidVersion = '10.1.1'`
-  2. Enforced resolution strategies in `android/app/build.gradle`:
-     ```groovy
-     configurations.all {
-         resolutionStrategy {
-             force "androidx.core:core:1.15.0"
-             force "androidx.core:core-ktx:1.15.0"
-             force "androidx.activity:activity:1.9.3"
-             force "androidx.activity:activity-ktx:1.9.3"
-             force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
-             force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
-             force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
-         }
-     }
-     ```
-
----
-
-### Issue 5: Gradle Release Lint Vital Aborting Builds
-- **Symptom**: `assembleRelease` failing on non-critical lint checks (`lintVitalRelease`).
-- **Root Cause**: Gradle's release build pipeline aborts on standard web-view warnings (e.g. `<img>` tags in static export) unless explicitly configured.
-- **Resolution**:
-  Added lint overrides in `android/app/build.gradle`:
-  ```groovy
-  lintOptions {
-      checkReleaseBuilds false
-      abortOnError false
-  }
-  ```
-
----
-
-### Issue 6: Notches, Cutouts & Gesture Bars Overlapping Content
-- **Symptom**: Top headers, title bars, and offline pills were clipped under camera punch-holes/status bars; bottom tabs collided with the Android gesture navigation indicator.
-- **Root Cause**: Absence of viewport fit cover and safe-area inset environment variables.
-- **Resolution**:
-  1. Exported `viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" }` in `src/app/layout.tsx`.
-  2. Defined `.pt-safe`, `.pb-safe`, `.pl-safe`, `.pr-safe` in `src/app/globals.css` using `env(safe-area-inset-*)`.
-  3. Applied `pt-safe` on sticky headers and `pb-[calc(0.25rem+env(safe-area-inset-bottom))]` on bottom bars.
-
----
-
-### Issue 7: Mobile 300ms Double-Tap Delay & Auto-Zoom Input Jumps
-- **Symptom**: UI felt sluggish on Android WebView; focusing on search fields or textareas caused the browser to suddenly zoom in, displacing the layout horizontally.
-- **Root Cause**: Mobile WebViews zoom in on inputs smaller than 16px font size (`UX-30`) and wait 300ms to detect potential double-taps.
-- **Resolution**:
-  1. Applied `touch-action: manipulation` across all buttons, inputs, links, and textareas in `src/app/globals.css`.
-  2. Enforced `text-base` (16px) on all form text inputs and textareas across `JobFinder.tsx`, `InterviewThread.tsx`, and `ResumeBuilder.tsx`.
-
----
-
-### Issue 8: Conflicting Double Bottom Navigation Bars on Mobile
-- **Symptom**: On mobile viewports, `ResumeBuilder` rendered its own `MobileBottomNav` fixed at `bottom-0`, completely covering the `Dashboard`'s main navigation bar.
-- **Root Cause**: Independent fixed bottom position without awareness of the parent app shell navigation.
-- **Resolution**:
-  1. Re-anchored `MobileBottomNav` as a floating action pill elevated above the main bottom bar: `bottom-[calc(4rem+env(safe-area-inset-bottom))]`.
-  2. Added a segmented `[ Edit | Preview ]` switch in the Resume Builder's sticky header toolbar, allowing users to toggle without needing the bottom bar.
-
----
-
-### Issue 9: Inaccessible Features on Mobile Screens (Scholarships, Job Finder, Profile)
-- **Symptom**: The mobile bottom navigation only featured 5 hardcoded destinations, leaving Job Finder and Scholarships inaccessible unless navigating back to the Home screen.
-- **Root Cause**: Mobile navigation had no secondary menu or drawer system.
-- **Resolution**:
-  Implemented an interactive slide-up **"More" Sheet Modal** (`UX-62`), giving immediate 1-tap/2-tap access to all 7 tools from any screen.
-
----
-
-### Issue 10: Temporary Build Stubs Polluting Working Tree on Interrupted Builds
-- **Symptom**: When static export builds were cancelled or aborted, stub files (`// Auto-generated build-time stub for Next.js static mobile export`) were left staged in `src/app/api/...`.
-- **Root Cause**: Node child process exit handlers did not always run during sudden process termination.
-- **Resolution**:
-  Restored real server API routes from HEAD and configured clean cleanup handlers in `scripts/build-mobile.mjs`. Added dynamic remote URL routing (`NEXT_PUBLIC_API_URL`) in `src/constants/endpoints.ts` so mobile APK builds communicate with the deployed API server seamlessly.
 
