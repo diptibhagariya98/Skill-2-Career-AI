@@ -404,6 +404,9 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
     try {
       // 1. Verify code with our backend OTP verification API
       let verifiedSuccessfully = false;
+      let sessionTokenHash: string | undefined = undefined;
+      let verificationType: string | undefined = undefined;
+
       try {
         const response = await fetch(API_ROUTES.AUTH_VERIFY_OTP, {
           method: "POST",
@@ -419,6 +422,8 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
         const result = await response.json();
         if (response.ok && result.success) {
           verifiedSuccessfully = true;
+          sessionTokenHash = result.sessionTokenHash;
+          verificationType = result.verificationType || "magiclink";
         } else {
           throw new Error(result.error || "Verification failed");
         }
@@ -442,31 +447,46 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
           localStorage.removeItem("resumentor_resume_revisions");
         }
 
-        // 2. Establish active session with password
-        if (pendingPassword) {
-          const { error: signInErr } = await supabase.auth.signInWithPassword({
-            email: pendingEmail,
-            password: pendingPassword,
-          });
+        // 2. Establish active session with full JWT access and refresh tokens
+        let sessionEstablished = false;
 
-          if (signInErr) {
-            console.warn("[Sign in after OTP warning]:", signInErr.message);
-            toast.success("Account confirmed! Please sign in with your password.");
-            setMode(AuthMode.LOGIN);
-            setEmail(pendingEmail);
-            setPassword("");
-            return;
+        // A) Use sessionTokenHash for instant token-based login
+        if (sessionTokenHash) {
+          try {
+            const { data: sessionData, error: sessionErr } = await supabase.auth.verifyOtp({
+              token_hash: sessionTokenHash,
+              type: (verificationType as "magiclink" | "signup") || "magiclink",
+            });
+            if (!sessionErr && sessionData?.session) {
+              sessionEstablished = true;
+            }
+          } catch (tokErr) {
+            console.warn("[Token session warning]:", tokErr);
           }
-
-          toast.success("Email verified successfully! Welcome to ResuMentor.");
-          router.replace(APP_ROUTES.DASHBOARD);
-        } else {
-          // If pendingPassword was not retained (e.g. page refresh), cleanly navigate to login with email prefilled
-          toast.success("Account confirmed! Please sign in with your password.");
-          setMode(AuthMode.LOGIN);
-          setEmail(pendingEmail);
-          setPassword("");
         }
+
+        // B) Backup: sign in directly with the password entered during registration
+        if (!sessionEstablished && pendingPassword) {
+          try {
+            const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+              email: pendingEmail,
+              password: pendingPassword,
+            });
+            if (!signInErr && signInData?.session) {
+              sessionEstablished = true;
+            }
+          } catch (pwdErr) {
+            console.warn("[Password sign in warning]:", pwdErr);
+          }
+        }
+
+        // Clear sensitive temporary state
+        setPendingPassword("");
+        setPassword("");
+
+        // 3. Directly transfer user to the main Dashboard screen without displaying the login screen
+        toast.success("Welcome to ResuMentor! Loading your dashboard...");
+        router.replace(APP_ROUTES.DASHBOARD);
       }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to verify 6-digit code."));

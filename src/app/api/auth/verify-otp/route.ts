@@ -413,8 +413,6 @@ export async function POST(request: NextRequest) {
           user_id: targetUserId,
           email: cleanEmail,
           event: AuthEvent.OTP_VERIFIED,
-          ip: clientIp,
-          user_agent: userAgent,
           metadata: { purpose: AuthPurpose.EMAIL_VERIFY },
         });
       } catch (auditErr: unknown) {
@@ -422,10 +420,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 9. Generate instant authentication session token for direct login
+    let sessionTokenHash: string | undefined = undefined;
+    let verificationType = "magiclink";
+    try {
+      const { data: linkData } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: cleanEmail || activeOtpDoc.email,
+      });
+      sessionTokenHash = linkData?.properties?.hashed_token;
+      if (linkData?.properties?.verification_type) {
+        verificationType = linkData.properties.verification_type;
+      }
+    } catch (linkErr: unknown) {
+      console.warn("[Session Link Generation Notice]:", getErrorMessage(linkErr));
+    }
+
     return NextResponse.json({
       success: true,
       message: "Email successfully verified! Your account is now active.",
       status: AccountStatus.ACTIVE,
+      sessionTokenHash,
+      verificationType,
     });
   } catch (error: unknown) {
     console.error("[Verify OTP Error]:", error);
