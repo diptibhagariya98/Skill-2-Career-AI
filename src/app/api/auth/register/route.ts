@@ -107,8 +107,20 @@ export async function POST(request: NextRequest) {
               { status: 409 }
             );
           }
-          // User exists but is unconfirmed: Resend verification code WITHOUT altering their password
+          // The user exists but is unconfirmed:
+          // Update their password and metadata to what they just entered in the registration form
+          // so that upon OTP confirmation, the password they just entered ACTUALLY works!
           userId = existingProfile.id;
+          const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
+            password,
+            user_metadata: {
+              name: sanitizedName,
+              full_name: sanitizedName,
+            },
+          });
+          if (updateErr) {
+            console.warn("[Unconfirmed User Password Sync Notice]:", updateErr.message);
+          }
         } else {
           return NextResponse.json(
             { error: AUTH_MESSAGES.ACCOUNT_ALREADY_EXISTS },

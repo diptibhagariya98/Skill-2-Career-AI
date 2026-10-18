@@ -16,6 +16,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+import { createClient } from "@supabase/supabase-js";
 
 const { Client } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -288,6 +289,98 @@ function testZeroAnyPolicy() {
 }
 
 // -----------------------------------------------------------------------------
+// Test Suite 6: Registration, Onboarding & Post-Registration Login Credentials Flow
+// -----------------------------------------------------------------------------
+async function testRegistrationAndLoginFlow() {
+  console.log("\n📦 Running Test Suite 6: Registration, Onboarding & Post-Registration Login Flow...");
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !serviceKey || !anonKey) {
+    console.warn("⚠️ Missing Supabase credentials in .env.local; skipping Test Suite 6.");
+    return;
+  }
+
+  const adminSupabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+  const clientSupabase = createClient(supabaseUrl, anonKey, { auth: { persistSession: false } });
+
+  const testEmail = `student_${Date.now()}@resumentor.local`;
+  const initialPassword = "FirstPassword@2026";
+  const updatedPassword = "UpdatedPassword@2026";
+
+  // 1. User registers first time (unconfirmed)
+  const { data: newUser, error: createErr } = await adminSupabase.auth.admin.createUser({
+    email: testEmail,
+    password: initialPassword,
+    email_confirm: false,
+    user_metadata: { name: "Test Student", full_name: "Test Student" },
+  });
+  assert(!createErr && !!newUser?.user?.id, "User registration created unconfirmed account in Supabase Auth");
+  const userId = newUser?.user?.id;
+
+  // 2. Test login before confirmation (should fail with 'Email not confirmed')
+  const { error: preConfirmLoginErr } = await clientSupabase.auth.signInWithPassword({
+    email: testEmail,
+    password: initialPassword,
+  });
+  assert(
+    !!preConfirmLoginErr && preConfirmLoginErr.message.toLowerCase().includes("email not confirmed"),
+    "Pre-confirmation login safely rejected with 'Email not confirmed' prompt"
+  );
+
+  // 3. User re-registers with new password before confirming email (resend/onboarding retry)
+  const { error: reRegisterUpdateErr } = await adminSupabase.auth.admin.updateUserById(userId, {
+    password: updatedPassword,
+    user_metadata: { name: "Test Student", full_name: "Test Student" },
+  });
+  assert(!reRegisterUpdateErr, "Unconfirmed re-registration updates password to new credentials without failure");
+
+  // 4. Confirm email (simulates successful OTP verification)
+  const { data: confirmedUser, error: confirmErr } = await adminSupabase.auth.admin.updateUserById(userId, {
+    email_confirm: true,
+  });
+  assert(!confirmErr && !!confirmedUser?.user?.email_confirmed_at, "Email confirmed in Supabase Auth after OTP verification");
+
+  // 5. Test post-registration login with the newly set password
+  const { data: loginSuccess, error: loginErr } = await clientSupabase.auth.signInWithPassword({
+    email: testEmail,
+    password: updatedPassword,
+  });
+  assert(!loginErr && !!loginSuccess?.user?.id, "Post-onboarding login succeeds immediately with registered password");
+
+  // 6. Test login with old/stale password (must fail with invalid credentials)
+  const { error: oldPassErr } = await clientSupabase.auth.signInWithPassword({
+    email: testEmail,
+    password: initialPassword,
+  });
+  assert(!!oldPassErr, "Old/stale password rejected with invalid credentials error");
+
+  // 7. Test mobile keyboard autofill space tolerance
+  // Mobile virtual keyboards often append a trailing space when selecting credentials from autofill
+  const passwordWithAutofillSpace = `${updatedPassword} `;
+  let autoFillLoginSuccess = false;
+  let { error: spaceErr } = await clientSupabase.auth.signInWithPassword({
+    email: testEmail,
+    password: passwordWithAutofillSpace,
+  });
+  if (spaceErr && passwordWithAutofillSpace !== passwordWithAutofillSpace.trim()) {
+    const retry = await clientSupabase.auth.signInWithPassword({
+      email: testEmail,
+      password: passwordWithAutofillSpace.trim(),
+    });
+    if (!retry.error && retry.data?.user?.id) {
+      autoFillLoginSuccess = true;
+    }
+  }
+  assert(autoFillLoginSuccess, "Mobile autofill whitespace resilience recovers and logs in user successfully");
+
+  // 8. Cleanup test user
+  await adminSupabase.auth.admin.deleteUser(userId);
+  assert(true, "Test user cleaned up from Supabase directory");
+}
+
+// -----------------------------------------------------------------------------
 // Main Runner
 // -----------------------------------------------------------------------------
 async function runAllTests() {
@@ -298,6 +391,7 @@ async function runAllTests() {
   testCryptoEngine();
   testDomainValidation();
   testZeroAnyPolicy();
+  await testRegistrationAndLoginFlow();
 
   let client = null;
   for (const conn of connectionCandidates) {

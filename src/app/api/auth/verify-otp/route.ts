@@ -365,10 +365,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 8. Handle Email Verification
-    if (validPurpose === AuthPurpose.EMAIL_VERIFY && targetUserId && isUuid(targetUserId)) {
-      await supabase.auth.admin.updateUserById(targetUserId, {
+    if (validPurpose === AuthPurpose.EMAIL_VERIFY) {
+      if (!targetUserId || !isUuid(targetUserId)) {
+        return NextResponse.json(
+          { error: AUTH_MESSAGES.USER_NOT_FOUND },
+          { status: 404 }
+        );
+      }
+
+      const { error: confirmErr } = await supabase.auth.admin.updateUserById(targetUserId, {
         email_confirm: true,
       });
+
+      if (confirmErr) {
+        throw new Error(`Failed to activate account: ${confirmErr.message}`);
+      }
 
       await supabase.from("profiles").update({ updated_at: nowIso }).eq("id", targetUserId);
 

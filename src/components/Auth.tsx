@@ -279,10 +279,22 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
     setLoading(true);
     try {
       const cleanEmail = sanitizeEmail(email);
-      const { data, error } = await supabase.auth.signInWithPassword({
+      let { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
       });
+
+      // Mobile keyboard autofill space tolerance: retry with trimmed password if failed
+      if (error && password !== password.trim()) {
+        const retryResult = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: password.trim(),
+        });
+        if (!retryResult.error) {
+          data = retryResult.data;
+          error = null;
+        }
+      }
 
       if (error) {
         // If email confirmation is required, automatically dispatch a 6-digit OTP and switch to OTP mode
@@ -429,15 +441,32 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
           localStorage.removeItem("resumentor_resume_current");
           localStorage.removeItem("resumentor_resume_revisions");
         }
+
         // 2. Establish active session with password
         if (pendingPassword) {
-          await supabase.auth.signInWithPassword({
+          const { error: signInErr } = await supabase.auth.signInWithPassword({
             email: pendingEmail,
             password: pendingPassword,
           });
+
+          if (signInErr) {
+            console.warn("[Sign in after OTP warning]:", signInErr.message);
+            toast.success("Account confirmed! Please sign in with your password.");
+            setMode(AuthMode.LOGIN);
+            setEmail(pendingEmail);
+            setPassword("");
+            return;
+          }
+
+          toast.success("Email verified successfully! Welcome to ResuMentor.");
+          router.replace(APP_ROUTES.DASHBOARD);
+        } else {
+          // If pendingPassword was not retained (e.g. page refresh), cleanly navigate to login with email prefilled
+          toast.success("Account confirmed! Please sign in with your password.");
+          setMode(AuthMode.LOGIN);
+          setEmail(pendingEmail);
+          setPassword("");
         }
-        toast.success("Email verified successfully! Welcome to ResuMentor.");
-        router.replace(APP_ROUTES.DASHBOARD);
       }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to verify 6-digit code."));
