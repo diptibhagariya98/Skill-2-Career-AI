@@ -14,10 +14,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         router.replace(APP_ROUTES.AUTH);
       } else {
+        try {
+          const { getDoc, doc } = await import("firebase/firestore");
+          const { db } = await import("../../lib/firebase");
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          if (userDoc.exists() && userDoc.data().status === "PENDING_VERIFICATION") {
+            router.replace(APP_ROUTES.AUTH);
+            return;
+          }
+        } catch {
+          // Allow fallback
+        }
         setLoading(false);
       }
     });

@@ -1,0 +1,65 @@
+import nodemailer from "nodemailer";
+import { BRAND } from "@/constants/brand.theme";
+
+// Check if SMTP configuration is present in environment
+const hasSmtpConfig = Boolean(
+  process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+);
+
+export const transporter = hasSmtpConfig
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+    })
+  : null;
+
+export interface SendEmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/**
+ * Send branded transactional email.
+ * Falls back to console output if SMTP credentials are not yet configured in .env.local.
+ */
+export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
+  const from = `"${BRAND.name}" <${process.env.MAIL_FROM || process.env.SMTP_USER || "no-reply@resumentor.app"}>`;
+
+  if (!transporter) {
+    console.info(`[MailDev] [SMTP Not Configured] Email to: ${to} | Subject: "${subject}"`);
+    console.info(`[MailDev] Text Preview:\n${text.substring(0, 300)}...`);
+    return {
+      success: true,
+      simulated: true,
+      messageId: `dev-simulated-${Date.now()}`,
+    };
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+      text,
+    });
+    return {
+      success: true,
+      simulated: false,
+      messageId: info.messageId,
+    };
+  } catch (error: any) {
+    console.error(`[Nodemailer Error] Failed to send email to ${to}:`, error.message);
+    throw error;
+  }
+}

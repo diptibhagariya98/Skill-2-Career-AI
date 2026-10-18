@@ -276,3 +276,32 @@ This document serves as an immutable, timestamped record of every technical, bui
   6. Added `.pt-safe` and compact mobile hero padding (`py-10 sm:py-24`) to `src/components/LandingPage.tsx`, and added `pt-safe pb-safe min-h-dvh` to `src/components/Auth.tsx`.
 - **Verification:**
   Tested across Android native layout definitions and Next.js static export; the native status bar remains cleanly segregated above the web view, with dark legible status indicators and zero visual clipping on application headers.
+
+---
+
+### [ISSUE-012] Android Hardware Back-Button App Exit, Duplicate Offline Banners & Mobile Header Notch Overlap
+
+- **Date:** October 18, 2026
+- **Timestamp:** 08:31:00 IST
+- **Component / Subsystem:** Native Capacitor Shell & Navigation (`src/shared/platform/`, `src/components/Dashboard.tsx`, `src/components/Auth.tsx`, `src/components/LearnPractice.tsx`, `src/app/layout.tsx`)
+- **Severity:** High (Navigation termination, header notch compression, and visual badge collision on mobile)
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  1. On Android physical devices, pressing the hardware or gesture back button when inside sub-tools (Resume Builder, Mock Interview, Scholarships, Job Finder) immediately exited the application instead of navigating back to the Home Dashboard.
+  2. Disconnecting network displayed duplicate offline badges overlapping each other at `top-2` on mobile screens.
+  3. Header on notched mobile displays was squished against the notch / camera hole due to fixed `h-14` constraint combined with `pt-safe`.
+  4. Segmented 6-digit OTP boxes on `Auth.tsx` risked horizontal overflow on 320px narrow mobile screens.
+- **Root Cause:**
+  1. Capacitor WebView does not automatically intercept Android hardware back button events without `@capacitor/app` `App.addListener('backButton')`.
+  2. `Dashboard.tsx` had a local offline indicator while `layout.tsx` mounted the global `OfflineBanner` simultaneously.
+  3. `Dashboard.tsx` header used hardcoded `h-14` (56px fixed height) which left insufficient space when `pt-safe` inset was applied on notched devices.
+  4. OTP inputs were fixed at `w-12` (48px) each with `gap-2`, totalling 328px on a card.
+- **Resolution:**
+  1. Installed `@capacitor/app`, `@capacitor/network`, `@capacitor/haptics`, and `@capacitor/share`, creating a unified `src/shared/platform/` layer.
+  2. Implemented `useAndroidBackButton()` in `Dashboard.tsx` that navigates back to the Dashboard home tab or dismisses modals before exiting.
+  3. Consolidated offline status reporting into a single global floating `OfflineBanner.tsx` mounted in `RootLayout`.
+  4. Replaced fixed `h-14` with responsive `min-h-[56px] pt-[max(env(safe-area-inset-top,0px),0.5rem)] pb-2` and added `pb-28 overflow-x-hidden` on the scrollable container.
+  5. Sized OTP inputs to responsive `w-10 h-12 sm:w-12 sm:h-14` with `gap-1.5 sm:gap-2.5 max-w-full justify-center`.
+  6. Wrapped tables in `LearnPractice.tsx` in `overflow-x-auto w-full`.
+- **Verification:**
+  Verified with `npx cap sync android`, `npm run build` (compiled in under 12s, exit code 0), and `npm run build:mobile` (exported all 14 static pages and synced assets to Android with exit code 0).

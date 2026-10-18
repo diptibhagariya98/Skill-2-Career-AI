@@ -25,6 +25,7 @@ import AIAnalysisReport from "./resume/AIAnalysisReport";
 import AIConsentModal, { CONSENT_STORAGE_KEY } from "./resume/AIConsentModal";
 import PDFPreflightModal, { PreflightWarning } from "./resume/PDFPreflightModal";
 import { ResumePreview } from "./resume/ResumePreview";
+import { hapticSuccess, hapticLight } from "@/shared/platform";
 
 import {
   Download,
@@ -316,6 +317,7 @@ export default function ResumeBuilder() {
 
       setExportState("done");
       setExportFailCount(0);
+      hapticSuccess();
       toast.success(`Downloaded ${filename}`, { id: toastId });
     } catch (err: any) {
       setExportState("failed");

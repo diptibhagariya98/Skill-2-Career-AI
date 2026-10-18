@@ -35,6 +35,7 @@ import LearnPractice from "./LearnPractice";
 import { UserData } from "../types/user";
 import { getInitials } from "../lib/imageUtils";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
+import { useAndroidBackButton, hapticLight } from "@/shared/platform";
 
 export default function Dashboard() {
   const [activePage, setActivePage] = useState("dashboard");
@@ -43,6 +44,21 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const { isOnline, wasOffline } = useNetworkStatus();
+
+  // Android hardware/gesture back button handling
+  useAndroidBackButton({
+    onBack: () => {
+      if (showMoreMenu) {
+        setShowMoreMenu(false);
+        return true;
+      }
+      if (activePage !== "dashboard") {
+        setActivePage("dashboard");
+        return true;
+      }
+      return false;
+    },
+  });
 
   // Fetch Firestore user profile
   useEffect(() => {
@@ -161,22 +177,7 @@ export default function Dashboard() {
   const initials = getInitials(displayName);
 
   return (
-    <div className="flex min-h-dvh bg-gray-50 text-gray-800 flex-col md:flex-row antialiased selection:bg-indigo-500 selection:text-white">
-      {/* Floating Offline / Online Status Pill with Safe Area clearance (UX-05, UX-41) */}
-      {!isOnline && (
-        <div className="fixed top-[calc(0.5rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-amber-300 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-lg border border-amber-500/30 flex items-center gap-1.5 animate-bounce">
-          <WifiOff className="w-3.5 h-3.5 text-amber-400" />
-          <span>Offline • Local features ready</span>
-        </div>
-      )}
-
-      {isOnline && wasOffline && (
-        <div className="fixed top-[calc(0.5rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 z-50 bg-emerald-900/95 text-emerald-200 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-lg border border-emerald-500/30 flex items-center gap-1.5 animate-fade-in">
-          <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Back Online • Sync Active</span>
-        </div>
-      )}
-
+    <div className="flex min-h-dvh bg-gray-50 text-gray-800 flex-col md:flex-row antialiased selection:bg-indigo-500 selection:text-white overflow-x-hidden">
       {/* Desktop Sidebar (Compact 240px, hidden on mobile) */}
       <aside className="hidden md:flex w-60 bg-white shadow-xs flex-shrink-0 flex-col border-r border-gray-100">
         <div className="p-4 border-b border-gray-100">
@@ -230,9 +231,9 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto flex flex-col min-w-0 overflow-hidden">
-        {/* Compact Sticky Top App Header (56px, Safe Area Inset) */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 pt-safe px-3 sm:px-6 h-14 flex items-center justify-between shadow-xs">
+      <main className="flex-1 w-full max-w-7xl mx-auto flex flex-col min-w-0 overflow-x-hidden">
+        {/* Compact Sticky Top App Header with Safe Area Notch padding */}
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[56px] pt-[max(env(safe-area-inset-top,0px),0.5rem)] pb-2 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2 min-w-0">
             {activePage !== "dashboard" ? (
               <button
@@ -286,8 +287,8 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* Scrollable Page Body with Safe Bottom Offset (pb-24 ensures clearance above mobile nav) */}
-        <div className="flex-1 p-3 sm:p-5 md:p-6 pb-24 md:pb-8 overflow-y-auto min-w-0">
+        {/* Scrollable Page Body with Safe Bottom Offset (pb-28 ensures clearance above mobile nav) */}
+        <div className="flex-1 p-3 sm:p-5 md:p-6 pb-28 md:pb-8 overflow-y-auto overflow-x-hidden min-w-0">
           <div className="animate-fade-in">
             {activePage === "dashboard" && (
               <div className="space-y-4 sm:space-y-6">
@@ -494,6 +495,7 @@ export default function Dashboard() {
             <button
               key={item.id}
               onClick={() => {
+                hapticLight();
                 if (isMore) {
                   setShowMoreMenu(!showMoreMenu);
                 } else {

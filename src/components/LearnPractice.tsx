@@ -184,11 +184,11 @@ export default function LearnPractice() {
         <div className="animate-fade-in">
           <button
             onClick={() => setSubPage("resources-category")}
-            className="mb-6 text-sm font-semibold text-gray-600 hover:text-indigo-600 inline-flex items-center gap-2"
+            className="mb-4 sm:mb-6 text-sm font-semibold text-gray-600 hover:text-indigo-600 inline-flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Categories
           </button>
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Frontend Development Detailed Roadmap</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6">Frontend Development Detailed Roadmap</h1>
           <div className="space-y-6">
             <div className="p-6 bg-white rounded-xl shadow-md border hover:border-indigo-500 transition">
               <h2 className="font-bold text-xl text-gray-800">Module 1: HTML - The Structure</h2>
@@ -258,31 +258,33 @@ export default function LearnPractice() {
           >
             <ArrowLeft className="h-4 w-4" /> Back to Hub
           </button>
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">Practice Quizzes</h2>
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b text-gray-400 font-bold">
-                  <th className="py-3 px-2">Topic</th>
-                  <th className="py-3 px-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-4 px-2 font-semibold text-gray-800 flex items-center gap-2">
-                    <HelpCircle className="h-4 w-4 text-indigo-500" /> HTML & CSS Basics
-                  </td>
-                  <td className="py-4 px-2 text-right">
-                    <button
-                      onClick={handleStartQuiz}
-                      className="font-bold text-indigo-600 hover:text-indigo-800"
-                    >
-                      Start Quiz
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-gray-100">
+            <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-800">Practice Quizzes</h2>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b text-gray-400 font-bold">
+                    <th className="py-3 px-2">Topic</th>
+                    <th className="py-3 px-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="py-4 px-2 font-semibold text-gray-800 flex items-center gap-2">
+                      <HelpCircle className="h-4 w-4 text-indigo-500" /> HTML & CSS Basics
+                    </td>
+                    <td className="py-4 px-2 text-right">
+                      <button
+                        onClick={handleStartQuiz}
+                        className="font-bold text-indigo-600 hover:text-indigo-800 py-1.5 px-3 rounded-lg hover:bg-indigo-50 transition min-h-[36px]"
+                      >
+                        Start Quiz
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -291,46 +293,48 @@ export default function LearnPractice() {
         <div className="animate-fade-in">
           <button
             onClick={() => setSubPage("hub")}
-            className="mb-6 text-sm font-semibold text-gray-600 hover:text-indigo-600 inline-flex items-center gap-2"
+            className="mb-4 sm:mb-6 text-sm font-semibold text-gray-600 hover:text-indigo-600 inline-flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Hub
           </button>
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">Downloadable Notes</h2>
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b text-gray-400 font-bold">
-                  <th className="py-3 px-2">Notes Category</th>
-                  <th className="py-3 px-2 text-right">Download</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b hover:bg-gray-50">
-                  <td className="py-4 px-2 font-semibold text-gray-800">HTML & CSS NOTES</td>
-                  <td className="py-4 px-2 text-right">
-                    <a
-                      href="/ROADMAPS/Class Notes-DEV.pdf"
-                      download
-                      className="font-bold text-indigo-600 hover:text-indigo-800"
-                    >
-                      Download
-                    </a>
-                  </td>
-                </tr>
-                <tr className="border-b hover:bg-gray-50">
-                  <td className="py-4 px-2 font-semibold text-gray-800">ML NOTES</td>
-                  <td className="py-4 px-2 text-right">
-                    <a
-                      href="/ROADMAPS/Unit1_Machine_Learning_Introduction_CU_3.0_.pdf"
-                      download
-                      className="font-bold text-indigo-600 hover:text-indigo-800"
-                    >
-                      Download
-                    </a>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-gray-100">
+            <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-800">Downloadable Notes</h2>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b text-gray-400 font-bold">
+                    <th className="py-3 px-2">Notes Category</th>
+                    <th className="py-3 px-2 text-right">Download</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b hover:bg-gray-50">
+                    <td className="py-4 px-2 font-semibold text-gray-800">HTML & CSS NOTES</td>
+                    <td className="py-4 px-2 text-right">
+                      <a
+                        href="/ROADMAPS/Class Notes-DEV.pdf"
+                        download
+                        className="font-bold text-indigo-600 hover:text-indigo-800 py-1.5 px-3 rounded-lg hover:bg-indigo-50 transition inline-block min-h-[36px]"
+                      >
+                        Download
+                      </a>
+                    </td>
+                  </tr>
+                  <tr className="border-b hover:bg-gray-50">
+                    <td className="py-4 px-2 font-semibold text-gray-800">ML NOTES</td>
+                    <td className="py-4 px-2 text-right">
+                      <a
+                        href="/ROADMAPS/Unit1_Machine_Learning_Introduction_CU_3.0_.pdf"
+                        download
+                        className="font-bold text-indigo-600 hover:text-indigo-800 py-1.5 px-3 rounded-lg hover:bg-indigo-50 transition inline-block min-h-[36px]"
+                      >
+                        Download
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { NativeAppProvider } from "@/shared/platform";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -30,7 +31,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} font-sans bg-gray-100 text-gray-800 antialiased`}>
         <TooltipProvider>
-          {children}
+          <NativeAppProvider>
+            {children}
+          </NativeAppProvider>
         </TooltipProvider>
         <Toaster position="top-right" reverseOrder={false} />
       </body>

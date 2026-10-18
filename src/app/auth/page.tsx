@@ -14,8 +14,19 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
+        try {
+          const { getDoc, doc } = await import("firebase/firestore");
+          const { db } = await import("../../lib/firebase");
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          if (userDoc.exists() && userDoc.data().status === "PENDING_VERIFICATION") {
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // If network check fails, fallback to normal state
+        }
         router.replace(APP_ROUTES.DASHBOARD);
       } else {
         setLoading(false);
