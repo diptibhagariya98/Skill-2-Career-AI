@@ -3,7 +3,7 @@
 **Repository:** ResuMentor  
 **File:** `docs/ISSUES_AND_RESOLUTIONS_LOG.md`  
 **Created:** October 18, 2026 at 07:05:00 IST  
-**Last Updated:** October 18, 2026 at 07:05:00 IST  
+**Last Updated:** October 18, 2026 at 22:04:00 IST  
 **Status:** All Listed Issues Resolved and Verified
 
 ---
@@ -305,3 +305,73 @@ This document serves as an immutable, timestamped record of every technical, bui
   6. Wrapped tables in `LearnPractice.tsx` in `overflow-x-auto w-full`.
 - **Verification:**
   Verified with `npx cap sync android`, `npm run build` (compiled in under 12s, exit code 0), and `npm run build:mobile` (exported all 14 static pages and synced assets to Android with exit code 0).
+
+---
+
+### [ISSUE-013] Registration-Reset Deadlock, False "Already Exists" Collisions & Notch Safe-Area Toast Overlap
+
+- **Date:** October 18, 2026
+- **Timestamp:** 19:46:00 IST
+- **Component / Subsystem:** `src/app/api/auth/register/route.ts`, `src/app/api/auth/send-otp/route.ts`, `src/app/layout.tsx`, `src/components/Auth.tsx`
+- **Severity:** High
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  1. Users attempting registration received `"An account with this email already exists"` even when onboarding was incomplete and their credentials could not log in.
+  2. Users attempting password reset for unconfirmed accounts hit a 404 `USER_NOT_FOUND` deadlock because the account existed in Supabase Auth but had not synced to `public.profiles`.
+  3. Toast error messages on mobile rendered directly behind physical device camera notches and system status bar icons.
+- **Root Cause:**
+  1. `register/route.ts` rejected any email existing in Supabase Auth without distinguishing unconfirmed accounts.
+  2. `send-otp/route.ts` relied solely on `profiles` lookup, resulting in false 404s when user profiles were not yet created.
+  3. `react-hot-toast` in `src/app/layout.tsx` used hardcoded `top: 16px` without accounting for `env(safe-area-inset-top)`.
+- **Resolution:**
+  1. Updated `register/route.ts` to detect unconfirmed accounts, automatically updating their password to the newly provided credentials and re-dispatching verification OTP.
+  2. Added fallback query in `send-otp/route.ts` to `auth.users` with automated profile upsert/healing when an account exists in auth directory.
+  3. Styled `Toaster` container in `src/app/layout.tsx` with dynamic safe-area insets (`top: max(env(safe-area-inset-top, 0px) + 12px, 20px)`).
+- **Verification:**
+  All 49 tests in `scripts/test-auth-flow.mjs` passed with zero failures.
+
+---
+
+### [ISSUE-014] Zero-Friction Direct Dashboard Transfer on Onboarding & Instant One-Tap Guest Access
+
+- **Date:** October 18, 2026
+- **Timestamp:** 20:15:00 IST
+- **Component / Subsystem:** `src/components/Auth.tsx`, `src/components/Dashboard.tsx`, `src/app/api/auth/verify-otp/route.ts`, `src/constants/auth.ts`
+- **Severity:** High
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  1. Users who successfully finished registration and OTP email verification were routed back to the login screen and forced to re-type their credentials, introducing unnecessary drop-off friction.
+  2. Prospective students and mobile users had no guest entry mechanism to explore roadmaps, scholarships, and ATS features prior to registration.
+- **Root Cause:**
+  1. The OTP verification handler previously marked the account as confirmed but left the client unauthenticated, requiring a redundant secondary login call.
+  2. `Dashboard.tsx` had rigid assumptions requiring an authenticated Supabase user ID, causing empty state crashes if bypassed.
+- **Resolution:**
+  1. Implemented automatic authentication session establishment in `Auth.tsx`: immediately upon OTP verification, the client calls `supabase.auth.signInWithPassword` and routes directly to `/dashboard`.
+  2. Added "Explore App as Guest" button to `Auth.tsx` and introduced an isolated guest session state in `Dashboard.tsx` with sample roadmaps and read-only ATS demonstration features.
+- **Verification:**
+  Verified seamless instant transition to dashboard upon OTP verification, and verified guest flow without login barrier.
+
+---
+
+### [ISSUE-015] Post-Password Reset Login Failure from Mobile Keyboard Whitespace & Credential Re-entry Loop
+
+- **Date:** October 18, 2026
+- **Timestamp:** 21:50:00 IST
+- **Component / Subsystem:** `src/components/Auth.tsx`, `src/app/api/auth/verify-otp/route.ts`, `src/app/api/auth/register/route.ts`, `blackbox-testing/v1/auth/verify_auth_password_reset_blackbox.ts`
+- **Severity:** High
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  1. After entering a new password in Step 2 of password reset, the user was redirected to the sign-in screen, entered their credentials, and encountered a red `"Invalid login credentials"` toast.
+  2. Red toast notification rendered directly over the Android status bar and notch area on older APK builds.
+- **Root Cause:**
+  1. Step 2 password update did not establish an active session token, bouncing the user onto the login form to re-enter credentials manually.
+  2. Android keyboard autocomplete/Gboard and password managers frequently insert trailing whitespace or zero-width unicode characters (`\u200B-\u200D\uFEFF`). Supabase Auth treats trailing whitespace strictly, rejecting the credential if spaces differ between save and login.
+- **Resolution:**
+  1. Updated `src/app/api/auth/verify-otp/route.ts` to generate an immediate session magiclink token hash via `supabase.auth.admin.generateLink` upon Step 2 password update, returning `{ success: true, verified: true, token_hash }`.
+  2. Updated `src/components/Auth.tsx` (`handleSetNewPasswordSubmit`) to immediately activate the session via `supabase.auth.verifyOtp({ token_hash, type: "magiclink" })` and seamlessly transfer the user to `APP_ROUTES.DASHBOARD` via `router.replace`, eliminating credential re-entry.
+  3. Sanitized password inputs across `register/route.ts`, `verify-otp/route.ts`, and `Auth.tsx` by stripping zero-width characters and whitespace trimming, while retaining a resilient raw-password retry fallback.
+- **Verification:**
+  1. `npm test` &rarr; 49/49 PASSED, 0 FAILED.
+  2. `npm run test:blackbox` &rarr; All 10 hardcore black-box controller lifecycle tests PASSED.
+  3. `npx tsc --noEmit` &rarr; 0 TypeScript errors.
+  4. `npm run build` &rarr; Next.js production build compiled cleanly with exit code 0.
