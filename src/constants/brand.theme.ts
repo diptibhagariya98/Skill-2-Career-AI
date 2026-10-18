@@ -11,7 +11,7 @@ export const BRAND = {
   supportEmail: "support@resumentor.app",
   companyAddress: "ResuMentor Inc. • AI Career Mentorship Platform",
   logo: {
-    src: "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/graduation-cap.png",
+    src: "/logo.png",
     width: 48,
     height: 48,
     alt: "ResuMentor",
