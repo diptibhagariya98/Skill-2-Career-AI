@@ -14,7 +14,8 @@
     "cap:ios": "npx cap open ios",
     "start": "next start",
     "lint": "next lint",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node scripts/migrate.mjs",
+    "seed:admin": "node scripts/seed-super-admin.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

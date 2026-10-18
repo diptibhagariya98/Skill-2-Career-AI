@@ -60,6 +60,23 @@
   bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Global Mobile Virtual Keyboard Handling:
+   Automatically hide bottom navigation bars, tab bars, and elements marked to hide when keyboard is open */
+body[data-keyboard-open="true"] nav.fixed.bottom-0,
+body[data-keyboard-open="true"] .mobile-bottom-nav,
+body[data-keyboard-open="true"] [data-hide-on-keyboard="true"],
+body[data-keyboard-open="true"] .hide-on-keyboard,
+body.keyboard-open nav.fixed.bottom-0,
+body.keyboard-open .mobile-bottom-nav,
+body.keyboard-open [data-hide-on-keyboard="true"],
+body.keyboard-open .hide-on-keyboard {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(100%) !important;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

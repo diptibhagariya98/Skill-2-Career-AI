@@ -3,13 +3,49 @@ import { getServiceSupabase } from "@/lib/supabase";
 import { otpMatches } from "@/lib/email/crypto";
 import { renderTemplate } from "@/lib/email/render";
 import { sendEmail } from "@/lib/email/transporter";
+import {
+  AuthPurpose,
+  AccountStatus,
+  AUTH_MESSAGES,
+  AUTH_CONSTANTS,
+  isUuid,
+  cleanEmail as sanitizeEmail,
+  getErrorMessage,
+} from "@/constants/auth";
 
 export const dynamic = "force-dynamic";
 
+interface VerifyOtpRequestBody {
+  email?: string;
+  userId?: string;
+  purpose?: string;
+  code?: string;
+  name?: string;
+  newPassword?: string;
+}
+
+interface OtpRecord {
+  id: string;
+  user_id: string;
+  email: string;
+  purpose: string;
+  code_hash: string;
+  attempts: number;
+  max_attempts: number;
+  expires_at: string;
+  created_at: string;
+  consumed_at: string | null;
+}
+
+interface AdminUserRecord {
+  id: string;
+  email?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, userId, purpose = "EMAIL_VERIFY", code, name } = body;
+    const body: VerifyOtpRequestBody = await request.json();
+    const { email, userId, purpose, code, name, newPassword } = body;
 
     if (!code || (!userId && !email)) {
       return NextResponse.json(
@@ -19,29 +55,39 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanCode = String(code).trim();
-    const cleanEmail = email ? String(email).trim().toLowerCase() : "";
+    const cleanEmail = sanitizeEmail(email);
     let cleanUserId = userId ? String(userId).trim() : cleanEmail;
-    const validPurpose = purpose === "PASSWORD_RESET" ? "PASSWORD_RESET" : "EMAIL_VERIFY";
+    const validPurpose =
+      purpose === AuthPurpose.PASSWORD_RESET
+        ? AuthPurpose.PASSWORD_RESET
+        : AuthPurpose.EMAIL_VERIFY;
+
     const supabase = getServiceSupabase();
 
-    // Look up Supabase Auth User ID if not provided as UUID
-    if (!cleanUserId || cleanUserId.includes("@")) {
+    // Look up Supabase Auth User ID if not provided as a valid UUID
+    if (!isUuid(cleanUserId)) {
       try {
         const { data: profile } = await supabase
           .from("profiles")
           .select("id")
-          .eq("email", cleanEmail)
+          .ilike("email", cleanEmail)
           .maybeSingle();
 
-        if (profile?.id) {
+        if (profile?.id && isUuid(profile.id)) {
           cleanUserId = profile.id;
         } else {
-          const { data: userList } = await supabase.auth.admin.listUsers();
-          const found = (userList?.users as any[])?.find((u: any) => u.email?.toLowerCase() === cleanEmail);
-          if (found) cleanUserId = found.id;
+          const { data: userList } = await supabase.auth.admin.listUsers({
+            perPage: AUTH_CONSTANTS.MAX_USERS_SEARCH_PAGE_SIZE,
+          });
+          const found = (userList?.users as AdminUserRecord[] | undefined)?.find(
+            (u) => sanitizeEmail(u.email) === cleanEmail
+          );
+          if (found?.id && isUuid(found.id)) {
+            cleanUserId = found.id;
+          }
         }
-      } catch {
-        // fallback
+      } catch (lookupErr: unknown) {
+        console.warn("[User Lookup Warning]:", getErrorMessage(lookupErr));
       }
     }
 
@@ -60,17 +106,17 @@ export async function POST(request: NextRequest) {
       query = query.eq("user_id", cleanUserId);
     }
 
-    const { data: records, error: fetchErr } = await query;
+    const { data: rawRecords, error: fetchErr } = await query;
 
     if (fetchErr) {
       throw new Error(`Database error: ${fetchErr.message}`);
     }
 
-    const activeOtpDoc = records?.[0];
+    const activeOtpDoc = (rawRecords as OtpRecord[] | null)?.[0];
 
     if (!activeOtpDoc) {
       return NextResponse.json(
-        { error: "No active verification code found. Please request a new one." },
+        { error: AUTH_MESSAGES.OTP_EXPIRED_OR_NOT_FOUND },
         { status: 400 }
       );
     }
@@ -78,7 +124,7 @@ export async function POST(request: NextRequest) {
     // 2. Check if maximum attempts exceeded
     if (activeOtpDoc.attempts >= activeOtpDoc.max_attempts) {
       return NextResponse.json(
-        { error: "Too many failed attempts. This code is invalidated, please request a new one." },
+        { error: AUTH_MESSAGES.OTP_TOO_MANY_ATTEMPTS },
         { status: 400 }
       );
     }
@@ -86,15 +132,25 @@ export async function POST(request: NextRequest) {
     // 3. Check expiration
     if (new Date(activeOtpDoc.expires_at).getTime() < Date.now()) {
       return NextResponse.json(
-        { error: "Verification code has expired. Please request a new one." },
+        { error: AUTH_MESSAGES.OTP_CODE_EXPIRED },
         { status: 400 }
       );
     }
 
     // 4. Verify code using constant-time HMAC comparison (check against cleanUserId or email)
-    let isMatch = otpMatches(activeOtpDoc.code_hash, cleanCode, activeOtpDoc.user_id, validPurpose);
+    let isMatch = otpMatches(
+      activeOtpDoc.code_hash,
+      cleanCode,
+      activeOtpDoc.user_id,
+      validPurpose
+    );
     if (!isMatch && cleanEmail) {
-      isMatch = otpMatches(activeOtpDoc.code_hash, cleanCode, cleanEmail, validPurpose);
+      isMatch = otpMatches(
+        activeOtpDoc.code_hash,
+        cleanCode,
+        cleanEmail,
+        validPurpose
+      );
     }
 
     if (!isMatch) {
@@ -107,15 +163,15 @@ export async function POST(request: NextRequest) {
       const remaining = Math.max(0, activeOtpDoc.max_attempts - newAttempts);
       return NextResponse.json(
         {
-          error: `Invalid verification code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
+          error: `${AUTH_MESSAGES.OTP_INVALID_CODE} ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
           remainingAttempts: remaining,
         },
         { status: 400 }
       );
     }
 
-    // 5. If this is Step 1 of Password Reset (verification only, no newPassword provided)
-    if (validPurpose === "PASSWORD_RESET" && !body.newPassword) {
+    // 5. If this is Step 1 of Password Reset (code verification only, no newPassword supplied)
+    if (validPurpose === AuthPurpose.PASSWORD_RESET && !newPassword) {
       return NextResponse.json({
         success: true,
         verified: true,
@@ -131,27 +187,70 @@ export async function POST(request: NextRequest) {
       .eq("id", activeOtpDoc.id);
 
     // 6. Confirm user email or update password in Supabase Auth via Admin API
-    const targetUserId = activeOtpDoc.user_id?.includes("@") ? cleanUserId : activeOtpDoc.user_id;
-    if (targetUserId && !targetUserId.includes("@")) {
-      const updatePayload: Record<string, any> = {
-        email_confirm: true,
-      };
+    let targetUserId = isUuid(activeOtpDoc.user_id)
+      ? activeOtpDoc.user_id
+      : isUuid(cleanUserId)
+      ? cleanUserId
+      : "";
 
-      if (validPurpose === "PASSWORD_RESET" && body.newPassword) {
-        updatePayload.password = String(body.newPassword);
+    // If targetUserId is still not resolved to a UUID, perform a direct profile lookup first
+    if (!targetUserId && cleanEmail) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("email", cleanEmail)
+          .maybeSingle();
+
+        if (profile?.id && isUuid(profile.id)) {
+          targetUserId = profile.id;
+        } else {
+          const { data: userList } = await supabase.auth.admin.listUsers({
+            perPage: AUTH_CONSTANTS.MAX_USERS_SEARCH_PAGE_SIZE,
+          });
+          const found = (userList?.users as AdminUserRecord[] | undefined)?.find(
+            (u) => sanitizeEmail(u.email) === cleanEmail
+          );
+          if (found?.id && isUuid(found.id)) {
+            targetUserId = found.id;
+          }
+        }
+      } catch (err: unknown) {
+        console.warn("[Admin User Search Error]:", getErrorMessage(err));
+      }
+    }
+
+    // Guard: For password reset, targetUserId MUST be a valid UUID. Never silently skip!
+    if (validPurpose === AuthPurpose.PASSWORD_RESET && newPassword) {
+      if (!targetUserId || !isUuid(targetUserId)) {
+        return NextResponse.json(
+          { error: AUTH_MESSAGES.USER_NOT_FOUND },
+          { status: 404 }
+        );
       }
 
       try {
-        const { error: authErr } = await supabase.auth.admin.updateUserById(targetUserId, updatePayload);
+        const { error: authErr } = await supabase.auth.admin.updateUserById(
+          targetUserId,
+          {
+            password: String(newPassword),
+            email_confirm: true,
+          }
+        );
+
         if (authErr) {
           console.error("[Supabase Auth Admin Update Error]:", authErr.message);
           return NextResponse.json(
-            { error: authErr.message || "Failed to update user security record." },
+            { error: authErr.message || AUTH_MESSAGES.PASSWORD_UPDATE_FAILED },
             { status: 400 }
           );
         }
-      } catch (authErr: any) {
-        console.warn("[Supabase Auth Confirm Notice]:", authErr.message);
+      } catch (authErr: unknown) {
+        console.error("[Supabase Auth Admin Exception]:", authErr);
+        return NextResponse.json(
+          { error: getErrorMessage(authErr, AUTH_MESSAGES.PASSWORD_UPDATE_FAILED) },
+          { status: 500 }
+        );
       }
 
       // Update profile timestamp
@@ -160,13 +259,31 @@ export async function POST(request: NextRequest) {
           .from("profiles")
           .update({ updated_at: nowIso })
           .eq("id", targetUserId);
-      } catch (profileErr: any) {
-        console.warn("[Profile Update Notice]:", profileErr.message);
+      } catch (profileErr: unknown) {
+        console.warn("[Profile Update Notice]:", getErrorMessage(profileErr));
+      }
+    } else if (targetUserId && isUuid(targetUserId)) {
+      // Email verify flow
+      try {
+        await supabase.auth.admin.updateUserById(targetUserId, {
+          email_confirm: true,
+        });
+      } catch (confirmErr: unknown) {
+        console.warn("[Supabase Auth Confirm Notice]:", getErrorMessage(confirmErr));
+      }
+
+      try {
+        await supabase
+          .from("profiles")
+          .update({ updated_at: nowIso })
+          .eq("id", targetUserId);
+      } catch (profileErr: unknown) {
+        console.warn("[Profile Update Notice]:", getErrorMessage(profileErr));
       }
     }
 
     // 7. If this was an email verification, send the branded Welcome Email
-    if (validPurpose === "EMAIL_VERIFY" && (cleanEmail || activeOtpDoc.email)) {
+    if (validPurpose === AuthPurpose.EMAIL_VERIFY && (cleanEmail || activeOtpDoc.email)) {
       try {
         const targetEmail = cleanEmail || activeOtpDoc.email;
         const { subject, html, text } = await renderTemplate({
@@ -179,22 +296,23 @@ export async function POST(request: NextRequest) {
           html,
           text,
         });
-      } catch (welcomeErr: any) {
-        console.warn("[Welcome Email Send Notice]:", welcomeErr.message);
+      } catch (welcomeErr: unknown) {
+        console.warn("[Welcome Email Send Notice]:", getErrorMessage(welcomeErr));
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: validPurpose === "PASSWORD_RESET"
-        ? "Password successfully reset! You can now log in with your new password."
-        : "Email successfully verified! Your account is now active.",
-      status: "ACTIVE",
+      message:
+        validPurpose === AuthPurpose.PASSWORD_RESET
+          ? AUTH_MESSAGES.PASSWORD_RESET_SUCCESS
+          : "Email successfully verified! Your account is now active.",
+      status: AccountStatus.ACTIVE,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Verify OTP Error]:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to verify code." },
+      { error: getErrorMessage(error, AUTH_MESSAGES.UNEXPECTED_ERROR) },
       { status: 500 }
     );
   }

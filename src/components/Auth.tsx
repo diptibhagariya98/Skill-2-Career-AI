@@ -23,24 +23,26 @@ import {
 import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
 import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
 import { useBackHandler, dispatchBack } from "@/shared/platform";
+import {
+  AuthMode,
+  AuthPurpose,
+  AUTH_MESSAGES,
+  AUTH_CONSTANTS,
+  AUTH_PATTERNS,
+  getErrorMessage,
+  cleanEmail as sanitizeEmail,
+} from "@/constants/auth";
 
-export type AuthMode =
-  | "login"
-  | "register"
-  | "otp"
-  | "forgot"
-  | "verify-reset-otp"
-  | "set-new-password"
-  | "reset-password";
+export { AuthMode };
 
 export interface AuthProps {
   initialMode?: AuthMode;
 }
 
-export default function Auth({ initialMode = "login" }: AuthProps = {}) {
+export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
   const router = useRouter();
 
-  // Mode state: 'login' | 'register' | 'otp' | 'forgot' | 'verify-reset-otp' | 'set-new-password' | 'reset-password'
+  // Mode state: Enforces AuthMode enum per project guidelines
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
   // Sync mode with URL search params if present
@@ -50,15 +52,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
       const urlMode = params.get("mode") as AuthMode | null;
       if (
         urlMode &&
-        [
-          "login",
-          "register",
-          "otp",
-          "forgot",
-          "verify-reset-otp",
-          "set-new-password",
-          "reset-password",
-        ].includes(urlMode)
+        Object.values(AuthMode).includes(urlMode)
       ) {
         setMode(urlMode);
       }
@@ -93,13 +87,13 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
   const [pendingEmail, setPendingEmail] = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
   const [pendingName, setPendingName] = useState("");
-  const [pendingPurpose, setPendingPurpose] = useState<"EMAIL_VERIFY" | "PASSWORD_RESET">("EMAIL_VERIFY");
+  const [pendingPurpose, setPendingPurpose] = useState<AuthPurpose>(AuthPurpose.EMAIL_VERIFY);
   const [cooldown, setCooldown] = useState(0);
 
   // Field-specific validation states
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // 60-second cooldown timer
+  // Cooldown timer
   useEffect(() => {
     if (cooldown <= 0) return;
     const interval = setInterval(() => {
@@ -112,11 +106,11 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedEmail = sessionStorage.getItem("resumentor_pending_email");
-      const savedPurpose = sessionStorage.getItem("resumentor_pending_purpose") as any;
+      const savedPurpose = sessionStorage.getItem("resumentor_pending_purpose") as AuthPurpose | null;
       if (savedEmail && !pendingEmail) {
         setPendingEmail(savedEmail);
       }
-      if (savedPurpose && !pendingPurpose) {
+      if (savedPurpose && Object.values(AuthPurpose).includes(savedPurpose)) {
         setPendingPurpose(savedPurpose);
       }
     }
@@ -133,21 +127,21 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
 
   // Register in-screen back navigation for Auth flows (Entry Layer per Implementation Guide)
   useBackHandler("in_screen", () => {
-    if (mode === "set-new-password") {
-      setMode("verify-reset-otp");
+    if (mode === AuthMode.SET_NEW_PASSWORD) {
+      setMode(AuthMode.VERIFY_RESET_OTP);
       return true;
     }
-    if (mode === "verify-reset-otp") {
-      setMode("forgot");
+    if (mode === AuthMode.VERIFY_RESET_OTP) {
+      setMode(AuthMode.FORGOT);
       return true;
     }
-    if (mode === "forgot") {
+    if (mode === AuthMode.FORGOT) {
       setForgotError(null);
-      setMode("login");
+      setMode(AuthMode.LOGIN);
       return true;
     }
-    if (mode === "otp") {
-      setMode("register");
+    if (mode === AuthMode.OTP) {
+      setMode(AuthMode.REGISTER);
       return true;
     }
     return false;
@@ -155,7 +149,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
 
   // Focus the first OTP box when entering OTP or reset-password verification mode
   useEffect(() => {
-    if (mode === "otp" || mode === "verify-reset-otp" || mode === "reset-password") {
+    if (mode === AuthMode.OTP || mode === AuthMode.VERIFY_RESET_OTP || mode === AuthMode.RESET_PASSWORD) {
       setTimeout(() => {
         otpInputRefs.current[0]?.focus();
       }, 100);
@@ -277,13 +271,13 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
     e.preventDefault();
     const isEmailValid = validateField("email", email);
     if (!isEmailValid || !password) {
-      toast.error("Please provide valid login details.");
+      toast.error(AUTH_MESSAGES.LOGIN_INVALID_DETAILS);
       return;
     }
 
     setLoading(true);
     try {
-      const cleanEmail = email.trim().toLowerCase();
+      const cleanEmail = sanitizeEmail(email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
@@ -294,10 +288,10 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         if (error.message.toLowerCase().includes("email not confirmed")) {
           setPendingEmail(cleanEmail);
           setPendingPassword(password);
-          setPendingPurpose("EMAIL_VERIFY");
+          setPendingPurpose(AuthPurpose.EMAIL_VERIFY);
           setOtpDigits(["", "", "", "", "", ""]);
-          setMode("otp");
-          setCooldown(60);
+          setMode(AuthMode.OTP);
+          setCooldown(AUTH_CONSTANTS.OTP_COOLDOWN_SECONDS);
 
           try {
             await fetch(API_ROUTES.AUTH_SEND_OTP, {
@@ -305,14 +299,14 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 email: cleanEmail,
-                purpose: "EMAIL_VERIFY",
+                purpose: AuthPurpose.EMAIL_VERIFY,
               }),
             });
-          } catch (e: any) {
-            console.warn("[OTP Trigger Notice]:", e.message);
+          } catch (e: unknown) {
+            console.warn("[OTP Trigger Notice]:", getErrorMessage(e));
           }
 
-          toast("A 6-digit verification code has been sent to your email.", { icon: "✉️" });
+          toast(AUTH_MESSAGES.OTP_SENT_EMAIL_VERIFY, { icon: "✉️" });
           return;
         }
         throw error;
@@ -322,10 +316,10 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         localStorage.removeItem("resumentor_resume_current");
         localStorage.removeItem("resumentor_resume_revisions");
       }
-      toast.success("Successfully logged in!");
+      toast.success(AUTH_MESSAGES.LOGIN_SUCCESS);
       router.replace(APP_ROUTES.DASHBOARD);
-    } catch (error: any) {
-      toast.error(error.message || "Invalid email or password.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, AUTH_MESSAGES.LOGIN_INVALID_CREDENTIALS));
     } finally {
       setLoading(false);
     }
@@ -372,13 +366,13 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
       setPendingEmail(cleanEmail);
       setPendingPassword(password);
       setPendingName(cleanName);
-      setPendingPurpose("EMAIL_VERIFY");
+      setPendingPurpose(AuthPurpose.EMAIL_VERIFY);
       setOtpDigits(["", "", "", "", "", ""]);
-      setMode("otp");
-      setCooldown(60);
+      setMode(AuthMode.OTP);
+      setCooldown(AUTH_CONSTANTS.OTP_COOLDOWN_SECONDS);
       toast.success("Account created! A 6-digit verification code has been sent to your email.");
-    } catch (error: any) {
-      toast.error(error.message || "Error creating account.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Error creating account."));
     } finally {
       setLoading(false);
     }
@@ -405,7 +399,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
             email: pendingEmail,
             userId: pendingUserId,
             code,
-            purpose: "EMAIL_VERIFY",
+            purpose: AuthPurpose.EMAIL_VERIFY,
             name: pendingName,
           }),
         });
@@ -415,7 +409,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         } else {
           throw new Error(result.error || "Verification failed");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Fallback: try Supabase's native verifyOtp in case token was generated natively
         const fallback = await supabase.auth.verifyOtp({
           email: pendingEmail,
@@ -444,8 +438,8 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         toast.success("Email verified successfully! Welcome to ResuMentor.");
         router.replace(APP_ROUTES.DASHBOARD);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to verify 6-digit code.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to verify 6-digit code."));
     } finally {
       setLoading(false);
     }
@@ -460,9 +454,9 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
       targetEmail = (sessionStorage.getItem("resumentor_pending_email") || "").trim().toLowerCase();
     }
 
-    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
-      toast.error("Please provide a valid email address.");
-      setMode("forgot");
+    if (!targetEmail || !AUTH_PATTERNS.EMAIL.test(targetEmail)) {
+      toast.error(AUTH_MESSAGES.EMAIL_INVALID);
+      setMode(AuthMode.FORGOT);
       return;
     }
 
@@ -475,7 +469,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
           email: targetEmail,
           userId: pendingUserId,
           name: pendingName,
-          purpose: pendingPurpose || (mode.includes("reset") ? "PASSWORD_RESET" : "EMAIL_VERIFY"),
+          purpose: pendingPurpose,
         }),
       });
 
@@ -484,10 +478,10 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         throw new Error(result.error || "Failed to resend code.");
       }
 
-      setCooldown(60);
+      setCooldown(AUTH_CONSTANTS.OTP_COOLDOWN_SECONDS);
       toast.success(`Fresh 6-digit verification code sent to ${targetEmail}!`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to resend code.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to resend code."));
     } finally {
       setLoading(false);
     }
@@ -510,13 +504,13 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: cleanEmail,
-          purpose: "PASSWORD_RESET",
+          purpose: AuthPurpose.PASSWORD_RESET,
         }),
       });
 
       const data = await response.json();
       if (!response.ok) {
-        const errorMsg = data.error || "This account does not exist in our system. Please check your email or sign up.";
+        const errorMsg = data.error || AUTH_MESSAGES.USER_NOT_FOUND;
         setForgotError(errorMsg);
         toast.error(errorMsg);
         return;
@@ -524,17 +518,17 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
 
       setPendingEmail(cleanEmail);
       setPendingUserId("");
-      setPendingPurpose("PASSWORD_RESET");
+      setPendingPurpose(AuthPurpose.PASSWORD_RESET);
       setOtpDigits(["", "", "", "", "", ""]);
       setVerifiedResetCode("");
       setNewPassword("");
       setConfirmNewPassword("");
       setResetOtpError(null);
-      setCooldown(60);
-      setMode("verify-reset-otp");
-      toast.success("A 6-digit password reset code has been sent to your email!");
-    } catch (error: any) {
-      const errorMsg = error.message || "Failed to send reset email.";
+      setCooldown(AUTH_CONSTANTS.OTP_COOLDOWN_SECONDS);
+      setMode(AuthMode.VERIFY_RESET_OTP);
+      toast.success(AUTH_MESSAGES.OTP_SENT_PASSWORD_RESET);
+    } catch (error: unknown) {
+      const errorMsg = getErrorMessage(error, "Failed to send reset email.");
       setForgotError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -560,21 +554,21 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         body: JSON.stringify({
           email: pendingEmail,
           code,
-          purpose: "PASSWORD_RESET",
+          purpose: AuthPurpose.PASSWORD_RESET,
         }),
       });
 
       const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Invalid verification code.");
+        throw new Error(result.error || AUTH_MESSAGES.OTP_INVALID_CODE);
       }
 
       // Successfully verified code without consuming it
       setVerifiedResetCode(code);
-      setMode("set-new-password");
+      setMode(AuthMode.SET_NEW_PASSWORD);
       toast.success("Code verified! Now create your new password.");
-    } catch (error: any) {
-      const msg = error.message || "Failed to verify 6-digit code.";
+    } catch (error: unknown) {
+      const msg = getErrorMessage(error, "Failed to verify 6-digit code.");
       setResetOtpError(msg);
       toast.error(msg);
     } finally {
@@ -588,17 +582,17 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
     const codeToUse = verifiedResetCode || otpDigits.join("");
     if (!codeToUse || codeToUse.length !== 6) {
       toast.error("Verification session expired. Please verify your OTP code again.");
-      setMode("verify-reset-otp");
+      setMode(AuthMode.VERIFY_RESET_OTP);
       return;
     }
 
     if (newPassedCount < 4) {
-      toast.error("Please satisfy all password security requirements.");
+      toast.error(AUTH_MESSAGES.PASSWORD_CRITERIA);
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      toast.error("New passwords do not match.");
+      toast.error(AUTH_MESSAGES.PASSWORDS_MISMATCH);
       return;
     }
 
@@ -610,14 +604,14 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         body: JSON.stringify({
           email: pendingEmail,
           code: codeToUse,
-          purpose: "PASSWORD_RESET",
+          purpose: AuthPurpose.PASSWORD_RESET,
           newPassword,
         }),
       });
 
       const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to reset password.");
+        throw new Error(result.error || AUTH_MESSAGES.PASSWORD_UPDATE_FAILED);
       }
 
       // Establish session with the newly created password
@@ -627,8 +621,9 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
       });
 
       if (signInErr) {
-        toast.success("Password updated! Please log in with your new password.");
-        setMode("login");
+        // Password was changed in Supabase, but automatic session creation encountered an error
+        toast.success(AUTH_MESSAGES.PASSWORD_UPDATED_PLEASE_LOGIN);
+        setMode(AuthMode.LOGIN);
         setEmail(pendingEmail);
         setPassword("");
         return;
@@ -638,10 +633,10 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         localStorage.removeItem("resumentor_resume_current");
         localStorage.removeItem("resumentor_resume_revisions");
       }
-      toast.success("Password reset successfully! Welcome back.");
+      toast.success(AUTH_MESSAGES.PASSWORD_RESET_SUCCESS);
       router.replace(APP_ROUTES.DASHBOARD);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to reset password.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, AUTH_MESSAGES.PASSWORD_UPDATE_FAILED));
     } finally {
       setLoading(false);
     }
@@ -664,10 +659,8 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
           </p>
         </div>
 
-        {/* =========================================================================
-            SCREEN 1: OTP Verification Screen
-            ========================================================================= */}
-        {mode === "otp" && (
+        {/* SCREEN 1: OTP Verification Screen */}
+        {mode === AuthMode.OTP && (
           <div className="animate-fade-in">
             <div className="text-center mb-6">
               <div className="inline-flex p-2.5 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-600 mb-2">
@@ -748,10 +741,8 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
           </div>
         )}
 
-        {/* =========================================================================
-            SCREEN 2: Forgot Password Screen
-            ========================================================================= */}
-        {mode === "forgot" && (
+        {/* SCREEN 2: Forgot Password Screen */}
+        {mode === AuthMode.FORGOT && (
           <div className="animate-fade-in">
             <div className="text-center mb-6">
               <div className="inline-flex p-2.5 bg-amber-50 border border-amber-100 rounded-full text-amber-600 mb-2">
@@ -775,7 +766,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     onClick={() => {
                       setErrors({});
                       setForgotError(null);
-                      setMode("register");
+                      setMode(AuthMode.REGISTER);
                     }}
                     className="mt-2 font-semibold text-indigo-700 hover:text-indigo-900 underline inline-flex items-center space-x-1"
                   >
@@ -816,7 +807,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                   type="button"
                   onClick={() => {
                     setForgotError(null);
-                    setMode("login");
+                    setMode(AuthMode.LOGIN);
                   }}
                   className="text-xs font-semibold text-slate-500 hover:text-slate-800 inline-flex items-center space-x-1 transition"
                 >
@@ -828,10 +819,8 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
           </div>
         )}
 
-        {/* =========================================================================
-            SCREEN 3A: Step 1 - Verify Password Reset OTP
-            ========================================================================= */}
-        {(mode === "verify-reset-otp" || mode === "reset-password") && (
+        {/* SCREEN 3A: Step 1 - Verify Password Reset OTP */}
+        {(mode === AuthMode.VERIFY_RESET_OTP || mode === AuthMode.RESET_PASSWORD) && (
           <div className="animate-fade-in">
             <div className="text-center mb-6">
               <div className="inline-flex p-2.5 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-600 mb-2">
@@ -923,7 +912,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                 type="button"
                 onClick={() => {
                   setForgotError(null);
-                  setMode("login");
+                  setMode(AuthMode.LOGIN);
                 }}
                 className="hover:text-slate-800 transition min-h-[36px]"
               >
@@ -933,10 +922,8 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
           </div>
         )}
 
-        {/* =========================================================================
-            SCREEN 3B: Step 2 - Create New Password
-            ========================================================================= */}
-        {mode === "set-new-password" && (
+        {/* SCREEN 3B: Step 2 - Create New Password */}
+        {mode === AuthMode.SET_NEW_PASSWORD && (
           <div className="animate-fade-in">
             <div className="text-center mb-6">
               <div className="inline-flex p-2.5 bg-emerald-50 border border-emerald-100 rounded-full text-emerald-600 mb-2">
@@ -961,6 +948,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
+                    autoComplete="new-password"
                     className="w-full pl-11 pr-11 py-3 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
                   />
                   <button
@@ -1025,6 +1013,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
                     required
+                    autoComplete="new-password"
                     className="w-full pl-11 pr-11 py-3 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
                   />
                   <button
@@ -1069,21 +1058,19 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
           </div>
         )}
 
-        {/* =========================================================================
-            SCREEN 3 & 4: Login / Sign Up Tabs Screen
-            ========================================================================= */}
-        {(mode === "login" || mode === "register") && (
+        {/* SCREEN 3 & 4: Login / Sign Up Tabs Screen */}
+        {(mode === AuthMode.LOGIN || mode === AuthMode.REGISTER) && (
           <div>
             {/* Segmented Top Tabs */}
             <div className="flex bg-slate-100/80 p-1 rounded-xl mb-6 border border-slate-200/60">
               <button
                 type="button"
                 onClick={() => {
-                  setMode("login");
+                  setMode(AuthMode.LOGIN);
                   setErrors({});
                 }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
-                  mode === "login"
+                  mode === AuthMode.LOGIN
                     ? "bg-white text-indigo-600 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
@@ -1093,11 +1080,11 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
               <button
                 type="button"
                 onClick={() => {
-                  setMode("register");
+                  setMode(AuthMode.REGISTER);
                   setErrors({});
                 }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
-                  mode === "register"
+                  mode === AuthMode.REGISTER
                     ? "bg-white text-indigo-600 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
@@ -1107,7 +1094,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
             </div>
 
             {/* Login Form */}
-            {mode === "login" && (
+            {mode === AuthMode.LOGIN && (
               <form onSubmit={handleLogin} className="space-y-4 animate-fade-in">
                 <div className="relative">
                   <Mail className="absolute top-3.5 left-4 h-5 w-5 text-slate-400" />
@@ -1118,6 +1105,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     onChange={(e) => handleChange("email", e.target.value, setEmail)}
                     onBlur={(e) => handleBlur("email", e.target.value)}
                     required
+                    autoComplete="username"
                     className={`w-full pl-11 pr-4 py-3 border rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 ${
                       errors.email ? "border-red-500 ring-1 ring-red-200" : "border-slate-200"
                     }`}
@@ -1135,6 +1123,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="current-password"
                     className="w-full pl-11 pr-11 py-3 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
                   />
                   <button
@@ -1151,7 +1140,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     type="button"
                     onClick={() => {
                       setResetSent(false);
-                      setMode("forgot");
+                      setMode(AuthMode.FORGOT);
                     }}
                     className="text-xs font-semibold text-indigo-600 hover:underline"
                   >
@@ -1170,7 +1159,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
             )}
 
             {/* Register Form */}
-            {mode === "register" && (
+            {mode === AuthMode.REGISTER && (
               <form onSubmit={handleRegister} className="space-y-3.5 animate-fade-in">
                 <div className="relative">
                   <User className="absolute top-3.5 left-4 h-5 w-5 text-slate-400" />
@@ -1181,6 +1170,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     onChange={(e) => handleChange("fullName", e.target.value, setFullName)}
                     onBlur={(e) => handleBlur("fullName", e.target.value)}
                     required
+                    autoComplete="name"
                     className={`w-full pl-11 pr-4 py-3 border rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 ${
                       errors.fullName ? "border-red-500 ring-1 ring-red-200" : "border-slate-200"
                     }`}
@@ -1199,6 +1189,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     onChange={(e) => handleChange("email", e.target.value, setEmail)}
                     onBlur={(e) => handleBlur("email", e.target.value)}
                     required
+                    autoComplete="username"
                     className={`w-full pl-11 pr-4 py-3 border rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 ${
                       errors.email ? "border-red-500 ring-1 ring-red-200" : "border-slate-200"
                     }`}
@@ -1216,6 +1207,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="new-password"
                     className="w-full pl-11 pr-11 py-3 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
                   />
                   <button
@@ -1279,6 +1271,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    autoComplete="new-password"
                     className="w-full pl-11 pr-11 py-3 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
                   />
                   <button

@@ -9,13 +9,14 @@ import { isNative } from "@/shared/platform";
 import { supabase } from "@/lib/supabase";
 import { APP_ROUTES } from "@/constants/endpoints";
 import { PremiumTransitionLoader } from "@/shared/ui/PremiumTransitionLoader";
+import { AuthMode } from "@/constants/auth";
 
 type ScreenState = "evaluating" | "intro" | "auth" | "landing";
 
 export default function Home() {
   const router = useRouter();
   const [screenState, setScreenState] = useState<ScreenState>("evaluating");
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authMode, setAuthMode] = useState<AuthMode>(AuthMode.LOGIN);
 
   useEffect(() => {
     let isMounted = true;
@@ -98,10 +99,10 @@ export default function Home() {
           if (action === "guest") {
             router.replace(`${APP_ROUTES.DASHBOARD}?guest=true`);
           } else if (action === "login") {
-            setAuthMode("login");
+            setAuthMode(AuthMode.LOGIN);
             setScreenState("auth");
           } else {
-            setAuthMode("register");
+            setAuthMode(AuthMode.REGISTER);
             setScreenState("auth");
           }
         }}
