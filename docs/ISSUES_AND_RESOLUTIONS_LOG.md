@@ -249,3 +249,30 @@ This document serves as an immutable, timestamped record of every technical, bui
   3. Added dynamic prefixing (`NEXT_PUBLIC_API_URL`) in `src/constants/endpoints.ts` so mobile APK builds route network calls dynamically to the deployed backend server.
 - **Verification:**
   Working tree remains clean after static export and builds.
+
+---
+
+### [ISSUE-011] Android Status Bar & Dynamic Island Overlapping Application Navigation Header
+
+- **Date:** October 18, 2026
+- **Timestamp:** 07:14:00 IST
+- **Component / Subsystem:** Android Window Insets & System Bars (`android/app/src/main/java/com/resumentor/app/MainActivity.java`, `android/app/src/main/res/values/styles.xml`, `android/app/src/main/res/layout/activity_main.xml`, `capacitor.config.ts`, `src/components/LandingPage.tsx`, `src/components/Auth.tsx`)
+- **Severity:** High (Device status bar, clock, notch, and audio player directly covered logo and "Get Started" header button)
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  On physical Android devices, the phone's top notification bar (clock, 5G, battery indicator, and Dynamic Island / notch music player) rendered directly on top of the Landing Page header ("ResuMentor AI" logo and the primary "Get Started" button), making the header text unreadable and the button difficult to tap.
+- **Root Cause:**
+  1. In modern Android SDKs (Android 12–15), Capacitor defaults to drawing the window edge-to-edge behind system bars unless explicit system window insets are enforced.
+  2. `MainActivity.java` did not call `WindowCompat.setDecorFitsSystemWindows(window, true)`.
+  3. `android/app/src/main/res/values/styles.xml` and `activity_main.xml` lacked `android:fitsSystemWindows="true"` on the root layout.
+  4. `capacitor.config.ts` lacked `StatusBar.overlaysWebView: false` and explicit status bar appearance styling (`style: "DARK"`, `backgroundColor: "#ffffff"`).
+  5. The landing page header previously lacked `pt-safe` and had excessive mobile vertical padding (`py-24`).
+- **Resolution:**
+  1. Updated `MainActivity.java` to invoke `WindowCompat.setDecorFitsSystemWindows(window, true)` on `onCreate`, ensuring the Android native window controller positions the WebView below the status bar and notch.
+  2. Set status bar background color to solid white (`#ffffff`) with `WindowInsetsControllerCompat.setAppearanceLightStatusBars(true)` so all native icons (clock, battery, Wi-Fi, 5G) remain crisp and dark.
+  3. Added `android:fitsSystemWindows="true"`, `android:statusBarColor="#ffffff"`, and `android:windowLightStatusBar="true"` to `AppTheme.NoActionBar` in `styles.xml`.
+  4. Added `android:fitsSystemWindows="true"` to `CoordinatorLayout` in `activity_main.xml`.
+  5. Configured `StatusBar: { overlaysWebView: false, style: "DARK", backgroundColor: "#ffffff" }` in `capacitor.config.ts`.
+  6. Added `.pt-safe` and compact mobile hero padding (`py-10 sm:py-24`) to `src/components/LandingPage.tsx`, and added `pt-safe pb-safe min-h-dvh` to `src/components/Auth.tsx`.
+- **Verification:**
+  Tested across Android native layout definitions and Next.js static export; the native status bar remains cleanly segregated above the web view, with dark legible status indicators and zero visual clipping on application headers.

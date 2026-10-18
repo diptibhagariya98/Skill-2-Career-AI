@@ -153,7 +153,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
+    <div className="min-h-dvh flex items-center justify-center p-4 pt-safe pb-safe bg-gray-100">
       {isLogin ? (
         <div className="w-full max-w-md bg-white p-8 md:p-12 rounded-2xl shadow-xl animate-fade-in">
           <div className="flex items-center justify-center mb-6">

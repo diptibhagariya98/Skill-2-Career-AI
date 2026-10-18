@@ -147,14 +147,14 @@ export default function LandingPage() {
 
   return (
     <div className="bg-white text-gray-900 min-h-screen font-sans antialiased selection:bg-teal-500 selection:text-white">
-      {/* Sticky Header Navigation */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-teal-600 p-2 rounded-xl text-white shadow-md shadow-teal-600/10">
-              <GraduationCap className="h-6 w-6" />
+      {/* Sticky Header Navigation (UX-05 Safe Area & Compact Mobile Header) */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs transition-all duration-300 pt-safe">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="bg-teal-600 p-1.5 sm:p-2 rounded-xl text-white shadow-md shadow-teal-600/10 shrink-0">
+              <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <span className="font-extrabold text-xl tracking-tight text-gray-900">
+            <span className="font-extrabold text-lg sm:text-xl tracking-tight text-gray-900 truncate">
               ResuMentor <span className="text-teal-600">+ AI</span>
             </span>
           </div>
@@ -187,24 +187,24 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-teal-50/40 via-white to-white py-24 sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-teal-50/40 via-white to-white py-10 sm:py-24">
         <div className="absolute inset-0 bg-[radial-gradient(#0d9488_0.6px,transparent_0.6px)] [background-size:24px_24px] opacity-[0.15] pointer-events-none" />
         
-        <div className="max-w-7xl mx-auto px-6 text-center relative z-10">
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-gray-900 max-w-4xl mx-auto leading-tight">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center relative z-10">
+          <h1 className="text-3xl sm:text-6xl font-black tracking-tight text-gray-900 max-w-4xl mx-auto leading-tight">
             🎯 Find Hidden Jobs. <br className="hidden sm:inline" />
             <span className="text-teal-600">Crack AI Interviews.</span> <br />
             Land Your Dream Job.
           </h1>
 
-          <p className="text-gray-600 text-lg sm:text-xl mt-8 max-w-3xl mx-auto leading-relaxed font-normal">
+          <p className="text-gray-600 text-base sm:text-xl mt-4 sm:mt-6 max-w-3xl mx-auto leading-relaxed font-normal">
             Built for Students & Job Seekers. We make your career journey simple: find off-portal jobs, practice with AI interviews, and secure scholarship support.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link 
               href={APP_ROUTES.AUTH} 
-              className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-bold px-8 py-4 rounded-xl shadow-xl shadow-teal-600/20 hover:shadow-teal-600/35 transition flex items-center justify-center gap-2 group"
+              className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-bold px-7 py-3.5 rounded-xl shadow-xl shadow-teal-600/20 hover:shadow-teal-600/35 transition flex items-center justify-center gap-2 group min-h-[44px]"
             >
               Get Started
               <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition" />
