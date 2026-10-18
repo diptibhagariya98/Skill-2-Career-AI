@@ -1,6 +1,7 @@
 /**
  * Resume Storage, Autosave, Revision History & Portability
  * Conforms to Production Spec Sections 5.3, 5.4, and 13
+ * Scoped per user ID to guarantee strict data isolation for new and existing users.
  */
 
 import { ResumeData, ResumeRevision } from "@/types/resume";
@@ -10,26 +11,55 @@ const STORAGE_KEY_CURRENT = "resumentor_resume_current";
 const STORAGE_KEY_REVISIONS = "resumentor_resume_revisions";
 const MAX_REVISIONS = 10;
 
+export function getResumeStorageKey(userId?: string): string {
+  return userId ? `resumentor_resume_${userId}_current` : STORAGE_KEY_CURRENT;
+}
+
+export function getRevisionsStorageKey(userId?: string): string {
+  return userId ? `resumentor_resume_${userId}_revisions` : STORAGE_KEY_REVISIONS;
+}
+
 /**
- * Loads the active resume from local storage, with fallback to an empty resume
+ * Loads the active resume from local storage scoped to the authenticated user.
+ * If the user is new (no saved record for their ID), returns a fresh empty resume initialized with their name & email.
  */
-export function loadLocalResume(): ResumeData {
-  if (typeof window === "undefined") return createEmptyResume();
+export function loadLocalResume(
+  userId?: string,
+  defaultUser?: { name?: string; email?: string }
+): ResumeData {
+  if (typeof window === "undefined") return createEmptyResume(defaultUser);
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_CURRENT);
-    if (!raw) return createEmptyResume();
+    const key = getResumeStorageKey(userId);
+    const raw = localStorage.getItem(key);
+
+    if (!raw) {
+      // For a new user with an explicit userId, strictly return clean empty state
+      // (Never leak a previous user's un-scoped legacy data)
+      return createEmptyResume(defaultUser);
+    }
+
     const parsed = JSON.parse(raw);
-    return migrateResumeSchema(parsed);
+    const migrated = migrateResumeSchema(parsed);
+
+    // If the saved resume was empty of contact details but we know the user's name/email, backfill them
+    if (!migrated.contact.fullName && defaultUser?.name) {
+      migrated.contact.fullName = defaultUser.name;
+    }
+    if (!migrated.contact.email && defaultUser?.email) {
+      migrated.contact.email = defaultUser.email;
+    }
+
+    return migrated;
   } catch (err) {
     console.error("Failed to load local resume:", err);
-    return createEmptyResume();
+    return createEmptyResume(defaultUser);
   }
 }
 
 /**
- * Saves current resume to local storage and updates the 10-revision history log
+ * Saves current resume to local storage scoped to the authenticated user and updates revisions
  */
-export function saveLocalResume(data: ResumeData): void {
+export function saveLocalResume(data: ResumeData, userId?: string): void {
   if (typeof window === "undefined") return;
   try {
     const payload = {
@@ -39,10 +69,13 @@ export function saveLocalResume(data: ResumeData): void {
         updatedAt: new Date().toISOString(),
       },
     };
-    localStorage.setItem(STORAGE_KEY_CURRENT, JSON.stringify(payload));
+    const currentKey = getResumeStorageKey(userId);
+    const revisionsKey = getRevisionsStorageKey(userId);
 
-    // Append to revisions (max 10)
-    const rawRevisions = localStorage.getItem(STORAGE_KEY_REVISIONS);
+    localStorage.setItem(currentKey, JSON.stringify(payload));
+
+    // Append to user-scoped revisions (max 10)
+    const rawRevisions = localStorage.getItem(revisionsKey);
     let revisions: ResumeRevision[] = rawRevisions ? JSON.parse(rawRevisions) : [];
     revisions.unshift({
       timestamp: payload.meta.updatedAt,
@@ -51,19 +84,19 @@ export function saveLocalResume(data: ResumeData): void {
     if (revisions.length > MAX_REVISIONS) {
       revisions = revisions.slice(0, MAX_REVISIONS);
     }
-    localStorage.setItem(STORAGE_KEY_REVISIONS, JSON.stringify(revisions));
+    localStorage.setItem(revisionsKey, JSON.stringify(revisions));
   } catch (err) {
     console.error("Failed to save local resume:", err);
   }
 }
 
 /**
- * Loads the 10 most recent timestamped revisions
+ * Loads the 10 most recent timestamped revisions for the given user
  */
-export function loadRevisionHistory(): ResumeRevision[] {
+export function loadRevisionHistory(userId?: string): ResumeRevision[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_REVISIONS);
+    const raw = localStorage.getItem(getRevisionsStorageKey(userId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -71,11 +104,11 @@ export function loadRevisionHistory(): ResumeRevision[] {
 }
 
 /**
- * Restores a specific revision
+ * Restores a specific revision for the given user
  */
-export function restoreRevision(revision: ResumeRevision): ResumeData {
+export function restoreRevision(revision: ResumeRevision, userId?: string): ResumeData {
   const migrated = migrateResumeSchema(revision.data);
-  saveLocalResume(migrated);
+  saveLocalResume(migrated, userId);
   return migrated;
 }
 
@@ -101,7 +134,7 @@ export function exportResumeDataFile(data: ResumeData): void {
 /**
  * Imports and validates a raw resume JSON file (Section 5.4)
  */
-export async function importResumeDataFile(file: File): Promise<ResumeData> {
+export async function importResumeDataFile(file: File, userId?: string): Promise<ResumeData> {
   if (!file.name.endsWith(".json") && file.type !== "application/json") {
     throw new Error("File must be a valid .json resume data file.");
   }
@@ -122,15 +155,19 @@ export async function importResumeDataFile(file: File): Promise<ResumeData> {
   }
 
   const migrated = migrateResumeSchema(parsed);
-  saveLocalResume(migrated);
+  saveLocalResume(migrated, userId);
   return migrated;
 }
 
 /**
  * One-click "Delete all my data" (Section 13)
  */
-export function deleteAllLocalResumeData(): void {
+export function deleteAllLocalResumeData(userId?: string): void {
   if (typeof window === "undefined") return;
+  if (userId) {
+    localStorage.removeItem(getResumeStorageKey(userId));
+    localStorage.removeItem(getRevisionsStorageKey(userId));
+  }
   localStorage.removeItem(STORAGE_KEY_CURRENT);
   localStorage.removeItem(STORAGE_KEY_REVISIONS);
 }

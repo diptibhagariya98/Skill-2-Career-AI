@@ -28,11 +28,12 @@ import InterviewScorecard from "./interview/InterviewScorecard";
 import InterviewHistory from "./interview/InterviewHistory";
 
 interface AIInterviewProps {
+  user?: { id?: string; name?: string; email?: string; [key: string]: any } | null;
   onGoToDashboard?: () => void;
   onNavigateToTab?: (tabId: string) => void;
 }
 
-export default function AIInterview({ onGoToDashboard, onNavigateToTab }: AIInterviewProps) {
+export default function AIInterview({ user, onGoToDashboard, onNavigateToTab }: AIInterviewProps) {
   const [activeTab, setActiveTab] = useState<"setup" | "session" | "scorecard" | "history">("setup");
   const [currentConfig, setCurrentConfig] = useState<InterviewSetupConfig | null>(null);
   const [currentQuestions, setCurrentQuestions] = useState<BankQuestion[]>([]);
@@ -41,22 +42,26 @@ export default function AIInterview({ onGoToDashboard, onNavigateToTab }: AIInte
   const [sessions, setSessions] = useState<InterviewSessionRecord[]>([]);
   const [isInitializing, setIsInitializing] = useState(false);
 
-  // Load past history from localStorage
+  const historyKey = user?.id ? `resumentor_interview_history_${user.id}` : "resumentor_interview_history";
+
+  // Load past history from localStorage for this user
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("resumentor_interview_history");
+      const stored = localStorage.getItem(historyKey);
       if (stored) {
         setSessions(JSON.parse(stored));
+      } else {
+        setSessions([]);
       }
     } catch (e) {
       console.warn("Failed to read session history from localStorage", e);
     }
-  }, []);
+  }, [historyKey]);
 
   const saveSessions = (updated: InterviewSessionRecord[]) => {
     setSessions(updated);
     try {
-      localStorage.setItem("resumentor_interview_history", JSON.stringify(updated));
+      localStorage.setItem(historyKey, JSON.stringify(updated));
     } catch (e) {
       console.warn("Failed to persist session history", e);
     }

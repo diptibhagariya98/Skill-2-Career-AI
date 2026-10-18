@@ -99,6 +99,13 @@ export default function Dashboard() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
+      if (typeof window !== "undefined") {
+        // Clear un-scoped legacy test caches to prevent data leakage between users
+        localStorage.removeItem("resumentor_resume_current");
+        localStorage.removeItem("resumentor_resume_revisions");
+        localStorage.removeItem("resumentor_scholarship_profile");
+        localStorage.removeItem("resumentor_interview_history");
+      }
       toast.success("Successfully logged out!");
       window.location.href = "/auth";
     } catch (error) {
@@ -409,15 +416,16 @@ export default function Dashboard() {
             )}
 
             {activePage === "profile" && <Profile userData={userData} onUpdateUserData={setUserData} />}
-            {activePage === "resume" && <ResumeBuilder />}
+            {activePage === "resume" && <ResumeBuilder user={userData} />}
             {activePage === "jobs" && <JobFinder />}
             {activePage === "interview" && (
               <AIInterview
+                user={userData}
                 onGoToDashboard={() => setActivePage("dashboard")}
                 onNavigateToTab={(tabId) => setActivePage(tabId)}
               />
             )}
-            {activePage === "scholarships" && <Scholarships />}
+            {activePage === "scholarships" && <Scholarships user={userData} />}
             {activePage === "learn" && <LearnPractice />}
           </div>
         </div>

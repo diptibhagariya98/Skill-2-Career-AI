@@ -32,7 +32,11 @@ type ActiveTab = "wizard" | "results" | "directory" | "scholars" | "admin";
 
 const LOCAL_STORAGE_PROFILE_KEY = "resumentor_scholarship_student_profile";
 
-export default function Scholarships() {
+interface ScholarshipsProps {
+  user?: { id?: string; name?: string; email?: string; [key: string]: any } | null;
+}
+
+export default function Scholarships({ user }: ScholarshipsProps = {}) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("wizard");
   const [schemes, setSchemes] = useState<ScholarshipScheme[]>(SEED_SCHOLARSHIP_SCHEMES);
   const [scholars, setScholars] = useState<ScholarListing[]>(SEED_SCHOLARS);
@@ -46,10 +50,12 @@ export default function Scholarships() {
   } | null>(null);
   const [scholarFilterScheme, setScholarFilterScheme] = useState<string | undefined>(undefined);
 
-  // Load saved profile from localStorage if exists
+  const storageKey = user?.id ? `resumentor_scholarship_student_profile_${user.id}` : LOCAL_STORAGE_PROFILE_KEY;
+
+  // Load saved profile from localStorage if exists for this user
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY);
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved) as StudentProfile;
         setStudentProfile(parsed);
@@ -57,13 +63,13 @@ export default function Scholarships() {
     } catch {
       // Ignore localStorage read errors
     }
-  }, []);
+  }, [storageKey]);
 
   // Run evaluation
   const handleEvaluate = (profile: StudentProfile) => {
     setStudentProfile(profile);
     try {
-      localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(profile));
+      localStorage.setItem(storageKey, JSON.stringify(profile));
     } catch {
       // Ignore storage errors
     }

@@ -24,17 +24,21 @@ import {
 
 interface DataManagementModalProps {
   resume: ResumeData;
+  userId?: string;
+  user?: { name?: string; email?: string } | null;
   onUpdateResume: (data: ResumeData) => void;
   onClose: () => void;
 }
 
 export default function DataManagementModal({
   resume,
+  userId,
+  user,
   onUpdateResume,
   onClose,
 }: DataManagementModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [revisions, setRevisions] = useState<ResumeRevision[]>(() => loadRevisionHistory());
+  const [revisions, setRevisions] = useState<ResumeRevision[]>(() => loadRevisionHistory(userId));
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   const handleExportJSON = () => {
@@ -50,9 +54,9 @@ export default function DataManagementModal({
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const imported = await importResumeDataFile(file);
+      const imported = await importResumeDataFile(file, userId);
       onUpdateResume(imported);
-      setRevisions(loadRevisionHistory());
+      setRevisions(loadRevisionHistory(userId));
       toast.success("Resume data imported successfully!");
       onClose();
     } catch (err: any) {
@@ -64,7 +68,7 @@ export default function DataManagementModal({
 
   const handleRestore = (rev: ResumeRevision) => {
     try {
-      const restored = restoreRevision(rev);
+      const restored = restoreRevision(rev, userId);
       onUpdateResume(restored);
       toast.success("Revision restored.");
       onClose();
@@ -81,15 +85,15 @@ export default function DataManagementModal({
   };
 
   const handleClearAll = () => {
-    const empty = createEmptyResume();
+    const empty = createEmptyResume({ name: user?.name, email: user?.email });
     onUpdateResume(empty);
     toast.success("Resume fields cleared.");
     onClose();
   };
 
   const handleDeleteAll = () => {
-    deleteAllLocalResumeData();
-    const empty = createEmptyResume();
+    deleteAllLocalResumeData(userId);
+    const empty = createEmptyResume({ name: user?.name, email: user?.email });
     onUpdateResume(empty);
     toast.success("All local resume data and revisions deleted.");
     setShowConfirmDelete(false);

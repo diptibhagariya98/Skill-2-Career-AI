@@ -4,15 +4,17 @@ import {
 } from "@/types/resume";
 import { DEFAULT_SECTION_ORDER, DEFAULT_SECTION_VISIBILITY } from "./registry";
 
-export function createEmptyResume(): ResumeData {
+export function createEmptyResume(initialUser?: { name?: string; email?: string }): ResumeData {
   const now = new Date().toISOString();
+  const userName = initialUser?.name?.trim() || "";
+  const userEmail = initialUser?.email?.trim() || "";
   return {
     meta: {
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `resume_${Date.now()}`,
       schemaVersion: RESUME_SCHEMA_VERSION,
       createdAt: now,
       updatedAt: now,
-      title: "Untitled Resume",
+      title: userName ? `${userName}'s Resume` : "Untitled Resume",
       selectedTemplate: "classic",
       pageSize: "A4",
       fontScale: "medium",
@@ -23,9 +25,9 @@ export function createEmptyResume(): ResumeData {
       sectionVisibility: { ...DEFAULT_SECTION_VISIBILITY },
     },
     contact: {
-      fullName: "",
+      fullName: userName,
       headline: "",
-      email: "",
+      email: userEmail,
       phone: "",
       city: "",
       state: "",

@@ -3,7 +3,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ResumeData, SectionKey, TemplateId, PageSize } from "@/types/resume";
 import { AnalysisResponse } from "@/types/analysis";
-import { loadLocalResume, saveLocalResume } from "@/lib/resume/storage";
+import { supabase } from "@/lib/supabase";
+import { createEmptyResume, migrateResumeSchema } from "@/lib/resume/schema";
+import {
+  loadLocalResume,
+  saveLocalResume,
+  getResumeStorageKey,
+} from "@/lib/resume/storage";
 import { generateContentFingerprint } from "@/lib/resume/scoring";
 import { API_ROUTES } from "@/constants/endpoints";
 import { toast } from "react-hot-toast";
@@ -50,12 +56,90 @@ const ACCENT_COLORS = [
   { name: "Forest", hex: "#14532d" },
 ];
 
-export default function ResumeBuilder() {
-  const [resume, setResume] = useState<ResumeData>(() => loadLocalResume());
+interface ResumeBuilderProps {
+  user?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    [key: string]: any;
+  } | null;
+}
+
+export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
+  const [currentUser, setCurrentUser] = useState(user || null);
+  const [resume, setResume] = useState<ResumeData>(() =>
+    loadLocalResume(user?.id, { name: user?.name, email: user?.email })
+  );
   const [activeSection, setActiveSection] = useState<SectionKey>("contact");
   const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
   const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "Idle">("Saved");
   const [showDataModal, setShowDataModal] = useState(false);
+
+  // Sync user and ensure newly registered users get clean, fresh state
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncUserAndResume = async () => {
+      try {
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+
+        const activeId = user?.id || authUser?.id;
+        const activeName =
+          user?.name ||
+          authUser?.user_metadata?.name ||
+          authUser?.user_metadata?.full_name ||
+          "";
+        const activeEmail = user?.email || authUser?.email || "";
+
+        if (activeId && isMounted) {
+          const userObj = { id: activeId, name: activeName, email: activeEmail };
+          setCurrentUser(userObj);
+
+          // 1. Check user-scoped local storage
+          const localKey = getResumeStorageKey(activeId);
+          const rawLocal = localStorage.getItem(localKey);
+
+          if (rawLocal) {
+            try {
+              const parsed = JSON.parse(rawLocal);
+              if (isMounted) setResume(migrateResumeSchema(parsed));
+              return;
+            } catch {
+              // fallback to DB if corrupt
+            }
+          }
+
+          // 2. Check cloud profile in Supabase PostgreSQL
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("resume_data")
+            .eq("id", activeId)
+            .single();
+
+          if (profile?.resume_data && isMounted) {
+            const migrated = migrateResumeSchema(profile.resume_data);
+            setResume(migrated);
+            saveLocalResume(migrated, activeId);
+          } else if (isMounted) {
+            // 3. Brand new user: initialize clean empty resume with ONLY their own name & email
+            const freshResume = createEmptyResume({ name: activeName, email: activeEmail });
+            setResume(freshResume);
+            saveLocalResume(freshResume, activeId);
+          }
+        }
+      } catch (err) {
+        console.warn("[ResumeBuilder sync notice]:", err);
+      }
+    };
+
+    syncUserAndResume();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.name, user?.email]);
 
   // Export PDF State (Phase 2 Part B)
   const [exportState, setExportState] = useState<"ready" | "preparing" | "done" | "failed">("ready");
@@ -74,17 +158,37 @@ export default function ResumeBuilder() {
   const previewPrintRef = useRef<HTMLDivElement>(null);
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debounced Autosave (800ms) complying with Section 5.3
-  const triggerAutosave = useCallback((updated: ResumeData) => {
-    setSaveStatus("Saving...");
-    if (autosaveTimeoutRef.current) {
-      clearTimeout(autosaveTimeoutRef.current);
-    }
-    autosaveTimeoutRef.current = setTimeout(() => {
-      saveLocalResume(updated);
-      setSaveStatus("Saved");
-    }, 800);
-  }, []);
+  // Debounced Autosave (800ms) with cloud sync complying with Section 5.3
+  const triggerAutosave = useCallback(
+    (updated: ResumeData) => {
+      setSaveStatus("Saving...");
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+      autosaveTimeoutRef.current = setTimeout(async () => {
+        const activeUserId = currentUser?.id;
+        saveLocalResume(updated, activeUserId);
+
+        // Async sync to Supabase PostgreSQL profiles table
+        if (activeUserId) {
+          try {
+            await supabase
+              .from("profiles")
+              .update({
+                resume_data: updated,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", activeUserId);
+          } catch (dbErr: any) {
+            console.warn("[Autosave Cloud Sync Notice]:", dbErr.message);
+          }
+        }
+
+        setSaveStatus("Saved");
+      }, 800);
+    },
+    [currentUser?.id]
+  );
 
   const handleUpdateResume = (next: ResumeData) => {
     setResume(next);
@@ -858,6 +962,8 @@ export default function ResumeBuilder() {
       {showDataModal && (
         <DataManagementModal
           resume={resume}
+          userId={currentUser?.id}
+          user={currentUser}
           onUpdateResume={handleUpdateResume}
           onClose={() => setShowDataModal(false)}
         />

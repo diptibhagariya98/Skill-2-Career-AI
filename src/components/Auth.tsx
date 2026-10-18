@@ -219,6 +219,10 @@ export default function Auth() {
         throw error;
       }
 
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("resumentor_resume_current");
+        localStorage.removeItem("resumentor_resume_revisions");
+      }
       toast.success("Successfully logged in!");
       router.replace(APP_ROUTES.DASHBOARD);
     } catch (error: any) {
@@ -340,6 +344,10 @@ export default function Auth() {
       }
 
       if (verifiedSuccessfully) {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("resumentor_resume_current");
+          localStorage.removeItem("resumentor_resume_revisions");
+        }
         // 2. Establish active session with password
         if (pendingPassword) {
           await supabase.auth.signInWithPassword({
