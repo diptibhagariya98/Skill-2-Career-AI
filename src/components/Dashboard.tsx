@@ -72,10 +72,11 @@ export default function Dashboard() {
           .single();
 
         setUserData({
+          id: user.id,
           name: profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || "Student",
           email: profile?.email || user.email || "",
           photoURL: profile?.photo_url || "",
-          role: profile?.role || "student",
+          role: profile?.role || user.user_metadata?.role || "student",
           ...profile,
         } as UserData);
       } catch (error) {
@@ -273,9 +274,22 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <div className="hidden sm:block text-right">
-              <span className="block font-semibold text-gray-800 text-xs sm:text-sm leading-tight">
-                {displayName}
-              </span>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="block font-semibold text-gray-800 text-xs sm:text-sm leading-tight">
+                  {displayName}
+                </span>
+                <span
+                  className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                    userData?.role === "admin"
+                      ? "bg-purple-100 text-purple-700 border border-purple-200"
+                      : userData?.role === "candidate"
+                      ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                      : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                  }`}
+                >
+                  {userData?.role || "Student"}
+                </span>
+              </div>
               <span className="block text-[11px] text-gray-400 font-medium truncate max-w-[150px]">
                 {userData?.email || ""}
               </span>

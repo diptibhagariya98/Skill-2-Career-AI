@@ -225,13 +225,17 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
     }
   };
 
-  const enrollmentDateStr = userData?.created_at || userData?.createdAt
+  const enrollmentDateStr = (userData?.created_at || userData?.createdAt)
     ? new Date(userData.created_at || userData.createdAt).toLocaleDateString("en-US", {
         month: "short",
         day: "2-digit",
         year: "numeric",
       })
-    : "Nov 01, 2025";
+    : new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+      });
 
   const userDisplayName = userData?.name || "Student";
   const avatarInitials = getInitials(userDisplayName);
@@ -418,7 +422,20 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
           </div>
 
           <h3 className="mt-4 text-xl font-bold text-gray-900">{userDisplayName}</h3>
-          <p className="text-sm text-gray-500 break-all">{userData?.email || "student@example.com"}</p>
+          <p className="text-sm text-gray-500 break-all">{userData?.email || ""}</p>
+          <div className="mt-2.5">
+            <span
+              className={`inline-block text-[11px] uppercase font-bold tracking-wider px-3 py-1 rounded-full ${
+                userData?.role === "admin"
+                  ? "bg-purple-100 text-purple-700 border border-purple-200"
+                  : userData?.role === "candidate"
+                  ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                  : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+              }`}
+            >
+              Role: {userData?.role || "Student"}
+            </span>
+          </div>
           <div className="mt-6 text-left space-y-3 pt-6 border-t border-gray-100">
             <p className="text-sm text-gray-700 flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-500" />

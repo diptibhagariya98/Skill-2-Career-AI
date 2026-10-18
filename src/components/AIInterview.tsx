@@ -22,6 +22,7 @@ import {
   selectQuestionsForSession,
 } from "../lib/interview/engine";
 import { generateAIInterviewPlan } from "../lib/interview/geminiService";
+import { loadLocalResume } from "@/lib/resume/storage";
 import InterviewSetup from "./interview/InterviewSetup";
 import InterviewThread from "./interview/InterviewThread";
 import InterviewScorecard from "./interview/InterviewScorecard";
@@ -79,7 +80,18 @@ export default function AIInterview({ user, onGoToDashboard, onNavigateToTab }: 
     // Full AI Dynamic Planning
     if (config.interviewMode === "full_ai") {
       try {
-        const aiPlan = await generateAIInterviewPlan(config);
+        let resumeSnippet = "";
+        if (config.useResume && user?.id) {
+          const userResume = loadLocalResume(user.id);
+          if (userResume?.contact?.fullName) {
+            resumeSnippet = `Candidate: ${userResume.contact.fullName}. Headline: ${userResume.contact.headline}. Experience: ${userResume.experience.map((e) => `${e.title} at ${e.employer}`).join("; ")}. Skills: ${(userResume.skills.flatList || []).join(", ")}`;
+          }
+        }
+
+        const aiPlan = await generateAIInterviewPlan({
+          ...config,
+          resumeContext: resumeSnippet || undefined,
+        });
         if (aiPlan.length >= 3) {
           preparedQuestions = aiPlan.map((item, idx) => ({
             id: `ai-q-${idx + 1}`,

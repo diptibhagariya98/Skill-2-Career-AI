@@ -122,6 +122,7 @@ export interface InterviewSetupConfig {
   feedbackTiming: FeedbackTiming;
   interviewMode: InterviewMode;
   useResume: boolean;
+  resumeContext?: string;
   answerTimeLimitSeconds?: number; // 0 for off, or 60, 120, 180
 }
 

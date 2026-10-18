@@ -92,7 +92,7 @@ export default function Scholarships({ user }: ScholarshipsProps = {}) {
   };
 
   const handleClearSavedData = () => {
-    localStorage.removeItem(LOCAL_STORAGE_PROFILE_KEY);
+    localStorage.removeItem(storageKey);
     setStudentProfile(null);
     setEvaluationResults(null);
     setActiveTab("wizard");
@@ -153,16 +153,18 @@ export default function Scholarships({ user }: ScholarshipsProps = {}) {
             <GraduationCap className="w-4 h-4" /> Verified Mentors ({scholars.length})
           </button>
 
-          <button
-            onClick={() => setActiveTab("admin")}
-            className={`px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab === "admin"
-                ? "bg-gray-800 text-white shadow-md"
-                : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-            }`}
-          >
-            <Terminal className="w-4 h-4" /> Console
-          </button>
+          {user?.role === "admin" && (
+            <button
+              onClick={() => setActiveTab("admin")}
+              className={`px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === "admin"
+                  ? "bg-purple-800 text-white shadow-md shadow-purple-200"
+                  : "text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200"
+              }`}
+            >
+              <Terminal className="w-4 h-4" /> Admin Console
+            </button>
+          )}
         </div>
 
         {/* Clear Data Policy button */}
