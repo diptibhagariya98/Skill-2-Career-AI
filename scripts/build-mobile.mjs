@@ -9,6 +9,43 @@ const projectRoot = path.resolve(__dirname, "..");
 const apiDir = path.join(projectRoot, "src", "app", "api");
 const appDir = path.join(projectRoot, "src", "app");
 
+// Sentinel cache directory: stores original file contents during build.
+// Persists across crashes so the next run can always auto-recover.
+const CACHE_DIR = path.join(projectRoot, ".mobile-build-cache");
+const STUB_MARKER = "Auto-generated build-time stub for Next.js static mobile export";
+
+// ---------------------------------------------------------------------------
+// Crash recovery: if a previous build died before restoring, do it now.
+// ---------------------------------------------------------------------------
+function recoverFromCrash() {
+  if (!fs.existsSync(CACHE_DIR)) return;
+
+  const entries = fs.readdirSync(CACHE_DIR).filter((f) => f.endsWith(".json"));
+  if (entries.length === 0) return;
+
+  console.log(`[build:mobile] ⚠ Detected ${entries.length} unrestored file(s) from a previous crashed build. Auto-recovering...`);
+
+  for (const entry of entries) {
+    const cachePath = path.join(CACHE_DIR, entry);
+    try {
+      const { originalPath, content } = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+      fs.writeFileSync(originalPath, content, "utf8");
+      fs.unlinkSync(cachePath);
+      console.log(`[build:mobile]   ✓ Restored: ${path.relative(projectRoot, originalPath)}`);
+    } catch (e) {
+      console.error(`[build:mobile]   ✗ Failed to recover ${entry}:`, e.message);
+    }
+  }
+
+  // Remove cache dir if now empty
+  try {
+    if (fs.readdirSync(CACHE_DIR).length === 0) fs.rmdirSync(CACHE_DIR);
+  } catch { /* ignore */ }
+}
+
+// ---------------------------------------------------------------------------
+// File finders
+// ---------------------------------------------------------------------------
 function findRouteFiles(dir, fileList = []) {
   if (!fs.existsSync(dir)) return fileList;
   const files = fs.readdirSync(dir);
@@ -23,9 +60,7 @@ function findRouteFiles(dir, fileList = []) {
   return fileList;
 }
 
-const originalContents = new Map();
-
-// Find all page.tsx / page.js files that use "force-dynamic" (incompatible with static export)
+// Find all page files that use "force-dynamic" (incompatible with static export)
 function findForceDynamicPages(dir, fileList = []) {
   if (!fs.existsSync(dir)) return fileList;
   const files = fs.readdirSync(dir);
@@ -43,17 +78,37 @@ function findForceDynamicPages(dir, fileList = []) {
   return fileList;
 }
 
+// ---------------------------------------------------------------------------
+// Cache helpers — write original content to disk before mutating
+// ---------------------------------------------------------------------------
+const originalContents = new Map();
+
+function cacheAndMutate(filePath, newContent) {
+  const original = fs.readFileSync(filePath, "utf8");
+  originalContents.set(filePath, original);
+
+  // Persist to crash-recovery cache
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+  const cacheKey = Buffer.from(filePath).toString("base64").replace(/[/+=]/g, "_");
+  fs.writeFileSync(
+    path.join(CACHE_DIR, `${cacheKey}.json`),
+    JSON.stringify({ originalPath: filePath, content: original }),
+    "utf8"
+  );
+
+  fs.writeFileSync(filePath, newContent, "utf8");
+}
+
+// ---------------------------------------------------------------------------
+// Stub / restore
+// ---------------------------------------------------------------------------
 function stubRoutes() {
   const routeFiles = findRouteFiles(apiDir);
   console.log(`[build:mobile] Stubbing ${routeFiles.length} server API routes for static export...`);
 
   for (const filePath of routeFiles) {
-    const content = fs.readFileSync(filePath, "utf8");
-    originalContents.set(filePath, content);
-
-    // Replace with static export safe stub
-    const stub = `// Auto-generated build-time stub for Next.js static mobile export\nexport const dynamic = "force-static";\nexport async function GET() {\n  return new Response(JSON.stringify({ status: "mobile-export" }), {\n    headers: { "Content-Type": "application/json" },\n  });\n}\n`;
-    fs.writeFileSync(filePath, stub, "utf8");
+    const stub = `// ${STUB_MARKER}\nexport const dynamic = "force-static";\nexport async function GET() {\n  return new Response(JSON.stringify({ status: "mobile-export" }), {\n    headers: { "Content-Type": "application/json" },\n  });\n}\n`;
+    cacheAndMutate(filePath, stub);
   }
 
   // Patch pages that use "force-dynamic" (not allowed in static export mode)
@@ -62,11 +117,10 @@ function stubRoutes() {
     console.log(`[build:mobile] Patching ${dynamicPages.length} page(s) with force-dynamic -> force-static for static export...`);
     for (const filePath of dynamicPages) {
       const content = fs.readFileSync(filePath, "utf8");
-      originalContents.set(filePath, content);
       const patched = content
         .replace(/export const dynamic = "force-dynamic"/g, 'export const dynamic = "force-static"')
         .replace(/export const dynamic = 'force-dynamic'/g, "export const dynamic = 'force-static'");
-      fs.writeFileSync(filePath, patched, "utf8");
+      cacheAndMutate(filePath, patched);
     }
   }
 }
@@ -76,23 +130,32 @@ function restoreRoutes() {
     for (const [filePath, content] of originalContents.entries()) {
       try {
         fs.writeFileSync(filePath, content, "utf8");
+
+        // Remove from crash-recovery cache
+        const cacheKey = Buffer.from(filePath).toString("base64").replace(/[/+=]/g, "_");
+        const cachePath = path.join(CACHE_DIR, `${cacheKey}.json`);
+        if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
       } catch (err) {
         console.error(`[build:mobile] Failed to restore ${filePath}:`, err.message);
       }
     }
     console.log(`[build:mobile] Restored all ${originalContents.size} stubbed/patched file(s).`);
     originalContents.clear();
+
+    // Remove cache dir if now empty
+    try {
+      if (fs.existsSync(CACHE_DIR) && fs.readdirSync(CACHE_DIR).length === 0) {
+        fs.rmdirSync(CACHE_DIR);
+      }
+    } catch { /* ignore */ }
   }
 }
 
-process.on("SIGINT", () => {
-  restoreRoutes();
-  process.exit(1);
-});
-process.on("SIGTERM", () => {
-  restoreRoutes();
-  process.exit(1);
-});
+// ---------------------------------------------------------------------------
+// Signal / error handlers
+// ---------------------------------------------------------------------------
+process.on("SIGINT", () => { restoreRoutes(); process.exit(1); });
+process.on("SIGTERM", () => { restoreRoutes(); process.exit(1); });
 process.on("uncaughtException", (err) => {
   console.error("[build:mobile] Uncaught exception:", err);
   restoreRoutes();
@@ -129,6 +192,9 @@ function safeCleanDir(dirPath) {
 }
 
 async function main() {
+  // Always attempt crash recovery first, before doing anything else
+  recoverFromCrash();
+
   try {
     stubRoutes();
 
