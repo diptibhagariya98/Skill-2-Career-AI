@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
     const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || null;
     const userAgent = request.headers.get("user-agent") || null;
 
+    // 5. Store new OTP in database (clean, minimal columns)
     const { error: dbError } = await supabase.from("otp_codes").insert({
       user_id: cleanUserId || cleanEmail,
       email: cleanEmail,
@@ -123,8 +124,6 @@ export async function POST(request: NextRequest) {
       expires_at: expiresAt,
       created_at: new Date().toISOString(),
       consumed_at: null,
-      ip_address: clientIp,
-      user_agent: userAgent,
     });
 
     if (dbError) {

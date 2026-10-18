@@ -92,25 +92,30 @@ export async function POST(request: NextRequest) {
         errLower.includes("violates unique constraint");
 
       if (isAlreadyExists) {
-        // Query profile to determine if the existing account is already confirmed
+        // Query profile to determine the user's ID
         const { data: existingProfile } = await supabase
           .from("profiles")
           .select("id, name, email")
           .eq("email", sanitizedEmail)
           .maybeSingle();
 
-        if (existingProfile?.id) {
-          const { data: authUserData } = await supabase.auth.admin.getUserById(existingProfile.id);
-          if (authUserData?.user?.email_confirmed_at) {
-            return NextResponse.json(
-              { error: AUTH_MESSAGES.ACCOUNT_ALREADY_EXISTS },
-              { status: 409 }
-            );
+        let existingUserId = existingProfile?.id;
+
+        // If not in profiles, search via Supabase auth listUsers
+        if (!existingUserId) {
+          const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+          const users = (userList?.users || []) as Array<{ id: string; email?: string }>;
+          const matched = users.find(
+            (u) => (u.email || "").toLowerCase() === sanitizedEmail.toLowerCase()
+          );
+          if (matched) {
+            existingUserId = matched.id;
           }
-          // The user exists but is unconfirmed:
-          // Update their password and metadata to what they just entered in the registration form
-          // so that upon OTP confirmation, the password they just entered ACTUALLY works!
-          userId = existingProfile.id;
+        }
+
+        if (existingUserId) {
+          userId = existingUserId;
+          // Update password to what user just typed so credentials always match
           const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
             password,
             user_metadata: {
@@ -119,13 +124,10 @@ export async function POST(request: NextRequest) {
             },
           });
           if (updateErr) {
-            console.warn("[Unconfirmed User Password Sync Notice]:", updateErr.message);
+            console.warn("[User Password Sync Notice]:", updateErr.message);
           }
         } else {
-          return NextResponse.json(
-            { error: AUTH_MESSAGES.ACCOUNT_ALREADY_EXISTS },
-            { status: 409 }
-          );
+          throw new Error(createErr?.message || "Failed to register account.");
         }
       } else {
         throw new Error(createErr?.message || "Failed to create user account.");
@@ -161,9 +163,7 @@ export async function POST(request: NextRequest) {
     const expiresInMinutes = AUTH_CONSTANTS.OTP_EXPIRATION_MINUTES;
     const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString();
 
-    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || null;
-    const userAgent = request.headers.get("user-agent") || null;
-
+    // Store OTP in database (clean, minimal columns)
     const { error: dbError } = await supabase.from("otp_codes").insert({
       user_id: userId,
       email: sanitizedEmail,
@@ -174,8 +174,6 @@ export async function POST(request: NextRequest) {
       expires_at: expiresAt,
       created_at: new Date().toISOString(),
       consumed_at: null,
-      ip_address: clientIp,
-      user_agent: userAgent,
     });
 
     if (dbError) {
@@ -198,20 +196,6 @@ export async function POST(request: NextRequest) {
       html,
       text,
     });
-
-    // 9. Record audit event
-    try {
-      await supabase.from("auth_audit_logs").insert({
-        user_id: userId,
-        email: sanitizedEmail,
-        event: AuthEvent.REGISTER,
-        ip: clientIp,
-        user_agent: userAgent,
-        metadata: { purpose: AuthPurpose.EMAIL_VERIFY },
-      });
-    } catch (auditErr: unknown) {
-      console.warn("[Audit Log Notice]:", getErrorMessage(auditErr));
-    }
 
     return NextResponse.json({
       success: true,
