@@ -21,13 +21,28 @@ import {
 } from "lucide-react";
 import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
 
-type AuthMode = "login" | "register" | "otp" | "forgot" | "reset-password";
+export type AuthMode = "login" | "register" | "otp" | "forgot" | "reset-password";
 
-export default function Auth() {
+export interface AuthProps {
+  initialMode?: AuthMode;
+}
+
+export default function Auth({ initialMode = "login" }: AuthProps = {}) {
   const router = useRouter();
 
   // Mode state: 'login' | 'register' | 'otp' | 'forgot' | 'reset-password'
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+
+  // Sync mode with URL search params if present
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlMode = params.get("mode") as AuthMode | null;
+      if (urlMode && ["login", "register", "otp", "forgot", "reset-password"].includes(urlMode)) {
+        setMode(urlMode);
+      }
+    }
+  }, []);
 
   // Form field states
   const [email, setEmail] = useState("");
