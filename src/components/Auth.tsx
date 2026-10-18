@@ -19,7 +19,7 @@ import {
   Check,
   Sparkles,
 } from "lucide-react";
-import { APP_ROUTES } from "@/constants/endpoints";
+import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
 
 type AuthMode = "login" | "register" | "otp" | "forgot";
 
@@ -46,6 +46,7 @@ export default function Auth() {
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [pendingUserId, setPendingUserId] = useState("");
   const [pendingEmail, setPendingEmail] = useState("");
+  const [pendingPassword, setPendingPassword] = useState("");
   const [pendingName, setPendingName] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
@@ -191,17 +192,28 @@ export default function Auth() {
       });
 
       if (error) {
-        // If email confirmation is required in Supabase, switch to OTP verification mode
+        // If email confirmation is required, automatically dispatch a 6-digit OTP and switch to OTP mode
         if (error.message.toLowerCase().includes("email not confirmed")) {
           setPendingEmail(cleanEmail);
+          setPendingPassword(password);
           setOtpDigits(["", "", "", "", "", ""]);
           setMode("otp");
           setCooldown(60);
-          await supabase.auth.resend({
-            type: "signup",
-            email: cleanEmail,
-          });
-          toast("Please verify your 6-digit email code to continue.", { icon: "✉️" });
+
+          try {
+            await fetch(API_ROUTES.AUTH_SEND_OTP, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: cleanEmail,
+                purpose: "EMAIL_VERIFY",
+              }),
+            });
+          } catch (e: any) {
+            console.warn("[OTP Trigger Notice]:", e.message);
+          }
+
+          toast("A 6-digit verification code has been sent to your email.", { icon: "✉️" });
           return;
         }
         throw error;
@@ -251,20 +263,30 @@ export default function Auth() {
 
       if (error) throw error;
 
-      // If user requires email verification:
-      if (data.user && !data.session) {
-        setPendingUserId(data.user.id);
-        setPendingEmail(cleanEmail);
-        setPendingName(cleanName);
-        setOtpDigits(["", "", "", "", "", ""]);
-        setMode("otp");
-        setCooldown(60);
-        toast.success("Account created! A 6-digit code has been sent to your email.");
-      } else {
-        // Automatically verified / logged in
-        toast.success("Account created successfully!");
-        router.replace(APP_ROUTES.DASHBOARD);
+      // Automatically send the 6-digit verification code using our custom Nodemailer SMTP route
+      try {
+        await fetch(API_ROUTES.AUTH_SEND_OTP, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: cleanEmail,
+            userId: data.user?.id,
+            name: cleanName,
+            purpose: "EMAIL_VERIFY",
+          }),
+        });
+      } catch (sendErr: any) {
+        console.warn("[Send OTP Client Notice]:", sendErr);
       }
+
+      setPendingUserId(data.user?.id || "");
+      setPendingEmail(cleanEmail);
+      setPendingPassword(password);
+      setPendingName(cleanName);
+      setOtpDigits(["", "", "", "", "", ""]);
+      setMode("otp");
+      setCooldown(60);
+      toast.success("Account created! A 6-digit verification code has been sent to your email.");
     } catch (error: any) {
       toast.error(error.message || "Error creating account.");
     } finally {
@@ -283,30 +305,51 @@ export default function Auth() {
 
     setLoading(true);
     try {
-      // 1. Try signup OTP confirmation
-      let { data, error } = await supabase.auth.verifyOtp({
-        email: pendingEmail,
-        token: code,
-        type: "signup",
-      });
-
-      // 2. If not signup, try generic email OTP (recovery / magiclink)
-      if (error) {
+      // 1. Verify code with our backend OTP verification API
+      let verifiedSuccessfully = false;
+      try {
+        const response = await fetch(API_ROUTES.AUTH_VERIFY_OTP, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: pendingEmail,
+            userId: pendingUserId,
+            code,
+            purpose: "EMAIL_VERIFY",
+            name: pendingName,
+          }),
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+          verifiedSuccessfully = true;
+        } else {
+          throw new Error(result.error || "Verification failed");
+        }
+      } catch (err: any) {
+        // Fallback: try Supabase's native verifyOtp in case token was generated natively
         const fallback = await supabase.auth.verifyOtp({
           email: pendingEmail,
           token: code,
-          type: "email",
+          type: "signup",
         });
         if (!fallback.error) {
-          data = fallback.data;
-          error = null;
+          verifiedSuccessfully = true;
+        } else {
+          throw err;
         }
       }
 
-      if (error) throw error;
-
-      toast.success("Email verified successfully! Welcome to ResuMentor.");
-      router.replace(APP_ROUTES.DASHBOARD);
+      if (verifiedSuccessfully) {
+        // 2. Establish active session with password
+        if (pendingPassword) {
+          await supabase.auth.signInWithPassword({
+            email: pendingEmail,
+            password: pendingPassword,
+          });
+        }
+        toast.success("Email verified successfully! Welcome to ResuMentor.");
+        router.replace(APP_ROUTES.DASHBOARD);
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to verify 6-digit code.");
     } finally {
@@ -320,15 +363,24 @@ export default function Auth() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: pendingEmail,
+      const response = await fetch(API_ROUTES.AUTH_RESEND_OTP, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: pendingEmail,
+          userId: pendingUserId,
+          name: pendingName,
+          purpose: "EMAIL_VERIFY",
+        }),
       });
 
-      if (error) throw error;
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to resend code.");
+      }
 
       setCooldown(60);
-      toast.success("New 6-digit code sent to your email!");
+      toast.success("Fresh 6-digit verification code sent to your email!");
     } catch (error: any) {
       toast.error(error.message || "Failed to resend code.");
     } finally {
