@@ -33,13 +33,31 @@ const dbPassword = env.DATABASE_PASSWORD || "k2OqCvQJls3Sa4cs";
 // Extract projectRef dynamically from NEXT_PUBLIC_SUPABASE_URL or DATABASE_URL
 const urlMatch = (env.NEXT_PUBLIC_SUPABASE_URL || "").match(/https:\/\/([^.]+)\.supabase\.co/);
 const dbMatch = (env.DATABASE_URL || "").match(/postgres\.([^:]+):/);
-const projectRef = urlMatch ? urlMatch[1] : (dbMatch ? dbMatch[1] : "ctfjvzlniopufzsadwcp");
+const projectRef = urlMatch ? urlMatch[1] : (dbMatch ? dbMatch[1] : "");
 
-// Connection strings to try (Pooler with IPv4 support first)
+// Detect region from DATABASE_URL if present, or try common Supabase pooler regions
+const detectedRegionMatch = (env.DATABASE_URL || "").match(/@(aws-0-[a-z0-9-]+)\.pooler/);
+const detectedRegion = detectedRegionMatch ? detectedRegionMatch[1] : (env.SUPABASE_REGION || "");
+
+const regionsToTry = [
+  detectedRegion,
+  "aws-0-ap-northeast-1",
+  "aws-0-ap-south-1",
+  "aws-0-us-east-1",
+  "aws-0-eu-central-1",
+  "aws-0-us-west-1",
+  "aws-0-ap-southeast-1",
+].filter(Boolean);
+
+// Connection strings to try
 const connectionCandidates = [
   env.DATABASE_URL,
-  projectRef ? `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-ap-south-1.pooler.supabase.com:6543/postgres` : null,
-  projectRef ? `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-ap-south-1.pooler.supabase.com:5432/postgres` : null,
+  ...(projectRef && dbPassword
+    ? regionsToTry.flatMap((region) => [
+        `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@${region}.pooler.supabase.com:6543/postgres`,
+        `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@${region}.pooler.supabase.com:5432/postgres`,
+      ])
+    : []),
 ].filter(Boolean);
 
 async function connectToDatabase() {
@@ -49,7 +67,7 @@ async function connectToDatabase() {
       const client = new Client({
         connectionString: connStr,
         ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 4000,
       });
       await client.connect();
       return client;
@@ -57,7 +75,20 @@ async function connectToDatabase() {
       lastErr = err;
     }
   }
-  throw new Error(`Failed to connect to Supabase PostgreSQL database: ${lastErr?.message || "All connection candidates failed."}`);
+
+  const hintMsg = `
+❌ Failed to connect to Supabase PostgreSQL database.
+Details: ${lastErr?.message || "All connection candidates failed."}
+
+💡 HINT for switching or transferring projects:
+In your new Supabase Project:
+1. Open Supabase Dashboard -> Project Settings -> Database.
+2. Scroll to "Connection String" -> Select "URI" -> Mode: "Transaction" (Port 6543).
+3. Paste the full connection string into your .env.local file:
+   DATABASE_URL=postgresql://postgres.[YOUR-PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+4. Then re-run: npm run db:migrate
+`;
+  throw new Error(hintMsg);
 }
 
 async function runMigrations() {
