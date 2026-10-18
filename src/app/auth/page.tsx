@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "../../lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { supabase } from "@/lib/supabase";
 import Auth from "../../components/Auth";
 import { APP_ROUTES } from "@/constants/endpoints";
 
@@ -14,26 +13,27 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        try {
-          const { getDoc, doc } = await import("firebase/firestore");
-          const { db } = await import("../../lib/firebase");
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-          if (userDoc.exists() && userDoc.data().status === "PENDING_VERIFICATION") {
-            setLoading(false);
-            return;
-          }
-        } catch {
-          // If network check fails, fallback to normal state
-        }
+    // 1. Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
         router.replace(APP_ROUTES.DASHBOARD);
       } else {
         setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    // 2. Auth state subscription
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        router.replace(APP_ROUTES.DASHBOARD);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   if (loading) {

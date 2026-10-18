@@ -2,14 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db } from "../lib/firebase";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  updateProfile,
-} from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import {
   GraduationCap,
@@ -26,7 +19,7 @@ import {
   Check,
   Sparkles,
 } from "lucide-react";
-import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
+import { APP_ROUTES } from "@/constants/endpoints";
 
 type AuthMode = "login" | "register" | "otp" | "forgot";
 
@@ -191,35 +184,27 @@ export default function Auth() {
 
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const cleanEmail = email.trim().toLowerCase();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
 
-      // Check account verification status in Firestore
-      const userDocSnap = await getDoc(doc(db, "users", user.uid));
-      const userData = userDocSnap.exists() ? userDocSnap.data() : null;
-
-      if (userData?.status === "PENDING_VERIFICATION") {
-        setPendingUserId(user.uid);
-        setPendingEmail(user.email || email);
-        setPendingName(userData?.name || user.displayName || "");
-        setOtpDigits(["", "", "", "", "", ""]);
-        setMode("otp");
-        setCooldown(60);
-
-        // Send a fresh OTP
-        await fetch(API_ROUTES.AUTH_SEND_OTP, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: user.email || email,
-            userId: user.uid,
-            name: userData?.name || user.displayName,
-            purpose: "EMAIL_VERIFY",
-          }),
-        });
-
-        toast("Please verify your email address to continue.", { icon: "✉️" });
-        return;
+      if (error) {
+        // If email confirmation is required in Supabase, switch to OTP verification mode
+        if (error.message.toLowerCase().includes("email not confirmed")) {
+          setPendingEmail(cleanEmail);
+          setOtpDigits(["", "", "", "", "", ""]);
+          setMode("otp");
+          setCooldown(60);
+          await supabase.auth.resend({
+            type: "signup",
+            email: cleanEmail,
+          });
+          toast("Please verify your 6-digit email code to continue.", { icon: "✉️" });
+          return;
+        }
+        throw error;
       }
 
       toast.success("Successfully logged in!");
@@ -250,46 +235,36 @@ export default function Auth() {
 
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanName = fullName.trim();
 
-      // Save initial profile marked as PENDING_VERIFICATION
-      await setDoc(doc(db, "users", user.uid), {
-        name: fullName,
-        email: user.email,
-        role: "student",
-        status: "PENDING_VERIFICATION",
-        createdAt: new Date().toISOString(),
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            name: cleanName,
+            full_name: cleanName,
+          },
+        },
       });
 
-      await updateProfile(user, { displayName: fullName });
+      if (error) throw error;
 
-      // Dispatch branded OTP email
-      const otpResponse = await fetch(API_ROUTES.AUTH_SEND_OTP, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          userId: user.uid,
-          name: fullName,
-          purpose: "EMAIL_VERIFY",
-        }),
-      });
-
-      const otpResult = await otpResponse.json();
-
-      if (!otpResponse.ok) {
-        throw new Error(otpResult.error || "Failed to send verification code.");
+      // If user requires email verification:
+      if (data.user && !data.session) {
+        setPendingUserId(data.user.id);
+        setPendingEmail(cleanEmail);
+        setPendingName(cleanName);
+        setOtpDigits(["", "", "", "", "", ""]);
+        setMode("otp");
+        setCooldown(60);
+        toast.success("Account created! A 6-digit code has been sent to your email.");
+      } else {
+        // Automatically verified / logged in
+        toast.success("Account created successfully!");
+        router.replace(APP_ROUTES.DASHBOARD);
       }
-
-      setPendingUserId(user.uid);
-      setPendingEmail(user.email || email);
-      setPendingName(fullName);
-      setOtpDigits(["", "", "", "", "", ""]);
-      setMode("otp");
-      setCooldown(60);
-
-      toast.success("Account created! A 6-digit code has been sent to your email.");
     } catch (error: any) {
       toast.error(error.message || "Error creating account.");
     } finally {
@@ -308,28 +283,32 @@ export default function Auth() {
 
     setLoading(true);
     try {
-      const res = await fetch(API_ROUTES.AUTH_VERIFY_OTP, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: pendingUserId,
-          email: pendingEmail,
-          code,
-          name: pendingName,
-          purpose: "EMAIL_VERIFY",
-        }),
+      // 1. Try signup OTP confirmation
+      let { data, error } = await supabase.auth.verifyOtp({
+        email: pendingEmail,
+        token: code,
+        type: "signup",
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Verification failed.");
+      // 2. If not signup, try generic email OTP (recovery / magiclink)
+      if (error) {
+        const fallback = await supabase.auth.verifyOtp({
+          email: pendingEmail,
+          token: code,
+          type: "email",
+        });
+        if (!fallback.error) {
+          data = fallback.data;
+          error = null;
+        }
       }
+
+      if (error) throw error;
 
       toast.success("Email verified successfully! Welcome to ResuMentor.");
       router.replace(APP_ROUTES.DASHBOARD);
     } catch (error: any) {
-      toast.error(error.message || "Failed to verify code.");
+      toast.error(error.message || "Failed to verify 6-digit code.");
     } finally {
       setLoading(false);
     }
@@ -341,25 +320,15 @@ export default function Auth() {
 
     setLoading(true);
     try {
-      const res = await fetch(API_ROUTES.AUTH_RESEND_OTP, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: pendingUserId,
-          email: pendingEmail,
-          name: pendingName,
-          purpose: "EMAIL_VERIFY",
-        }),
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: pendingEmail,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to resend code.");
-      }
+      if (error) throw error;
 
       setCooldown(60);
-      toast.success("New verification code sent to your email!");
+      toast.success("New 6-digit code sent to your email!");
     } catch (error: any) {
       toast.error(error.message || "Failed to resend code.");
     } finally {
@@ -377,7 +346,12 @@ export default function Auth() {
 
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth?mode=reset` : undefined,
+      });
+
+      if (error) throw error;
+
       setResetSent(true);
       toast.success("Password reset instructions dispatched!");
     } catch (error: any) {

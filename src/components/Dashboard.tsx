@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { auth, db } from "../lib/firebase";
-import { signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import {
   GraduationCap,
@@ -60,19 +58,26 @@ export default function Dashboard() {
     },
   });
 
-  // Fetch Firestore user profile
+  // Fetch Supabase user profile
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
       try {
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUserData(docSnap.data() as UserData);
-        } else {
-          setUserData({ name: user.displayName || "Student", email: user.email || "" });
-        }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        setUserData({
+          name: profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || "Student",
+          email: profile?.email || user.email || "",
+          photoURL: profile?.photo_url || "",
+          role: profile?.role || "student",
+          ...profile,
+        } as UserData);
       } catch (error) {
         // user profile fetch error
       } finally {
@@ -93,8 +98,9 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       toast.success("Successfully logged out!");
+      window.location.href = "/auth";
     } catch (error) {
       toast.error("Error logging out.");
     }
@@ -173,7 +179,7 @@ export default function Dashboard() {
     );
   }
 
-  const displayName = userData?.name || auth.currentUser?.displayName || "Student";
+  const displayName = userData?.name || "Student";
   const initials = getInitials(displayName);
 
   return (
@@ -264,7 +270,7 @@ export default function Dashboard() {
                 {displayName}
               </span>
               <span className="block text-[11px] text-gray-400 font-medium truncate max-w-[150px]">
-                {auth.currentUser?.email}
+                {userData?.email || ""}
               </span>
             </div>
             {userData?.photoURL ? (

@@ -15,9 +15,7 @@ export const API_ROUTES = {
   GEMINI: `${API_BASE}/api/gemini`,
   JOBS: `${API_BASE}/api/jobs`,
   RESUME_ANALYZE: `${API_BASE}/api/resume/analyze`,
-  AUTH_SEND_OTP: `${API_BASE}/api/auth/send-otp`,
-  AUTH_VERIFY_OTP: `${API_BASE}/api/auth/verify-otp`,
-  AUTH_RESEND_OTP: `${API_BASE}/api/auth/resend-otp`,
+  HEALTH_SUPABASE: `${API_BASE}/api/health/supabase`,
 } as const;
 
 export type ApiRouteKey = keyof typeof API_ROUTES;

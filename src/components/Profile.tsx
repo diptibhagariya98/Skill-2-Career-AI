@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { auth, db } from "../lib/firebase";
-import { updatePassword, updateProfile } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import { Calendar, Camera, Trash2, Loader2 } from "lucide-react";
 import { processAvatarImage, getInitials } from "../lib/imageUtils";
@@ -87,26 +85,36 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = auth.currentUser;
-    if (!user) {
-      toast.error("You are not logged in.");
-      return;
-    }
     const isNameValid = validateField("fullName", fullName);
     if (!isNameValid) {
       toast.error("Please provide a valid full name.");
       return;
     }
+
     setUpdatingProfile(true);
     try {
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
-        name: fullName,
-      });
-      if (user) {
-        await updateProfile(user, { displayName: fullName });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You are not logged in.");
+        return;
       }
-      onUpdateUserData({ ...userData, name: fullName });
+
+      const cleanName = fullName.trim();
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          name: cleanName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      await supabase.auth.updateUser({
+        data: { name: cleanName, full_name: cleanName },
+      });
+
+      onUpdateUserData({ ...userData, name: cleanName });
       toast.success("Profile name updated successfully!");
     } catch (error: any) {
       toast.error(error.message || "Failed to update profile name.");
@@ -119,32 +127,36 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const user = auth.currentUser;
-    if (!user) {
-      toast.error("You must be logged in to update your profile photo.");
-      return;
-    }
-
     setUploadingAvatar(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to update your profile photo.");
+        return;
+      }
+
       const compressedDataUrl = await processAvatarImage(file, 256, 0.85);
 
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
-        photoURL: compressedDataUrl,
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          photo_url: compressedDataUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      await supabase.auth.updateUser({
+        data: { avatar_url: compressedDataUrl },
       });
 
-      // Update Firebase Auth user profile
-      await updateProfile(user, { photoURL: compressedDataUrl });
-
-      // Update state in app
       onUpdateUserData({ ...userData, photoURL: compressedDataUrl });
       toast.success("Profile photo updated successfully!");
     } catch (err: any) {
       toast.error(err.message || "Failed to process and upload profile image.");
     } finally {
       setUploadingAvatar(false);
-      // Reset input value so re-selecting same file triggers change
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -152,17 +164,24 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
   };
 
   const handleRemoveAvatar = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-
     setUploadingAvatar(true);
     try {
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
-        photoURL: "",
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      await updateProfile(user, { photoURL: "" });
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          photo_url: "",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      await supabase.auth.updateUser({
+        data: { avatar_url: "" },
+      });
 
       onUpdateUserData({ ...userData, photoURL: "" });
       toast.success("Profile photo removed.");
@@ -175,11 +194,6 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = auth.currentUser;
-    if (!user) {
-      toast.error("You are not logged in.");
-      return;
-    }
     const isPasswordValid = validateField("newPassword", newPassword);
     if (!isPasswordValid) {
       toast.error("Please enter a valid strong password.");
@@ -192,29 +206,34 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
 
     setUpdatingPassword(true);
     try {
-      await updatePassword(user, newPassword);
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
       toast.success("Password changed successfully!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
       toast.error(
-        error.message || "Failed to change password. Sensitive actions may require you to re-authenticate."
+        error.message || "Failed to change password. You may need to log in again."
       );
     } finally {
       setUpdatingPassword(false);
     }
   };
 
-  const enrollmentDateStr = auth.currentUser?.metadata?.creationTime
-    ? new Date(auth.currentUser.metadata.creationTime).toLocaleDateString("en-US", {
+  const enrollmentDateStr = userData?.created_at || userData?.createdAt
+    ? new Date(userData.created_at || userData.createdAt).toLocaleDateString("en-US", {
         month: "short",
         day: "2-digit",
         year: "numeric",
       })
     : "Nov 01, 2025";
 
-  const userDisplayName = userData?.name || auth.currentUser?.displayName || "Student";
+  const userDisplayName = userData?.name || "Student";
   const avatarInitials = getInitials(userDisplayName);
 
   return (
@@ -249,7 +268,7 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
               <input
                 type="email"
                 id="emailAddress"
-                value={auth.currentUser?.email || ""}
+                value={userData?.email || ""}
                 disabled
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-500 focus:outline-none cursor-not-allowed"
               />
@@ -399,7 +418,7 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
           </div>
 
           <h3 className="mt-4 text-xl font-bold text-gray-900">{userDisplayName}</h3>
-          <p className="text-sm text-gray-500 break-all">{auth.currentUser?.email || "student@example.com"}</p>
+          <p className="text-sm text-gray-500 break-all">{userData?.email || "student@example.com"}</p>
           <div className="mt-6 text-left space-y-3 pt-6 border-t border-gray-100">
             <p className="text-sm text-gray-700 flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-500" />
