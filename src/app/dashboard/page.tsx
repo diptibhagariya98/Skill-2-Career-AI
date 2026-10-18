@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Dashboard from "../../components/Dashboard";
 import { APP_ROUTES } from "@/constants/endpoints";
+import { SkeletonDashboard } from "@/shared/ui/Skeleton";
 
 export const dynamic = "force-dynamic";
 
@@ -37,14 +38,7 @@ export default function DashboardPage() {
   }, [router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-500 font-semibold">Loading your workspace...</p>
-        </div>
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
 
   return <Dashboard />;

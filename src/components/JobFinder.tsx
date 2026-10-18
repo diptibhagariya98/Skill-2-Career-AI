@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { Search, MapPin, Briefcase, Calendar, Sparkles, Filter, ExternalLink, RotateCcw } from "lucide-react";
 import { API_ROUTES } from "../constants/endpoints";
 import { hapticLight } from "@/shared/platform";
+import { Skeleton, SkeletonCard } from "@/shared/ui";
 
 interface JobItem {
   title: string;
@@ -203,28 +204,11 @@ export default function JobFinder() {
 
       {/* Loading Skeleton States (UX-40 matching final layout) */}
       {loading ? (
-        <div className="space-y-4">
-          <div className="h-6 w-44 bg-gray-200 rounded-md animate-pulse" />
+        <div className="space-y-4 animate-fade-in" aria-busy="true">
+          <Skeleton className="h-6 w-44 rounded-lg" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="bg-white p-5 rounded-2xl border border-gray-150 space-y-3 animate-pulse"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 w-3/4 bg-gray-200 rounded" />
-                    <div className="h-3 w-1/2 bg-gray-100 rounded" />
-                  </div>
-                  <div className="h-5 w-16 bg-gray-200 rounded-full" />
-                </div>
-                <div className="h-3 w-1/3 bg-gray-100 rounded" />
-                <div className="flex gap-2 pt-2">
-                  <div className="h-4 w-14 bg-gray-100 rounded" />
-                  <div className="h-4 w-14 bg-gray-100 rounded" />
-                </div>
-                <div className="h-10 w-full bg-gray-100 rounded-xl mt-3" />
-              </div>
+              <SkeletonCard key={i} />
             ))}
           </div>
         </div>

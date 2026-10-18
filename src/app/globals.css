@@ -75,6 +75,44 @@
   animation: fadeIn 0.3s ease-out;
 }
 
+/* Luxurious Skeleton & Loader Shimmer */
+@keyframes luxuryShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.luxury-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(241, 245, 249, 0.9) 0%,
+    rgba(226, 232, 240, 0.45) 25%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(226, 232, 240, 0.45) 75%,
+    rgba(241, 245, 249, 0.9) 100%
+  );
+  background-size: 200% 100%;
+  animation: luxuryShimmer 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes luxuryGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.luxury-glow {
+  animation: luxuryGlow 3s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-bounce,

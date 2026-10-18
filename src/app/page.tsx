@@ -8,6 +8,7 @@ import Auth from "../components/Auth";
 import { isNative } from "@/shared/platform";
 import { supabase } from "@/lib/supabase";
 import { APP_ROUTES } from "@/constants/endpoints";
+import { PremiumTransitionLoader } from "@/shared/ui/PremiumTransitionLoader";
 
 type ScreenState = "evaluating" | "intro" | "auth" | "landing";
 
@@ -78,18 +79,14 @@ export default function Home() {
     };
   }, [router]);
 
-  // While evaluating first-launch decision, render a smooth matching splash container
+  // While evaluating first-launch decision, render the luxury branded loader
   if (screenState === "evaluating") {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-200 animate-pulse">
-          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-          </svg>
-        </div>
-        <p className="mt-4 text-xs font-bold tracking-wider uppercase text-slate-400">ResuMentor</p>
-      </div>
+      <PremiumTransitionLoader
+        label="Welcome to ResuMentor"
+        subtitle="Optimizing your mobile career experience..."
+        fullscreen={true}
+      />
     );
   }
 
