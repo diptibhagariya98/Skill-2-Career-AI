@@ -60,8 +60,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const cleanPassword = String(password).replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+
     // 3. Server-side Password Criteria Validation
-    const passwordValidation = evaluatePasswordCriteria(password);
+    const passwordValidation = evaluatePasswordCriteria(cleanPassword);
     if (!passwordValidation.isValid) {
       return NextResponse.json(
         { error: AUTH_MESSAGES.PASSWORD_CRITERIA },
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
     let userId = "";
     const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
       email: sanitizedEmail,
-      password,
+      password: cleanPassword,
       email_confirm: false,
       user_metadata: {
         name: sanitizedName,
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
           userId = existingUserId;
           // Update password to what user just typed so credentials always match
           const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
-            password,
+            password: cleanPassword,
             user_metadata: {
               name: sanitizedName,
               full_name: sanitizedName,

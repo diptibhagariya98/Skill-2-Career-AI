@@ -202,8 +202,9 @@ export async function POST(request: NextRequest) {
       }
 
       // 6. Update user password in Supabase Auth
+      const cleanNewPassword = String(newPassword).replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
       const { error: authUpdateErr } = await supabase.auth.admin.updateUserById(targetUserId, {
-        password: String(newPassword),
+        password: cleanNewPassword,
         email_confirm: true,
       });
 
@@ -231,8 +232,24 @@ export async function POST(request: NextRequest) {
         console.warn("[Audit Log Notice]:", getErrorMessage(auditErr));
       }
 
+      // 8. Generate immediate session magiclink token_hash for zero-friction login
+      let sessionTokenHash: string | null = null;
+      try {
+        const { data: linkData } = await supabase.auth.admin.generateLink({
+          type: "magiclink",
+          email: cleanEmail,
+        });
+        if (linkData?.properties?.hashed_token) {
+          sessionTokenHash = linkData.properties.hashed_token;
+        }
+      } catch (linkErr: unknown) {
+        console.warn("[Reset Session Link Notice]:", getErrorMessage(linkErr));
+      }
+
       return NextResponse.json({
         success: true,
+        verified: true,
+        token_hash: sessionTokenHash,
         message: AUTH_MESSAGES.PASSWORD_RESET_SUCCESS,
       });
     }

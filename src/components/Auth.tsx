@@ -290,16 +290,18 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
     setLoading(true);
     try {
       const cleanEmail = sanitizeEmail(email);
+      const cleanPass = password.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+
       let { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
-        password,
+        password: cleanPass,
       });
 
-      // Mobile keyboard autofill space tolerance: retry with trimmed password if failed
-      if (error && password !== password.trim()) {
+      // Mobile keyboard autofill space tolerance: retry with raw password if clean differed and failed
+      if (error && password !== cleanPass) {
         const retryResult = await supabase.auth.signInWithPassword({
           email: cleanEmail,
-          password: password.trim(),
+          password,
         });
         if (!retryResult.error) {
           data = retryResult.data;
@@ -370,13 +372,14 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
     try {
       const cleanEmail = email.trim().toLowerCase();
       const cleanName = fullName.trim();
+      const cleanPass = password.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
 
       const response = await fetch(API_ROUTES.AUTH_REGISTER, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: cleanEmail,
-          password,
+          password: cleanPass,
           name: cleanName,
         }),
       });
@@ -697,7 +700,11 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
         body: JSON.stringify(requestPayload),
       });
 
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+        token_hash?: string;
+      };
       if (!response.ok || !result.success) {
         throw new Error(result.error || AUTH_MESSAGES.PASSWORD_UPDATE_FAILED);
       }
@@ -706,25 +713,46 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
         sessionStorage.removeItem("resumentor_reset_token");
       }
 
-      // Establish session with the newly created password
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: pendingEmail,
-        password: newPassword,
-      });
+      const sessionTokenHash = typeof result.token_hash === "string" ? result.token_hash : null;
+      let sessionEstablished = false;
 
-      if (signInErr) {
-        // Password was changed in Supabase, but automatic session creation encountered an error
-        toast.success(AUTH_MESSAGES.PASSWORD_UPDATED_PLEASE_LOGIN);
-        setMode(AuthMode.LOGIN);
-        setEmail(pendingEmail);
-        setPassword("");
-        return;
+      // 1. Primary: activate session using backend-issued magiclink token_hash
+      if (sessionTokenHash) {
+        try {
+          const { data: sessionData, error: sessionErr } = await supabase.auth.verifyOtp({
+            token_hash: sessionTokenHash,
+            type: "magiclink",
+          });
+          if (!sessionErr && sessionData?.session) {
+            sessionEstablished = true;
+          }
+        } catch (tokErr: unknown) {
+          console.warn("[Token session warning]:", tokErr);
+        }
+      }
+
+      // 2. Backup: sign in directly with the new password
+      if (!sessionEstablished) {
+        try {
+          const cleanPass = newPassword.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+            email: pendingEmail,
+            password: cleanPass,
+          });
+          if (!signInErr && signInData?.session) {
+            sessionEstablished = true;
+          }
+        } catch (pwdErr: unknown) {
+          console.warn("[Password sign in warning]:", pwdErr);
+        }
       }
 
       if (typeof window !== "undefined") {
         localStorage.removeItem("resumentor_resume_current");
         localStorage.removeItem("resumentor_resume_revisions");
       }
+
+      // Direct seamless transition to dashboard
       toast.success(AUTH_MESSAGES.PASSWORD_RESET_SUCCESS);
       router.replace(APP_ROUTES.DASHBOARD);
     } catch (error: unknown) {
