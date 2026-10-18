@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const androidDir = path.join(projectRoot, "android");
 const gradlePropsPath = path.join(androidDir, "gradle.properties");
+const localPropsPath = path.join(androidDir, "local.properties");
 const localJdkDir = path.join(androidDir, ".jdk");
 
 /**
@@ -132,6 +133,38 @@ function findExistingCompatibleJdk() {
   return null;
 }
 
+export function ensureAndroidSdk() {
+  if (fs.existsSync(localPropsPath)) {
+    const content = fs.readFileSync(localPropsPath, "utf8");
+    if (/^sdk\.dir\s*=/m.test(content)) return true;
+  }
+
+  const candidates = [
+    process.env.ANDROID_HOME,
+    process.env.ANDROID_SDK_ROOT,
+    process.platform === "win32"
+      ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "Android", "Sdk")
+      : null,
+    process.platform === "darwin"
+      ? path.join(os.homedir(), "Library", "Android", "sdk")
+      : null,
+    process.platform === "linux"
+      ? path.join(os.homedir(), "Android", "Sdk")
+      : null,
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, "platform-tools"))) {
+      const normalized = candidate.replace(/\\/g, "/");
+      fs.writeFileSync(localPropsPath, `## Configured automatically by build pipeline\nsdk.dir=${normalized}\n`, "utf8");
+      console.log(`[ResuMentor Env] ✓ Configured android/local.properties with Android SDK at:\n  -> ${candidate}`);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function configureGradleJavaHome(jdkPath) {
   if (!fs.existsSync(gradlePropsPath)) return;
 
@@ -152,6 +185,7 @@ export function configureGradleJavaHome(jdkPath) {
 }
 
 export async function ensureCompatibleJdk() {
+  ensureAndroidSdk();
   console.log("[ResuMentor Env] Checking active Java environment for Android builds...");
 
   // Check current system java

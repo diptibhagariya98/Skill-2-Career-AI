@@ -13,24 +13,25 @@ async function runCommand(command, args, cwd = projectRoot, env = {}) {
   return new Promise((resolve, reject) => {
     const isWindows = process.platform === "win32";
     let cmd = command;
-    let useShell = false;
+    let spawnCmd = command;
+    let spawnArgs = args;
 
     if (command === "node") {
-      cmd = process.execPath;
-      useShell = false;
+      spawnCmd = process.execPath;
     } else if (isWindows) {
       if (command.endsWith(".bat") || command.endsWith(".cmd")) {
-        useShell = true;
+        spawnCmd = "cmd.exe";
+        spawnArgs = ["/d", "/s", "/c", command, ...args];
       } else if (!command.endsWith(".exe")) {
-        cmd = `${command}.cmd`;
-        useShell = true;
+        spawnCmd = "cmd.exe";
+        spawnArgs = ["/d", "/s", "/c", `${command}.cmd`, ...args];
       }
     }
 
-    const proc = spawn(cmd, args, {
+    const proc = spawn(spawnCmd, spawnArgs, {
       cwd,
       stdio: "inherit",
-      shell: useShell,
+      shell: false,
       env: { ...process.env, ...env },
     });
 
