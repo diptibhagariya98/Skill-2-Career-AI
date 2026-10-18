@@ -70,16 +70,24 @@ async function runCommand(command, args, env = {}) {
   return new Promise((resolve, reject) => {
     const isWindows = process.platform === "win32";
     let cmd = command;
+    let useShell = false;
+
     if (command === "node") {
       cmd = process.execPath;
-    } else if (isWindows && !command.endsWith(".bat") && !command.endsWith(".cmd") && !command.endsWith(".exe")) {
-      cmd = `${command}.cmd`;
+      useShell = false;
+    } else if (isWindows) {
+      if (command.endsWith(".bat") || command.endsWith(".cmd")) {
+        useShell = true;
+      } else if (!command.endsWith(".exe")) {
+        cmd = `${command}.cmd`;
+        useShell = true;
+      }
     }
 
     const proc = spawn(cmd, args, {
       cwd: projectRoot,
       stdio: "inherit",
-      shell: isWindows,
+      shell: useShell,
       env: { ...process.env, ...env },
     });
 

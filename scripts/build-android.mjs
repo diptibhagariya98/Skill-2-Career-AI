@@ -13,16 +13,24 @@ async function runCommand(command, args, cwd = projectRoot, env = {}) {
   return new Promise((resolve, reject) => {
     const isWindows = process.platform === "win32";
     let cmd = command;
+    let useShell = false;
+
     if (command === "node") {
       cmd = process.execPath;
-    } else if (isWindows && !command.endsWith(".bat") && !command.endsWith(".cmd") && !command.endsWith(".exe")) {
-      cmd = `${command}.cmd`;
+      useShell = false;
+    } else if (isWindows) {
+      if (command.endsWith(".bat") || command.endsWith(".cmd")) {
+        useShell = true;
+      } else if (!command.endsWith(".exe")) {
+        cmd = `${command}.cmd`;
+        useShell = true;
+      }
     }
 
     const proc = spawn(cmd, args, {
       cwd,
       stdio: "inherit",
-      shell: isWindows,
+      shell: useShell,
       env: { ...process.env, ...env },
     });
 
@@ -56,7 +64,7 @@ async function main() {
   // Step 3: Run Gradle
   console.log(`\n[2/2] Running Gradle ${gradleTask}...`);
   const isWindows = process.platform === "win32";
-  const gradlewCmd = isWindows ? path.join(androidDir, "gradlew.bat") : "./gradlew";
+  const gradlewCmd = isWindows ? ".\\gradlew.bat" : "./gradlew";
 
   const customEnv = {};
   if (jdkResult.path) {
