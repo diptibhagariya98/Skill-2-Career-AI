@@ -26,12 +26,12 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       provider: "supabase",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json(
       {
         status: "error",
         connected: false,
-        error: err.message,
+        error: err instanceof Error ? err.message : "Internal Server Error",
       },
       { status: 500 }
     );

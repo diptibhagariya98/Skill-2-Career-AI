@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EXTERNAL_API } from "@/constants/endpoints";
+import { getErrorMessage } from "@/constants/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,10 @@ export async function GET(request: NextRequest) {
 
     const apiKey = process.env.RAPIDAPI_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "RapidAPI key is not configured on the server." }, { status: 500 });
+      return NextResponse.json(
+        { error: "RapidAPI key is not configured on the server." },
+        { status: 500 }
+      );
     }
 
     const combinedQuery = location ? `${query} in ${location}` : query;
@@ -21,8 +25,8 @@ export async function GET(request: NextRequest) {
       method: "GET",
       headers: {
         "X-RapidAPI-Key": apiKey,
-        "X-RapidAPI-Host": EXTERNAL_API.RAPID_JOBS_HOST
-      }
+        "X-RapidAPI-Host": EXTERNAL_API.RAPID_JOBS_HOST,
+      },
     });
 
     if (!response.ok) {
@@ -35,7 +39,10 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: getErrorMessage(error, "Internal Server Error") },
+      { status: 500 }
+    );
   }
 }

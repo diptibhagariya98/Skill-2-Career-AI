@@ -34,13 +34,13 @@ import Scholarships from "./Scholarships";
 import LearnPractice from "./LearnPractice";
 import AdminDashboard from "./admin/AdminDashboard";
 import { UserData } from "../types/user";
-import { UserRole, isUserAdmin } from "@/constants/roles";
+import { UserRole, isUserAdmin, DashboardSection } from "@/constants/roles";
 import { getInitials } from "../lib/imageUtils";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useBackHandler, dispatchBack, hapticLight } from "@/shared/platform";
 
 export default function Dashboard() {
-  const [activePage, setActivePage] = useState("dashboard");
+  const [activePage, setActivePage] = useState<DashboardSection | string>(DashboardSection.DASHBOARD);
   const [learnSubPage, setLearnSubPage] = useState("hub");
   const [interviewTab, setInterviewTab] = useState<"setup" | "session" | "scorecard" | "history">("setup");
   const [scholarshipTab, setScholarshipTab] = useState<"wizard" | "results" | "directory" | "scholars" | "admin">("wizard");

@@ -78,6 +78,7 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
   const [resetSent, setResetSent] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [verifiedResetCode, setVerifiedResetCode] = useState("");
+  const [verifiedResetToken, setVerifiedResetToken] = useState("");
   const [resetOtpError, setResetOtpError] = useState<string | null>(null);
 
   // OTP Verification segmented states
@@ -179,21 +180,21 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
     const cleanValue = (value || "").trim();
 
     if (!cleanValue) {
-      errorMsg = "This field is required";
+      errorMsg = AUTH_MESSAGES.FIELD_REQUIRED;
     } else {
       if (field === "fullName") {
-        if (!/^[a-zA-Z\s]+$/.test(cleanValue)) {
-          errorMsg = "Letters and spaces only, no numbers or special characters";
+        if (!AUTH_PATTERNS.LETTERS_AND_SPACES.test(cleanValue)) {
+          errorMsg = AUTH_MESSAGES.NAME_INVALID;
         }
       }
       if (field === "email") {
-        if (!/^[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(cleanValue)) {
-          errorMsg = "Please enter a valid email address";
+        if (!AUTH_PATTERNS.EMAIL.test(cleanValue)) {
+          errorMsg = AUTH_MESSAGES.EMAIL_INVALID;
         }
       }
       if (field === "password") {
         if (passedCount < 4) {
-          errorMsg = "Please meet all password security requirements";
+          errorMsg = AUTH_MESSAGES.PASSWORD_CRITERIA;
         }
       }
     }
@@ -491,8 +492,8 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      toast.error("Please enter a valid email address.");
+    if (!cleanEmail || !AUTH_PATTERNS.EMAIL.test(cleanEmail)) {
+      toast.error(AUTH_MESSAGES.EMAIL_INVALID);
       return;
     }
 
@@ -521,6 +522,10 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
       setPendingPurpose(AuthPurpose.PASSWORD_RESET);
       setOtpDigits(["", "", "", "", "", ""]);
       setVerifiedResetCode("");
+      setVerifiedResetToken("");
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("resumentor_reset_token");
+      }
       setNewPassword("");
       setConfirmNewPassword("");
       setResetOtpError(null);
@@ -563,8 +568,13 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
         throw new Error(result.error || AUTH_MESSAGES.OTP_INVALID_CODE);
       }
 
-      // Successfully verified code without consuming it
+      // Secure reset token issued after OTP verification
+      const issuedToken = result.resetToken || "";
+      setVerifiedResetToken(issuedToken);
       setVerifiedResetCode(code);
+      if (typeof window !== "undefined" && issuedToken) {
+        sessionStorage.setItem("resumentor_reset_token", issuedToken);
+      }
       setMode(AuthMode.SET_NEW_PASSWORD);
       toast.success("Code verified! Now create your new password.");
     } catch (error: unknown) {
@@ -579,9 +589,14 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
   // --- Step 2: Set New Password Submit Handler ---
   const handleSetNewPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const codeToUse = verifiedResetCode || otpDigits.join("");
-    if (!codeToUse || codeToUse.length !== 6) {
-      toast.error("Verification session expired. Please verify your OTP code again.");
+    let tokenToUse = verifiedResetToken;
+    if (!tokenToUse && typeof window !== "undefined") {
+      tokenToUse = sessionStorage.getItem("resumentor_reset_token") || "";
+    }
+    const codeFallback = verifiedResetCode || otpDigits.join("");
+
+    if (!tokenToUse && (!codeFallback || codeFallback.length !== 6)) {
+      toast.error(AUTH_MESSAGES.RESET_TOKEN_INVALID_OR_EXPIRED);
       setMode(AuthMode.VERIFY_RESET_OTP);
       return;
     }
@@ -598,20 +613,37 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
 
     setLoading(true);
     try {
+      const requestPayload: {
+        email: string;
+        purpose: AuthPurpose;
+        newPassword: string;
+        resetToken?: string;
+        code?: string;
+      } = {
+        email: pendingEmail,
+        purpose: AuthPurpose.PASSWORD_RESET,
+        newPassword,
+      };
+
+      if (tokenToUse) {
+        requestPayload.resetToken = tokenToUse;
+      } else {
+        requestPayload.code = codeFallback;
+      }
+
       const response = await fetch(API_ROUTES.AUTH_VERIFY_OTP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: pendingEmail,
-          code: codeToUse,
-          purpose: AuthPurpose.PASSWORD_RESET,
-          newPassword,
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
       const result = await response.json();
       if (!response.ok || !result.success) {
         throw new Error(result.error || AUTH_MESSAGES.PASSWORD_UPDATE_FAILED);
+      }
+
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("resumentor_reset_token");
       }
 
       // Establish session with the newly created password

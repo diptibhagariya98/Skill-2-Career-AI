@@ -5,11 +5,14 @@ import { renderTemplate } from "@/lib/email/render";
 import { sendEmail } from "@/lib/email/transporter";
 import {
   AuthPurpose,
+  AuthEvent,
+  AuthTemplateKey,
   AUTH_MESSAGES,
   AUTH_CONSTANTS,
-  isUuid,
+  AUTH_PATTERNS,
   cleanEmail as sanitizeEmail,
   getErrorMessage,
+  isUuid,
 } from "@/constants/auth";
 
 export const dynamic = "force-dynamic";
@@ -21,15 +24,6 @@ interface SendOtpRequestBody {
   name?: string;
 }
 
-interface AdminUserRecord {
-  id: string;
-  email?: string;
-  user_metadata?: {
-    full_name?: string;
-    name?: string;
-  };
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body: SendOtpRequestBody = await request.json();
@@ -37,61 +31,51 @@ export async function POST(request: NextRequest) {
 
     if (!email) {
       return NextResponse.json(
-        { error: "Missing required field: email" },
+        { error: AUTH_MESSAGES.FIELD_REQUIRED },
         { status: 400 }
       );
     }
 
     const cleanEmail = sanitizeEmail(email);
-    let cleanUserId = userId ? String(userId).trim() : cleanEmail;
+    if (!AUTH_PATTERNS.EMAIL.test(cleanEmail)) {
+      return NextResponse.json(
+        { error: AUTH_MESSAGES.EMAIL_INVALID },
+        { status: 400 }
+      );
+    }
+
     const validPurpose =
       purpose === AuthPurpose.PASSWORD_RESET
         ? AuthPurpose.PASSWORD_RESET
         : AuthPurpose.EMAIL_VERIFY;
+
     const supabase = getServiceSupabase();
+    let cleanUserId = userId && isUuid(userId) ? String(userId).trim() : "";
+    let resolvedName = String(name || "").trim();
 
-    let resolvedName = name || "";
+    // 1. Resolve User from profiles using indexed email lookup (avoiding linear user list scans)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, name, full_name")
+      .ilike("email", cleanEmail)
+      .maybeSingle();
 
-    // Look up Supabase Auth User ID if not provided as UUID
-    if (!isUuid(cleanUserId)) {
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .ilike("email", cleanEmail)
-          .maybeSingle();
-
-        if (profile?.id && isUuid(profile.id)) {
-          cleanUserId = profile.id;
-          if (!resolvedName && profile.full_name) resolvedName = profile.full_name;
-        } else {
-          const { data: userList } = await supabase.auth.admin.listUsers({
-            perPage: AUTH_CONSTANTS.MAX_USERS_SEARCH_PAGE_SIZE,
-          });
-          const found = (userList?.users as AdminUserRecord[] | undefined)?.find(
-            (u) => sanitizeEmail(u.email) === cleanEmail
-          );
-          if (found?.id && isUuid(found.id)) {
-            cleanUserId = found.id;
-            if (!resolvedName && (found.user_metadata?.full_name || found.user_metadata?.name)) {
-              resolvedName = found.user_metadata?.full_name || found.user_metadata?.name || "";
-            }
-          }
-        }
-      } catch (lookupErr: unknown) {
-        console.warn("[Send OTP Lookup Notice]:", getErrorMessage(lookupErr));
+    if (profile?.id) {
+      cleanUserId = profile.id;
+      if (!resolvedName) {
+        resolvedName = profile.full_name || profile.name || "";
       }
     }
 
-    // For password reset, require that user account exists
-    if (validPurpose === AuthPurpose.PASSWORD_RESET && !isUuid(cleanUserId)) {
+    // 2. For password reset, require an existing account
+    if (validPurpose === AuthPurpose.PASSWORD_RESET && !cleanUserId) {
       return NextResponse.json(
         { error: AUTH_MESSAGES.USER_NOT_FOUND },
         { status: 404 }
       );
     }
 
-    // 1. Invalidate any existing unused OTPs for this user and purpose
+    // 3. Invalidate any existing unconsumed OTPs for this email and purpose
     try {
       await supabase
         .from("otp_codes")
@@ -103,15 +87,18 @@ export async function POST(request: NextRequest) {
       console.warn("[OTP Invalidate Notice]:", getErrorMessage(invalErr));
     }
 
-    // 2. Generate 6-digit numeric OTP and HMAC hash
+    // 4. Generate 6-digit numeric OTP and HMAC hash
     const code = generateOtp();
-    const codeHash = hashOtp(code, cleanUserId, validPurpose);
+    const codeHash = hashOtp(code, cleanEmail, validPurpose);
     const expiresInMinutes = AUTH_CONSTANTS.OTP_EXPIRATION_MINUTES;
     const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString();
 
-    // 3. Store OTP record in Supabase PostgreSQL
+    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || null;
+    const userAgent = request.headers.get("user-agent") || null;
+
+    // 5. Store OTP record in PostgreSQL
     const { error: dbError } = await supabase.from("otp_codes").insert({
-      user_id: cleanUserId,
+      user_id: cleanUserId || cleanEmail,
       email: cleanEmail,
       purpose: validPurpose,
       code_hash: codeHash,
@@ -120,15 +107,20 @@ export async function POST(request: NextRequest) {
       expires_at: expiresAt,
       created_at: new Date().toISOString(),
       consumed_at: null,
+      ip_address: clientIp,
+      user_agent: userAgent,
     });
 
     if (dbError) {
       throw new Error(`Failed to save verification record: ${dbError.message}`);
     }
 
-    // 4. Render branded email template with 6-digit code
+    // 6. Render and dispatch branded email
     const templateKey =
-      validPurpose === AuthPurpose.PASSWORD_RESET ? "reset-password" : "verify-email";
+      validPurpose === AuthPurpose.PASSWORD_RESET
+        ? AuthTemplateKey.RESET_PASSWORD
+        : AuthTemplateKey.VERIFY_EMAIL;
+
     const { subject, html, text } = await renderTemplate({
       template: templateKey,
       data: {
@@ -138,13 +130,26 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 5. Dispatch email via Nodemailer
     await sendEmail({
       to: cleanEmail,
       subject,
       html,
       text,
     });
+
+    // 7. Record audit log
+    try {
+      await supabase.from("auth_audit_logs").insert({
+        user_id: cleanUserId || null,
+        email: cleanEmail,
+        event: AuthEvent.OTP_DISPATCHED,
+        ip: clientIp,
+        user_agent: userAgent,
+        metadata: { purpose: validPurpose },
+      });
+    } catch (auditErr: unknown) {
+      console.warn("[Audit Log Notice]:", getErrorMessage(auditErr));
+    }
 
     return NextResponse.json({
       success: true,

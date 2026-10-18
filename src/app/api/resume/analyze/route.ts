@@ -410,9 +410,12 @@ ${hasJobDesc ? `TARGET JOB DESCRIPTION:\n${jobDescription!.slice(0, 6000)}` : "N
     analysisCache.set(fingerprint, { response, expiresAt: Date.now() + CACHE_TTL_MS });
 
     return NextResponse.json(response);
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Failed to process resume analysis.", code: "service_unavailable" },
+      {
+        error: error instanceof Error ? error.message : "Failed to process resume analysis.",
+        code: "service_unavailable",
+      },
       { status: 500 }
     );
   }

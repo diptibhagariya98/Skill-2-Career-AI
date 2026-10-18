@@ -244,6 +244,10 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentPassword) {
+      toast.error(AUTH_MESSAGES.CURRENT_PASSWORD_REQUIRED);
+      return;
+    }
     const isPasswordValid = validateField("newPassword", newPassword);
     if (!isPasswordValid) {
       toast.error(AUTH_MESSAGES.PASSWORD_CRITERIA);
@@ -256,6 +260,24 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
 
     setUpdatingPassword(true);
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.email) {
+        toast.error("You must be logged in to update your password.");
+        return;
+      }
+
+      // Verify current password first
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (verifyErr) {
+        throw new Error(AUTH_MESSAGES.CURRENT_PASSWORD_INCORRECT);
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });

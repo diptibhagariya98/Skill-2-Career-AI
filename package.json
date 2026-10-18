@@ -15,7 +15,9 @@
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node scripts/migrate.mjs",
-    "seed:admin": "node scripts/seed-super-admin.mjs"
+    "seed:admin": "node scripts/seed-super-admin.mjs",
+    "test": "node scripts/test-auth-flow.mjs",
+    "test:auth": "node scripts/test-auth-flow.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

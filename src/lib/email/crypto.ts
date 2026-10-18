@@ -1,6 +1,11 @@
-import { randomInt, createHmac, timingSafeEqual } from "crypto";
+import { randomInt, randomBytes, createHmac, createHash, timingSafeEqual } from "crypto";
+import { AuthPurpose } from "@/constants/auth";
 
-const DEFAULT_SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "resumentor-secret-hmac-key-default-2026";
+const SERVER_AUTH_SECRET =
+  process.env.AUTH_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "resumentor-production-secure-hmac-salt-key-2026";
 
 /**
  * Generate a cryptographically secure 6-digit numeric OTP.
@@ -11,17 +16,21 @@ export function generateOtp(): string {
 }
 
 /**
- * Hash an OTP using HMAC-SHA256 with userId, purpose and server secret.
+ * Hash an OTP using HMAC-SHA256 with user identifier, purpose and server secret.
  * Prevents offline rainbow table / brute-force attacks on 6-digit codes.
  */
 export function hashOtp(
   code: string,
-  userId: string,
-  purpose: string,
-  secret: string = DEFAULT_SECRET
+  identifier: string,
+  purpose: AuthPurpose | string,
+  secret: string = SERVER_AUTH_SECRET
 ): string {
+  const normalizedId = String(identifier || "").trim().toLowerCase();
+  const normalizedPurpose = String(purpose || "").trim().toUpperCase();
+  const normalizedCode = String(code || "").trim();
+
   return createHmac("sha256", secret)
-    .update(`${userId.toLowerCase()}:${purpose.toUpperCase()}:${code.trim()}`)
+    .update(`${normalizedId}:${normalizedPurpose}:${normalizedCode}`)
     .digest("hex");
 }
 
@@ -31,14 +40,43 @@ export function hashOtp(
 export function otpMatches(
   storedHex: string,
   code: string,
-  userId: string,
-  purpose: string,
-  secret: string = DEFAULT_SECRET
+  identifier: string,
+  purpose: AuthPurpose | string,
+  secret: string = SERVER_AUTH_SECRET
 ): boolean {
   try {
-    const computedHex = hashOtp(code, userId, purpose, secret);
+    const computedHex = hashOtp(code, identifier, purpose, secret);
     const a = Buffer.from(computedHex, "hex");
     const b = Buffer.from(storedHex, "hex");
+    return a.length === b.length && timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generate a high-entropy 256-bit cryptographically secure reset token.
+ * Formatted as a 64-character hexadecimal string.
+ */
+export function generateResetToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+/**
+ * Hash a reset token using SHA-256 for persistent database storage.
+ */
+export function hashResetToken(token: string): string {
+  return createHash("sha256").update(token.trim()).digest("hex");
+}
+
+/**
+ * Timing-safe comparison of provided reset token with stored SHA-256 hex hash.
+ */
+export function resetTokenMatches(storedHash: string, token: string): boolean {
+  try {
+    const computedHash = hashResetToken(token);
+    const a = Buffer.from(computedHash, "hex");
+    const b = Buffer.from(storedHash, "hex");
     return a.length === b.length && timingSafeEqual(a, b);
   } catch {
     return false;
