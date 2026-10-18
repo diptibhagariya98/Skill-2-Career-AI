@@ -66,50 +66,45 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-async function runCommand(command, args, env = {}) {
+const nextBin = path.join(projectRoot, "node_modules", "next", "dist", "bin", "next");
+const capBin = path.join(projectRoot, "node_modules", "@capacitor", "cli", "bin", "capacitor");
+
+async function runNodeScript(scriptPath, args, env = {}) {
   return new Promise((resolve, reject) => {
-    const isWindows = process.platform === "win32";
-    let cmd = command;
-    let useShell = false;
-
-    if (command === "node") {
-      cmd = process.execPath;
-      useShell = false;
-    } else if (isWindows) {
-      if (command.endsWith(".bat") || command.endsWith(".cmd")) {
-        useShell = true;
-      } else if (!command.endsWith(".exe")) {
-        cmd = `${command}.cmd`;
-        useShell = true;
-      }
-    }
-
-    const proc = spawn(cmd, args, {
+    const proc = spawn(process.execPath, [scriptPath, ...args], {
       cwd: projectRoot,
       stdio: "inherit",
-      shell: useShell,
+      shell: false,
       env: { ...process.env, ...env },
     });
 
     proc.on("close", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`Command ${command} failed with exit code ${code}`));
+      else reject(new Error(`Script ${path.basename(scriptPath)} failed with exit code ${code}`));
     });
   });
+}
+
+function safeCleanDir(dirPath) {
+  if (fs.existsSync(dirPath)) {
+    try {
+      fs.rmSync(dirPath, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 });
+    } catch (e) {
+      console.warn(`[build:mobile] Notice: ${path.basename(dirPath)} cleanup deferred (${e.code || e.message}), proceeding with build.`);
+    }
+  }
 }
 
 async function main() {
   try {
     stubRoutes();
 
-    console.log("[build:mobile] Cleaning previous build artifacts...");
-    const nextDir = path.join(projectRoot, ".next");
+    console.log("[build:mobile] Cleaning previous static export directory...");
     const outDir = path.join(projectRoot, "out");
-    if (fs.existsSync(nextDir)) fs.rmSync(nextDir, { recursive: true, force: true });
-    if (fs.existsSync(outDir)) fs.rmSync(outDir, { recursive: true, force: true });
+    safeCleanDir(outDir);
 
     console.log("[build:mobile] Starting Next.js static export build (BUILD_TARGET=mobile)...");
-    await runCommand("npx", ["next", "build"], { BUILD_TARGET: "mobile" });
+    await runNodeScript(nextBin, ["build"], { BUILD_TARGET: "mobile" });
     console.log("[build:mobile] Static export succeeded -> ./out directory ready.");
 
   } finally {
@@ -119,7 +114,7 @@ async function main() {
   // After export and API restore, run Capacitor sync
   console.log("[build:mobile] Running Capacitor sync...");
   try {
-    await runCommand("npx", ["cap", "sync"]);
+    await runNodeScript(capBin, ["sync"]);
     console.log("[build:mobile] Capacitor sync completed.");
   } catch (syncError) {
     console.warn("[build:mobile] Capacitor sync notice:", syncError.message);
