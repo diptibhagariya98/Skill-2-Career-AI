@@ -114,7 +114,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Code is valid: Mark consumed in Supabase PostgreSQL
+    // 5. If this is Step 1 of Password Reset (verification only, no newPassword provided)
+    if (validPurpose === "PASSWORD_RESET" && !body.newPassword) {
+      return NextResponse.json({
+        success: true,
+        verified: true,
+        message: "Code verified successfully! You may now create your new password.",
+      });
+    }
+
+    // Code is valid: Mark consumed in Supabase PostgreSQL
     const nowIso = new Date().toISOString();
     await supabase
       .from("otp_codes")

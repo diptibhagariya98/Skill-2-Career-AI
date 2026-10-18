@@ -18,11 +18,19 @@ import {
   ShieldCheck,
   Check,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
 import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
 
-export type AuthMode = "login" | "register" | "otp" | "forgot" | "reset-password";
+export type AuthMode =
+  | "login"
+  | "register"
+  | "otp"
+  | "forgot"
+  | "verify-reset-otp"
+  | "set-new-password"
+  | "reset-password";
 
 export interface AuthProps {
   initialMode?: AuthMode;
@@ -31,7 +39,7 @@ export interface AuthProps {
 export default function Auth({ initialMode = "login" }: AuthProps = {}) {
   const router = useRouter();
 
-  // Mode state: 'login' | 'register' | 'otp' | 'forgot' | 'reset-password'
+  // Mode state: 'login' | 'register' | 'otp' | 'forgot' | 'verify-reset-otp' | 'set-new-password' | 'reset-password'
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
   // Sync mode with URL search params if present
@@ -39,7 +47,18 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlMode = params.get("mode") as AuthMode | null;
-      if (urlMode && ["login", "register", "otp", "forgot", "reset-password"].includes(urlMode)) {
+      if (
+        urlMode &&
+        [
+          "login",
+          "register",
+          "otp",
+          "forgot",
+          "verify-reset-otp",
+          "set-new-password",
+          "reset-password",
+        ].includes(urlMode)
+      ) {
         setMode(urlMode);
       }
     }
@@ -60,8 +79,11 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
-  // Forgot password reset sent state
+  // Forgot password & reset state
   const [resetSent, setResetSent] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [verifiedResetCode, setVerifiedResetCode] = useState("");
+  const [resetOtpError, setResetOtpError] = useState<string | null>(null);
 
   // OTP Verification segmented states
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
@@ -85,9 +107,9 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  // Focus the first OTP box when entering OTP or reset-password mode
+  // Focus the first OTP box when entering OTP or reset-password verification mode
   useEffect(() => {
-    if (mode === "otp" || mode === "reset-password") {
+    if (mode === "otp" || mode === "verify-reset-otp" || mode === "reset-password") {
       setTimeout(() => {
         otpInputRefs.current[0]?.focus();
       }, 100);
@@ -438,6 +460,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
     }
 
     setLoading(true);
+    setForgotError(null);
     try {
       const response = await fetch(API_ROUTES.AUTH_SEND_OTP, {
         method: "POST",
@@ -450,31 +473,79 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to dispatch reset code.");
+        const errorMsg = data.error || "This account does not exist in our system. Please check your email or sign up.";
+        setForgotError(errorMsg);
+        toast.error(errorMsg);
+        return;
       }
 
       setPendingEmail(cleanEmail);
       setPendingUserId("");
       setPendingPurpose("PASSWORD_RESET");
       setOtpDigits(["", "", "", "", "", ""]);
+      setVerifiedResetCode("");
       setNewPassword("");
       setConfirmNewPassword("");
+      setResetOtpError(null);
       setCooldown(60);
-      setMode("reset-password");
+      setMode("verify-reset-otp");
       toast.success("A 6-digit password reset code has been sent to your email!");
     } catch (error: any) {
-      toast.error(error.message || "Failed to send reset email.");
+      const errorMsg = error.message || "Failed to send reset email.";
+      setForgotError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Reset Password Submit Handler (Verify OTP & Set New Password) ---
-  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+  // --- Step 1: Verify OTP Handler for Password Reset ---
+  const handleVerifyResetOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = otpDigits.join("");
     if (code.length !== 6) {
       toast.error("Please enter the complete 6-digit verification code.");
+      return;
+    }
+
+    setLoading(true);
+    setResetOtpError(null);
+    try {
+      const response = await fetch(API_ROUTES.AUTH_VERIFY_OTP, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: pendingEmail,
+          code,
+          purpose: "PASSWORD_RESET",
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Invalid verification code.");
+      }
+
+      // Successfully verified code without consuming it
+      setVerifiedResetCode(code);
+      setMode("set-new-password");
+      toast.success("Code verified! Now create your new password.");
+    } catch (error: any) {
+      const msg = error.message || "Failed to verify 6-digit code.";
+      setResetOtpError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Step 2: Set New Password Submit Handler ---
+  const handleSetNewPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const codeToUse = verifiedResetCode || otpDigits.join("");
+    if (!codeToUse || codeToUse.length !== 6) {
+      toast.error("Verification session expired. Please verify your OTP code again.");
+      setMode("verify-reset-otp");
       return;
     }
 
@@ -495,7 +566,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: pendingEmail,
-          code,
+          code: codeToUse,
           purpose: "PASSWORD_RESET",
           newPassword,
         }),
@@ -649,6 +720,28 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
               </p>
             </div>
 
+            {/* Prominent Account Not Found / Error Banner */}
+            {forgotError && (
+              <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start space-x-3 text-left animate-fade-in shadow-sm">
+                <AlertCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <p className="font-semibold text-rose-900">Account Not Found</p>
+                  <p className="text-rose-700 mt-0.5 leading-relaxed">{forgotError}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrors({});
+                      setForgotError(null);
+                      setMode("register");
+                    }}
+                    className="mt-2 font-semibold text-indigo-700 hover:text-indigo-900 underline inline-flex items-center space-x-1"
+                  >
+                    <span>Create a new account with this email &rarr;</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
               <div className="relative">
                 <Mail className="absolute top-3.5 left-4 h-5 w-5 text-slate-400" />
@@ -656,9 +749,14 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                   type="email"
                   placeholder="Enter your registered email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (forgotError) setForgotError(null);
+                  }}
                   required
-                  className="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
+                  className={`w-full pl-11 pr-4 py-3 border rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 ${
+                    forgotError ? "border-rose-400 ring-1 ring-rose-200" : "border-slate-200"
+                  }`}
                 />
               </div>
 
@@ -667,13 +765,16 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                 disabled={loading}
                 className="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl hover:bg-indigo-700 transition duration-150 disabled:opacity-50 text-sm shadow-md shadow-indigo-200"
               >
-                {loading ? "Sending 6-Digit Code..." : "Send 6-Digit Code"}
+                {loading ? "Checking Account & Sending Code..." : "Send 6-Digit Code"}
               </button>
 
               <div className="text-center pt-2">
                 <button
                   type="button"
-                  onClick={() => setMode("login")}
+                  onClick={() => {
+                    setForgotError(null);
+                    setMode("login");
+                  }}
                   className="text-xs font-semibold text-slate-500 hover:text-slate-800 inline-flex items-center space-x-1 transition"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
@@ -685,23 +786,31 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         )}
 
         {/* =========================================================================
-            SCREEN 3: Reset Password Screen (OTP + New Password)
+            SCREEN 3A: Step 1 - Verify Password Reset OTP
             ========================================================================= */}
-        {mode === "reset-password" && (
+        {(mode === "verify-reset-otp" || mode === "reset-password") && (
           <div className="animate-fade-in">
             <div className="text-center mb-6">
               <div className="inline-flex p-2.5 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-600 mb-2">
                 <KeyRound className="h-6 w-6" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900">Create New Password</h2>
+              <h2 className="text-xl font-bold text-slate-900">Verify Reset Code</h2>
               <p className="text-xs text-slate-500 mt-1">
-                Enter the 6-digit code sent to
+                Step 1 of 2: Enter the 6-digit code sent to
                 <br />
                 <span className="font-semibold text-slate-800 break-all">{pendingEmail}</span>
               </p>
             </div>
 
-            <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+            {/* Inline Error Message */}
+            {resetOtpError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center space-x-2.5 text-left animate-fade-in">
+                <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                <p className="text-xs text-rose-700 font-medium">{resetOtpError}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyResetOtp} className="space-y-4">
               {/* 6 Segmented Digit Boxes */}
               <div>
                 <label className="block text-xs uppercase font-semibold text-slate-400 mb-2 text-center tracking-wider">
@@ -719,7 +828,10 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                       pattern="[0-9]*"
                       maxLength={1}
                       value={digit}
-                      onChange={(e) => handleOtpChange(idx, e.target.value)}
+                      onChange={(e) => {
+                        handleOtpChange(idx, e.target.value);
+                        if (resetOtpError) setResetOtpError(null);
+                      }}
                       onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                       onPaste={handleOtpPaste}
                       className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold font-mono rounded-xl border border-slate-200 bg-slate-50/70 text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition-all duration-150 shrink-0"
@@ -728,8 +840,76 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                 </div>
               </div>
 
+              {/* Verify Code Button */}
+              <button
+                type="submit"
+                disabled={loading || otpDigits.join("").length !== 6}
+                className="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl hover:bg-indigo-700 active:scale-[0.99] transition duration-150 disabled:opacity-50 shadow-md shadow-indigo-200 flex items-center justify-center space-x-2 text-sm"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>{loading ? "Verifying Code..." : "Verify Code & Proceed"}</span>
+              </button>
+            </form>
+
+            {/* Resend OTP with Cooldown Pill */}
+            <div className="mt-5 text-center">
+              <button
+                type="button"
+                disabled={cooldown > 0 || loading}
+                onClick={handleResendOtp}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-400 disabled:no-underline inline-flex items-center space-x-1.5 transition"
+              >
+                <RotateCcw className={`h-3.5 w-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />
+                <span>
+                  {cooldown > 0 ? `Resend Code in ${cooldown}s` : "Didn't receive code? Resend"}
+                </span>
+              </button>
+            </div>
+
+            {/* Change Email or Back to Login */}
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotError(null);
+                  setMode("forgot");
+                }}
+                className="hover:text-indigo-600 inline-flex items-center space-x-1 transition"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Change Email</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                className="hover:text-slate-800 transition"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            SCREEN 3B: Step 2 - Create New Password
+            ========================================================================= */}
+        {mode === "set-new-password" && (
+          <div className="animate-fade-in">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-2.5 bg-emerald-50 border border-emerald-100 rounded-full text-emerald-600 mb-2">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">Create New Password</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Step 2 of 2: Code verified! Choose a strong password for
+                <br />
+                <span className="font-semibold text-slate-800 break-all">{pendingEmail}</span>
+              </p>
+            </div>
+
+            <form onSubmit={handleSetNewPasswordSubmit} className="space-y-4">
               {/* New Password Input */}
-              <div className="space-y-1 pt-1">
+              <div className="space-y-1">
                 <div className="relative">
                   <Lock className="absolute top-3.5 left-4 h-5 w-5 text-slate-400" />
                   <input
@@ -793,50 +973,44 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
               </div>
 
               {/* Confirm New Password Input */}
-              <div className="relative">
-                <Lock className="absolute top-3.5 left-4 h-5 w-5 text-slate-400" />
-                <input
-                  type={showConfirmNewPassword ? "text" : "password"}
-                  placeholder="Confirm New Password"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  required
-                  className="w-full pl-11 pr-11 py-3 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                  className="absolute top-3.5 right-4 h-5 w-5 text-slate-400 hover:text-slate-600"
-                >
-                  {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+              <div className="space-y-1">
+                <div className="relative">
+                  <Lock className="absolute top-3.5 left-4 h-5 w-5 text-slate-400" />
+                  <input
+                    type={showConfirmNewPassword ? "text" : "password"}
+                    placeholder="Confirm New Password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    required
+                    className="w-full pl-11 pr-11 py-3 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                    className="absolute top-3.5 right-4 h-5 w-5 text-slate-400 hover:text-slate-600"
+                  >
+                    {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+
+                {/* Password Match Status */}
+                {confirmNewPassword.length > 0 && (
+                  <p className={`text-xs ${newPassword === confirmNewPassword ? "text-emerald-600" : "text-rose-500"} font-medium`}>
+                    {newPassword === confirmNewPassword ? "✓ Passwords match" : "✕ Passwords do not match"}
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading || otpDigits.join("").length !== 6 || newPassedCount < 4 || newPassword !== confirmNewPassword}
+                disabled={loading || newPassedCount < 4 || newPassword !== confirmNewPassword}
                 className="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl hover:bg-indigo-700 active:scale-[0.99] transition duration-150 disabled:opacity-50 shadow-md shadow-indigo-200 flex items-center justify-center space-x-2 text-sm"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 <span>{loading ? "Updating Password..." : "Update Password & Sign In"}</span>
               </button>
             </form>
-
-            {/* Resend OTP with Cooldown Pill */}
-            <div className="mt-5 text-center">
-              <button
-                type="button"
-                disabled={cooldown > 0 || loading}
-                onClick={handleResendOtp}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-400 disabled:no-underline inline-flex items-center space-x-1.5 transition"
-              >
-                <RotateCcw className={`h-3.5 w-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />
-                <span>
-                  {cooldown > 0 ? `Resend Code in ${cooldown}s` : "Didn't receive code? Resend"}
-                </span>
-              </button>
-            </div>
 
             {/* Back to Login */}
             <div className="mt-6 pt-4 border-t border-slate-100 text-center">
