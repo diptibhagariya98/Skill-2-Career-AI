@@ -359,8 +359,8 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* Scrollable Page Body with Safe Bottom Offset (pb-28 ensures clearance above mobile nav) */}
-        <div className="flex-1 p-3 sm:p-5 md:p-6 pb-28 md:pb-8 overflow-y-auto overflow-x-hidden min-w-0">
+        {/* Scrollable Page Body with Compact Mobile Edge-to-Edge Margins & Safe Bottom Offset */}
+        <div className="flex-1 p-1 sm:p-4 md:p-6 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-8 overflow-y-auto overflow-x-hidden min-w-0">
           <div className="animate-fade-in">
             {activePage === "dashboard" && (
               <div className="space-y-4 sm:space-y-6">

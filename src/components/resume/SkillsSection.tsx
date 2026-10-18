@@ -100,22 +100,22 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Skills</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Skills</h2>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
             ATS engines match keywords against candidate skills. Clean tags with zero graphic rating bars.
           </p>
         </div>
 
         {/* Grouped vs Flat Toggle */}
-        <div className="flex items-center bg-gray-100 p-1 rounded-xl self-start sm:self-auto">
+        <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-xl self-start sm:self-auto">
           <button
             type="button"
             onClick={() => handleToggleGrouped(true)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-              skills.isGrouped ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500 hover:text-gray-900"
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition ${
+              skills.isGrouped ? "bg-white text-indigo-600 shadow-xs" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             Categorized
@@ -123,8 +123,8 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
           <button
             type="button"
             onClick={() => handleToggleGrouped(false)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-              !skills.isGrouped ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500 hover:text-gray-900"
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition ${
+              !skills.isGrouped ? "bg-white text-indigo-600 shadow-xs" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             Flat List
@@ -134,33 +134,33 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
 
       {skills.isGrouped ? (
         /* Categorized Groups */
-        <div className="space-y-5">
+        <div className="space-y-3 sm:space-y-5">
           {skills.groups.map((grp) => (
-            <div key={grp.id} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-3">
-              <div className="flex items-center justify-between gap-3">
+            <div key={grp.id} className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-xs space-y-2.5 sm:space-y-3">
+              <div className="flex items-center justify-between gap-2 sm:gap-3">
                 <input
                   type="text"
                   placeholder="Category Name (e.g., Languages, Frameworks)"
                   value={grp.name}
                   onChange={(e) => handleUpdateGroupName(grp.id, e.target.value)}
-                  className="font-bold text-sm text-gray-900 border-b border-transparent hover:border-gray-300 focus:border-indigo-600 focus:outline-none px-1 py-1 w-2/3"
+                  className="font-bold text-xs sm:text-sm text-gray-900 border-b border-transparent hover:border-gray-300 focus:border-indigo-600 focus:outline-none px-1 py-0.5 sm:py-1 w-2/3"
                 />
                 <button
                   type="button"
                   onClick={() => handleRemoveGroup(grp.id)}
-                  className="p-1.5 text-gray-400 hover:text-red-500"
+                  className="p-1 sm:p-1.5 text-gray-400 hover:text-red-500 min-h-[32px] min-w-[32px] flex items-center justify-center"
                   title="Remove category"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
               </div>
 
               {/* Tag Badges */}
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1 sm:gap-1.5">
                 {grp.skills.map((sText) => (
                   <span
                     key={sText}
-                    className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-lg border border-indigo-100"
+                    className="inline-flex items-center gap-1 sm:gap-1.5 bg-indigo-50 text-indigo-700 text-[11px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg border border-indigo-100"
                   >
                     {sText}
                     <button
@@ -175,7 +175,7 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
               </div>
 
               {/* Tag Input for Group */}
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-1.5 sm:gap-2 pt-0.5 sm:pt-1">
                 <input
                   type="text"
                   placeholder="Type skill & press Enter (e.g. React, Next.js, Python)"
@@ -187,12 +187,12 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
                       handleAddSkillToGroup(grp.id);
                     }
                   }}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px]"
+                  className="flex-1 px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-xl text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[38px] sm:min-h-[40px]"
                 />
                 <button
                   type="button"
                   onClick={() => handleAddSkillToGroup(grp.id)}
-                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold px-3 py-2 rounded-xl transition"
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition"
                 >
                   Add
                 </button>
@@ -203,14 +203,14 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
           <button
             type="button"
             onClick={handleAddGroup}
-            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl text-xs font-semibold text-gray-600 hover:border-indigo-500 hover:text-indigo-600 transition flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 sm:py-3 border-2 border-dashed border-gray-300 rounded-xl sm:rounded-2xl text-xs font-semibold text-gray-600 hover:border-indigo-500 hover:text-indigo-600 transition flex items-center justify-center gap-1.5 min-h-[42px]"
           >
             <Plus className="h-4 w-4" /> Add Skill Category
           </button>
         </div>
       ) : (
         /* Flat List Mode */
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs space-y-3 sm:space-y-4">
           <div className="flex flex-wrap gap-2 min-h-[40px]">
             {(skills.flatList || []).map((sText) => (
               <span

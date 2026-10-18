@@ -23,8 +23,8 @@ export default function StepIndicator({
   const visibleSections = sectionOrder.filter((key) => sectionVisibility[key] !== false);
 
   return (
-    <div className="w-full bg-white border-b border-gray-200 overflow-x-auto scrollbar-none py-3 px-4 shadow-sm">
-      <div className="flex items-center gap-2 min-w-max">
+    <div className="w-full bg-white border-b border-gray-150 overflow-x-auto scrollbar-none py-1.5 sm:py-2.5 px-2 sm:px-4 shadow-xs">
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
         {visibleSections.map((key, idx) => {
           const def = SECTION_REGISTRY[key];
           if (!def) return null;
@@ -35,16 +35,16 @@ export default function StepIndicator({
             <button
               key={key}
               onClick={() => onSelectSection(key)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 min-h-[44px] ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 min-h-[36px] sm:min-h-[42px] ${
                 isActive
-                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
+                  ? "bg-indigo-600 text-white shadow-xs shadow-indigo-200"
                   : isCompleted
                   ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               <span
-                className={`flex items-center justify-center h-5 w-5 rounded-full text-[11px] font-bold ${
+                className={`flex items-center justify-center h-4.5 w-4.5 sm:h-5 sm:w-5 rounded-full text-[10px] sm:text-[11px] font-bold ${
                   isActive
                     ? "bg-white text-indigo-600"
                     : isCompleted
@@ -54,7 +54,7 @@ export default function StepIndicator({
               >
                 {isCompleted ? <Check className="h-3 w-3 stroke-[3]" /> : idx + 1}
               </span>
-              <span>{def.label}</span>
+              <span className="truncate">{def.label}</span>
             </button>
           );
         })}

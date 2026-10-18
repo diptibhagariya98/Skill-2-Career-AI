@@ -112,25 +112,25 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Work Experience</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Work Experience</h2>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
             List your career milestones in reverse-chronological order with quantifiable impact.
           </p>
         </div>
         <button
           type="button"
           onClick={handleAddItem}
-          className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition min-h-[44px]"
+          className="inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 sm:px-4 py-2 rounded-xl transition min-h-[38px] sm:min-h-[44px] shrink-0 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" /> Add Experience
         </button>
       </div>
 
       {lastDeleted && (
-        <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-center justify-between text-xs text-amber-800">
+        <div className="bg-amber-50 border border-amber-200 p-2.5 sm:p-3 rounded-xl flex items-center justify-between text-xs text-amber-800">
           <span>
             Deleted <strong>{lastDeleted.item.title || "Experience entry"}</strong>
           </span>
@@ -145,8 +145,8 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
       )}
 
       {items.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50 p-6">
-          <Briefcase className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+        <div className="text-center py-8 sm:py-12 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50 p-4 sm:p-6">
+          <Briefcase className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mx-auto mb-2" />
           <p className="text-sm font-semibold text-gray-700">No work experience added yet</p>
           <p className="text-xs text-gray-400 mt-1 mb-4">
             Click below to add your first job, internship, or freelance project.
@@ -160,85 +160,85 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {items.map((exp, idx) => {
             const isExpanded = expandedId === exp.id;
             return (
               <div
                 key={exp.id}
-                className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden transition-all"
+                className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-xs overflow-hidden transition-all"
               >
                 {/* Header Card / Accordion Banner */}
                 <div
                   onClick={() => setExpandedId(isExpanded ? null : exp.id)}
-                  className="p-4 bg-gray-50/70 hover:bg-gray-100/70 cursor-pointer flex items-center justify-between transition min-h-[56px]"
+                  className="p-2.5 sm:p-4 bg-gray-50/70 hover:bg-gray-100/70 cursor-pointer flex items-center justify-between transition min-h-[46px] sm:min-h-[56px]"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center justify-center h-6 w-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
+                    <span className="flex items-center justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-indigo-100 text-indigo-700 text-[11px] sm:text-xs font-bold shrink-0">
                       {idx + 1}
                     </span>
-                    <div>
-                      <h3 className="font-bold text-sm text-gray-900">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-xs sm:text-sm text-gray-900 truncate">
                         {exp.title || "Untitled Role"}
                       </h3>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[11px] sm:text-xs text-gray-500 truncate">
                         {exp.employer || "Employer"} • {exp.startMonth} {exp.startYear} -{" "}
                         {exp.isCurrent ? "Present" : `${exp.endMonth || ""} ${exp.endYear || ""}`}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-0.5 sm:gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       disabled={idx === 0}
                       onClick={() => handleMove(idx, "up")}
-                      className="p-2 text-gray-500 hover:text-gray-800 disabled:opacity-30 min-h-[36px]"
+                      className="p-1 sm:p-2 text-gray-500 hover:text-gray-800 disabled:opacity-30 min-h-[32px] min-w-[32px] flex items-center justify-center"
                       title="Move up"
                     >
-                      <ArrowUp className="h-4 w-4" />
+                      <ArrowUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
                     <button
                       type="button"
                       disabled={idx === items.length - 1}
                       onClick={() => handleMove(idx, "down")}
-                      className="p-2 text-gray-500 hover:text-gray-800 disabled:opacity-30 min-h-[36px]"
+                      className="p-1 sm:p-2 text-gray-500 hover:text-gray-800 disabled:opacity-30 min-h-[32px] min-w-[32px] flex items-center justify-center"
                       title="Move down"
                     >
-                      <ArrowDown className="h-4 w-4" />
+                      <ArrowDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDuplicateItem(exp.id)}
-                      className="p-2 text-gray-500 hover:text-indigo-600 min-h-[36px]"
+                      className="p-1 sm:p-2 text-gray-500 hover:text-indigo-600 min-h-[32px] min-w-[32px] flex items-center justify-center"
                       title="Duplicate"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteItem(exp.id)}
-                      className="p-2 text-red-500 hover:text-red-700 min-h-[36px]"
+                      className="p-1 sm:p-2 text-red-500 hover:text-red-700 min-h-[32px] min-w-[32px] flex items-center justify-center"
                       title="Delete"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setExpandedId(isExpanded ? null : exp.id)}
-                      className="p-2 text-gray-500 hover:text-gray-800 min-h-[36px]"
+                      className="p-1 sm:p-2 text-gray-500 hover:text-gray-800 min-h-[32px] min-w-[32px] flex items-center justify-center"
                     >
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                     </button>
                   </div>
                 </div>
 
                 {/* Expanded Form Fields */}
                 {isExpanded && (
-                  <div className="p-5 space-y-4 border-t border-gray-100">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-2.5 sm:p-5 space-y-3 sm:space-y-4 border-t border-gray-150">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1">
                           Job Title <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -246,12 +246,12 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                           placeholder="e.g., Software Engineer"
                           value={exp.title}
                           onChange={(e) => handleUpdateItem(exp.id, { title: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
+                          className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1">
                           Company / Employer <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -259,14 +259,14 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                           placeholder="e.g., Google or Startup Inc."
                           value={exp.employer}
                           onChange={(e) => handleUpdateItem(exp.id, { employer: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
+                          className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1">
                           Location (City, Country)
                         </label>
                         <input
@@ -274,12 +274,12 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                           placeholder="e.g., Bengaluru, India or Remote"
                           value={exp.location || ""}
                           onChange={(e) => handleUpdateItem(exp.id, { location: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
+                          className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1">
                           Employment Type
                         </label>
                         <select
@@ -287,7 +287,7 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                           onChange={(e) =>
                             handleUpdateItem(exp.id, { employmentType: e.target.value as any })
                           }
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px] bg-white"
+                          className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] bg-white"
                         >
                           <option value="full-time">Full-time</option>
                           <option value="part-time">Part-time</option>
@@ -299,16 +299,16 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                     </div>
 
                     {/* Dates */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1">
                           Start Date <span className="text-red-500">*</span>
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           <select
                             value={exp.startMonth}
                             onChange={(e) => handleUpdateItem(exp.id, { startMonth: e.target.value })}
-                            className="px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white"
+                            className="px-2.5 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white min-h-[38px] sm:min-h-[42px]"
                           >
                             {MONTHS.map((m) => (
                               <option key={m} value={m}>
@@ -319,7 +319,7 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                           <select
                             value={exp.startYear}
                             onChange={(e) => handleUpdateItem(exp.id, { startYear: e.target.value })}
-                            className="px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white"
+                            className="px-2.5 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white min-h-[38px] sm:min-h-[42px]"
                           >
                             {YEARS.map((y) => (
                               <option key={y} value={y}>
@@ -332,10 +332,10 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
 
                       <div>
                         <div className="flex justify-between items-center mb-1">
-                          <label className="block text-xs font-semibold text-gray-700">
+                          <label className="block text-[11px] sm:text-xs font-semibold text-gray-700">
                             End Date
                           </label>
-                          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer font-medium">
+                          <label className="flex items-center gap-1 text-[11px] sm:text-xs text-gray-600 cursor-pointer font-medium">
                             <input
                               type="checkbox"
                               checked={exp.isCurrent}
@@ -355,7 +355,7 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                               onChange={(e) =>
                                 handleUpdateItem(exp.id, { endMonth: e.target.value })
                               }
-                              className="px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white"
+                              className="px-2.5 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white min-h-[38px] sm:min-h-[42px]"
                             >
                               {MONTHS.map((m) => (
                                 <option key={m} value={m}>
@@ -368,7 +368,7 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                               onChange={(e) =>
                                 handleUpdateItem(exp.id, { endYear: e.target.value })
                               }
-                              className="px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white"
+                              className="px-2.5 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white min-h-[38px] sm:min-h-[42px]"
                             >
                               {YEARS.map((y) => (
                                 <option key={y} value={y}>
@@ -382,9 +382,9 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                     </div>
 
                     {/* Bullet Points */}
-                    <div className="space-y-2 pt-2">
+                    <div className="space-y-1.5 sm:space-y-2 pt-1 sm:pt-2">
                       <div className="flex justify-between items-center">
-                        <label className="block text-xs font-semibold text-gray-800">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-800">
                           Key Achievements & Responsibilities (Recommended 3 to 6 bullets)
                         </label>
                         <button
@@ -401,8 +401,8 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                         const isOver = len > 220;
                         return (
                           <div key={bIdx} className="space-y-1">
-                            <div className="flex items-start gap-2">
-                              <span className="text-gray-400 mt-2.5 text-xs font-bold">•</span>
+                            <div className="flex items-start gap-1.5 sm:gap-2">
+                              <span className="text-gray-400 mt-2 text-xs font-bold shrink-0">•</span>
                               <textarea
                                 rows={2}
                                 placeholder="e.g., Spearheaded migration of database cluster, reducing API latency by 35% across 2M daily requests."
@@ -416,21 +416,21 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                                     handleAddBullet(exp.id);
                                   }
                                 }}
-                                className={`flex-1 p-2.5 border rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                                className={`flex-1 p-2 sm:p-2.5 border rounded-xl text-xs sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                                   isOver ? "border-amber-400" : "border-gray-300"
                                 }`}
                               />
                               <button
                                 type="button"
                                 onClick={() => handleRemoveBullet(exp.id, bIdx)}
-                                className="p-2 text-gray-400 hover:text-red-500 mt-1"
+                                className="p-1.5 sm:p-2 text-gray-400 hover:text-red-500 mt-0.5"
                                 title="Delete bullet"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                             {isOver && (
-                              <p className="text-[11px] text-amber-600 text-right pr-8 font-medium">
+                              <p className="text-[10px] sm:text-[11px] text-amber-600 text-right pr-6 sm:pr-8 font-medium">
                                 {len}/220 chars (concise bullets under 220 chars scan better in ATS)
                               </p>
                             )}
