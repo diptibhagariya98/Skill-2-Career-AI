@@ -554,14 +554,14 @@ export default function InterviewThread({
             <button
               type="button"
               onClick={handleSkipQuestion}
-              className="text-xs font-bold text-gray-500 hover:text-gray-700 flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-gray-200/60 transition-colors"
+              className="text-xs font-bold text-gray-500 hover:text-gray-700 flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-gray-200/60 transition-colors min-h-[48px]"
             >
               <SkipForward className="w-3.5 h-3.5" />
               Skip Question
             </button>
 
-            <div className="flex items-center gap-3">
-              <span className="text-2xs text-gray-400">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="text-2xs text-gray-400 hidden sm:inline">
                 {userText.length > 0 ? `${userText.length}/3000 chars` : ""}
               </span>
 
@@ -569,9 +569,9 @@ export default function InterviewThread({
                 type="button"
                 onClick={handleSubmitAnswer}
                 disabled={isEvaluating}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-2 transition-all active:scale-[0.98]"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-2 transition-all active:scale-[0.98] min-h-[48px]"
               >
-                <span>Submit Answer</span>
+                <span>Submit</span>
                 <Send className="w-4 h-4" />
               </button>
             </div>

@@ -1,24 +1,35 @@
 /**
  * Centralized API Endpoints and Application Routes
  * 
- * RULE: Do NOT hardcode API endpoints or internal route paths in components or route handlers.
- * Always import and reference from this file.
+ * Supports both:
+ * 1. Standard Next.js serverless route handlers (default for local dev)
+ * 2. Dedicated Supabase Edge Functions (free-tier serverless workers for production & mobile APKs)
  */
 
-// API Base URL prefix for remote mobile APK builds vs relative web dev
+// Custom API Base URL (if using a custom domain or proxy)
 const API_BASE = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL)
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")
   : "";
 
+// Supabase Edge Functions Endpoint Base (derived dynamically from environment)
+const SUPABASE_URL = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL)
+  ? process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, "")
+  : "";
+
+const SUPABASE_FUNCTIONS_BASE = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1` : "";
+
+// Enable Supabase Edge Functions by setting NEXT_PUBLIC_USE_EDGE_FUNCTIONS=true
+const isUsingEdge = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_USE_EDGE_FUNCTIONS === "true";
+
 // Internal client-side API endpoints
 export const API_ROUTES = {
-  GEMINI: `${API_BASE}/api/gemini`,
-  JOBS: `${API_BASE}/api/jobs`,
-  RESUME_ANALYZE: `${API_BASE}/api/resume/analyze`,
-  HEALTH_SUPABASE: `${API_BASE}/api/health/supabase`,
-  AUTH_SEND_OTP: `${API_BASE}/api/auth/send-otp`,
-  AUTH_VERIFY_OTP: `${API_BASE}/api/auth/verify-otp`,
-  AUTH_RESEND_OTP: `${API_BASE}/api/auth/resend-otp`,
+  GEMINI: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/gemini` : `${API_BASE}/api/gemini`,
+  JOBS: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/jobs` : `${API_BASE}/api/jobs`,
+  RESUME_ANALYZE: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/resume-analyze` : `${API_BASE}/api/resume/analyze`,
+  HEALTH_SUPABASE: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/health` : `${API_BASE}/api/health/supabase`,
+  AUTH_SEND_OTP: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/auth-send-otp` : `${API_BASE}/api/auth/send-otp`,
+  AUTH_VERIFY_OTP: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/auth-verify-otp` : `${API_BASE}/api/auth/verify-otp`,
+  AUTH_RESEND_OTP: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/auth-send-otp` : `${API_BASE}/api/auth/resend-otp`,
 } as const;
 
 export type ApiRouteKey = keyof typeof API_ROUTES;

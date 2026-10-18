@@ -29,13 +29,17 @@ function loadEnv() {
 
 const env = loadEnv();
 const dbPassword = env.DATABASE_PASSWORD || "k2OqCvQJls3Sa4cs";
-const projectRef = "nefflnvyoimondewpfwc";
+
+// Extract projectRef dynamically from NEXT_PUBLIC_SUPABASE_URL or DATABASE_URL
+const urlMatch = (env.NEXT_PUBLIC_SUPABASE_URL || "").match(/https:\/\/([^.]+)\.supabase\.co/);
+const dbMatch = (env.DATABASE_URL || "").match(/postgres\.([^:]+):/);
+const projectRef = urlMatch ? urlMatch[1] : (dbMatch ? dbMatch[1] : "nefflnvyoimondewpfwc");
 
 // Connection strings to try (Pooler with IPv4 support first)
 const connectionCandidates = [
   env.DATABASE_URL,
-  `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres`,
-  `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres`,
+  projectRef ? `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres` : null,
+  projectRef ? `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres` : null,
 ].filter(Boolean);
 
 async function connectToDatabase() {

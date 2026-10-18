@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
-import { Calendar, Camera, Trash2, Loader2 } from "lucide-react";
+import { Calendar, Camera, Trash2, Loader2, Sparkles, Smartphone, ChevronRight } from "lucide-react";
 import { processAvatarImage, getInitials } from "../lib/imageUtils";
 import { UserData } from "../types/user";
+import IntroScreens from "./mobile/IntroScreens";
 
 interface ProfileProps {
   userData: UserData | null;
@@ -13,6 +14,7 @@ interface ProfileProps {
 }
 
 export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
+  const [showTourModal, setShowTourModal] = useState(false);
   const [fullName, setFullName] = useState(userData?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -443,7 +445,48 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
             </p>
           </div>
         </div>
+
+        {/* App Tour & Mobile Features Card */}
+        <div className="mt-6 bg-white p-6 rounded-xl shadow-md text-left">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">App Tour &amp; Guide</h4>
+              <p className="text-[11px] text-gray-500">Learn how ResuMentor powers your career</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-600 leading-relaxed mb-4 mt-2">
+            Replay the introductory walkthrough to discover how the AI Resume Builder, Mock Interview Coach, and Scholarships work.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setShowTourModal(true)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 text-indigo-700 rounded-xl font-bold text-xs border border-indigo-150 transition active:scale-[0.98] min-h-[48px]"
+          >
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-indigo-600" />
+              <span>Replay App Tour</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-indigo-400" />
+          </button>
+        </div>
       </div>
+
+      {/* Replayable Full Screen Tour Modal */}
+      {showTourModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center animate-fade-in">
+          <div className="w-full max-w-md h-full md:h-[88vh] md:max-h-[760px] bg-white md:rounded-3xl shadow-2xl overflow-hidden flex flex-col relative">
+            <IntroScreens
+              isReplayModal
+              onCloseModal={() => setShowTourModal(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

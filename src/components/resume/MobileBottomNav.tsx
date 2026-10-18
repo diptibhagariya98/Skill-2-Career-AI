@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Edit3, Eye, Download } from "lucide-react";
+import { hapticLight } from "@/shared/platform";
 
 export type MobileTab = "edit" | "preview" | "export";
 
@@ -17,33 +18,46 @@ export default function MobileBottomNav({
   onExport,
 }: MobileBottomNavProps) {
   return (
-    <div className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-30 bg-white/95 backdrop-blur-md border border-gray-200/90 px-3 py-1 flex items-center gap-1 rounded-full shadow-xl">
+    <div className="lg:hidden fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-30 bg-white/95 backdrop-blur-md border border-gray-200/90 p-1.5 flex items-center gap-1.5 rounded-full shadow-2xl">
       <button
-        onClick={() => onChangeTab("edit")}
-        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[64px] rounded-lg transition-colors ${
-          activeTab === "edit" ? "text-indigo-600 font-bold" : "text-gray-500 hover:text-gray-800"
+        onClick={() => {
+          hapticLight();
+          onChangeTab("edit");
+        }}
+        className={`flex items-center gap-1.5 min-h-[48px] px-4 rounded-full transition-all active:scale-95 ${
+          activeTab === "edit"
+            ? "bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200"
+            : "text-gray-600 hover:text-gray-900"
         }`}
       >
-        <Edit3 className="h-5 w-5 mb-0.5" />
-        <span className="text-[11px]">Edit</span>
+        <Edit3 className="h-4.5 w-4.5" />
+        <span className="text-xs">Edit</span>
       </button>
 
       <button
-        onClick={() => onChangeTab("preview")}
-        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[64px] rounded-lg transition-colors ${
-          activeTab === "preview" ? "text-indigo-600 font-bold" : "text-gray-500 hover:text-gray-800"
+        onClick={() => {
+          hapticLight();
+          onChangeTab("preview");
+        }}
+        className={`flex items-center gap-1.5 min-h-[48px] px-4 rounded-full transition-all active:scale-95 ${
+          activeTab === "preview"
+            ? "bg-indigo-600 text-white font-bold shadow-md shadow-indigo-200"
+            : "text-gray-600 hover:text-gray-900"
         }`}
       >
-        <Eye className="h-5 w-5 mb-0.5" />
-        <span className="text-[11px]">Preview</span>
+        <Eye className="h-4.5 w-4.5" />
+        <span className="text-xs">Preview</span>
       </button>
 
       <button
-        onClick={onExport}
-        className="flex flex-col items-center justify-center min-h-[44px] min-w-[64px] rounded-lg text-emerald-600 hover:text-emerald-700 transition-colors font-bold"
+        onClick={() => {
+          hapticLight();
+          onExport();
+        }}
+        className="flex items-center gap-1.5 min-h-[48px] px-4 rounded-full text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all font-bold active:scale-95 border border-emerald-200"
       >
-        <Download className="h-5 w-5 mb-0.5" />
-        <span className="text-[11px]">Export</span>
+        <Download className="h-4.5 w-4.5" />
+        <span className="text-xs">Export</span>
       </button>
     </div>
   );

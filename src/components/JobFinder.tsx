@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Search, MapPin, Briefcase, Calendar } from "lucide-react";
+import { Search, MapPin, Briefcase, Calendar, Sparkles, Filter, ExternalLink, RotateCcw } from "lucide-react";
 import { API_ROUTES } from "../constants/endpoints";
+import { hapticLight } from "@/shared/platform";
 
 interface JobItem {
   title: string;
@@ -15,12 +16,21 @@ interface JobItem {
   postDate?: string;
 }
 
+const QUICK_SEARCH_CHIPS = [
+  "React Developer",
+  "Python Fresher",
+  "Remote Intern",
+  "Node.js Backend",
+  "AI / ML Engineer",
+];
+
 export default function JobFinder() {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string>("all");
 
   const fetchJobs = async (searchQuery: string, searchLocation = "") => {
     setLoading(true);
@@ -64,70 +74,181 @@ export default function JobFinder() {
       toast.error("Please enter a keyword to search.");
       return;
     }
+    hapticLight();
     fetchJobs(keyword, location);
   };
 
-  const recommendedJobs = jobs.slice(0, 2);
-  const allJobs = jobs.slice(2);
+  const handleChipClick = (chip: string) => {
+    hapticLight();
+    setKeyword(chip);
+    fetchJobs(chip, location);
+  };
+
+  const filteredJobs = jobs.filter((job) => {
+    if (selectedType === "all") return true;
+    return job.type.toLowerCase().includes(selectedType.toLowerCase());
+  });
+
+  const recommendedJobs = filteredJobs.slice(0, 2);
+  const otherJobs = filteredJobs.slice(2);
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Search Form */}
-      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-xs border border-gray-100">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 items-end">
-          <div className="md:col-span-2">
-            <label htmlFor="job-keyword" className="block text-xs sm:text-sm font-semibold text-gray-700">
-              Keywords (Title, Skill)
-            </label>
-            <input
-              type="text"
-              id="job-keyword"
-              placeholder="e.g., React Developer"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-lg shadow-2xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base text-gray-900"
-            />
+    <div className="space-y-6 sm:space-y-8 animate-fade-in pb-16 sm:pb-8">
+      {/* Search Bar & Quick Chips Container */}
+      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-xs border border-gray-150">
+        <form onSubmit={handleSearchSubmit} className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 items-end">
+            <div className="md:col-span-2">
+              <label htmlFor="job-keyword" className="block text-xs sm:text-sm font-bold text-gray-800 mb-1">
+                Keywords &amp; Skills
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="job-keyword"
+                  placeholder="e.g. React Developer, Data Analyst"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  className="block w-full border border-gray-250 rounded-xl shadow-2xs py-3 px-3.5 pl-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base text-gray-900 min-h-[48px]"
+                />
+                <Search className="h-4.5 w-4.5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="job-location" className="block text-xs sm:text-sm font-bold text-gray-800 mb-1">
+                Location
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="job-location"
+                  placeholder="e.g. Remote, Bangalore, Delhi"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="block w-full border border-gray-250 rounded-xl shadow-2xs py-3 px-3.5 pl-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base text-gray-900 min-h-[48px]"
+                />
+                <MapPin className="h-4.5 w-4.5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-indigo-600 text-white font-bold py-3 px-5 rounded-xl hover:bg-indigo-700 active:scale-[0.98] transition flex items-center justify-center gap-2 disabled:opacity-50 min-h-[48px] text-sm shadow-md shadow-indigo-150"
+            >
+              <Search className="h-4 w-4" /> {loading ? "Searching..." : "Search Jobs"}
+            </button>
           </div>
-          <div>
-            <label htmlFor="job-location" className="block text-xs sm:text-sm font-semibold text-gray-700">
-              Location
-            </label>
-            <input
-              type="text"
-              id="job-location"
-              placeholder="e.g., Mumbai, Remote"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-lg shadow-2xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base text-gray-900"
-            />
+
+          {/* Quick Search Horizontal Scroll Pills (Mobile Thumb Friendly) */}
+          <div className="pt-2 flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">
+              Popular:
+            </span>
+            {QUICK_SEARCH_CHIPS.map((chip) => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => handleChipClick(chip)}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full shrink-0 border transition active:scale-95 min-h-[36px] flex items-center ${
+                  keyword === chip
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                }`}
+              >
+                {chip}
+              </button>
+            ))}
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-50 min-h-[44px] text-xs sm:text-sm shadow-xs active:scale-[0.98]"
-          >
-            <Search className="h-4 w-4" /> {loading ? "Searching..." : "Search Jobs"}
-          </button>
         </form>
       </div>
 
+      {/* Filter Tabs Bar */}
+      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+        <div className="flex items-center gap-1.5 bg-gray-200/70 p-1 rounded-xl">
+          {[
+            { id: "all", label: "All Types" },
+            { id: "full-time", label: "Full-time" },
+            { id: "internship", label: "Internship" },
+          ].map((type) => (
+            <button
+              key={type.id}
+              onClick={() => {
+                hapticLight();
+                setSelectedType(type.id);
+              }}
+              className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition min-h-[36px] ${
+                selectedType === type.id
+                  ? "bg-white text-indigo-700 shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {type.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            hapticLight();
+            fetchJobs(keyword || "Developer in India", location);
+          }}
+          className="text-xs font-bold text-gray-500 hover:text-indigo-600 flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 min-h-[36px] transition shrink-0"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      {/* Loading Skeleton States (UX-40 matching final layout) */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
-          <p className="mt-2 text-gray-500">Fetching job postings...</p>
+        <div className="space-y-4">
+          <div className="h-6 w-44 bg-gray-200 rounded-md animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="bg-white p-5 rounded-2xl border border-gray-150 space-y-3 animate-pulse"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-3/4 bg-gray-200 rounded" />
+                    <div className="h-3 w-1/2 bg-gray-100 rounded" />
+                  </div>
+                  <div className="h-5 w-16 bg-gray-200 rounded-full" />
+                </div>
+                <div className="h-3 w-1/3 bg-gray-100 rounded" />
+                <div className="flex gap-2 pt-2">
+                  <div className="h-4 w-14 bg-gray-100 rounded" />
+                  <div className="h-4 w-14 bg-gray-100 rounded" />
+                </div>
+                <div className="h-10 w-full bg-gray-100 rounded-xl mt-3" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : error ? (
-        <div className="bg-red-50 text-red-700 p-6 rounded-xl border border-red-200 text-center">
-          <p className="font-semibold">Error Loading Jobs</p>
-          <p className="text-sm mt-1">{error}</p>
+        <div className="bg-red-50 text-red-700 p-6 rounded-2xl border border-red-200 text-center">
+          <p className="font-bold text-base">Error Loading Jobs</p>
+          <p className="text-xs sm:text-sm mt-1 text-red-600">{error}</p>
+          <button
+            onClick={() => fetchJobs(keyword || "Developer in India", location)}
+            className="mt-3 inline-flex items-center gap-1 text-xs font-bold bg-white text-red-700 border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50"
+          >
+            Retry Search
+          </button>
         </div>
       ) : (
         <>
           {/* Recommended Jobs */}
           {recommendedJobs.length > 0 && (
-            <div id="recommended-section">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Recommended For You</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="recommended-section" className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Recommended For You</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {recommendedJobs.map((job, idx) => (
                   <JobCard key={idx} job={job} isRecommended={true} />
                 ))}
@@ -135,23 +256,26 @@ export default function JobFinder() {
             </div>
           )}
 
-          {/* All Jobs */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-800">Job Postings</h2>
-              <span className="text-sm font-medium text-gray-500">
-                {jobs.length} jobs found
+          {/* All Postings */}
+          <div className="space-y-3 pt-2">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Job Postings</h2>
+              <span className="text-xs font-semibold text-gray-500">
+                {filteredJobs.length} available
               </span>
             </div>
-            {jobs.length === 0 ? (
-              <div className="text-center text-gray-500 py-12 bg-white rounded-xl shadow-md border border-dashed border-gray-300">
-                <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                <p className="font-semibold text-lg">No matching jobs found.</p>
-                <p className="text-sm text-gray-400">Try modifying your keywords or location search.</p>
+
+            {filteredJobs.length === 0 ? (
+              <div className="text-center text-gray-500 py-12 px-4 bg-white rounded-2xl border border-dashed border-gray-300">
+                <Briefcase className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                <p className="font-bold text-base text-gray-800">No matching jobs found</p>
+                <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                  Try adjusting your search terms or tap one of the popular search tags above.
+                </p>
               </div>
             ) : (
-              <div className="space-y-6">
-                {allJobs.map((job, idx) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {otherJobs.map((job, idx) => (
                   <JobCard key={idx} job={job} isRecommended={false} />
                 ))}
               </div>
@@ -168,51 +292,72 @@ function JobCard({ job, isRecommended }: { job: JobItem; isRecommended: boolean 
     ? new Date(job.postDate).toLocaleDateString()
     : "Recently";
 
-  let badgeColorClass = "bg-blue-100 text-blue-800";
-  if (job.type === "Full-time") badgeColorClass = "bg-green-100 text-green-800";
-  else if (job.type === "Internship") badgeColorClass = "bg-yellow-100 text-yellow-800";
+  let badgeColorClass = "bg-blue-50 text-blue-700 border-blue-200";
+  if (job.type === "Full-time") badgeColorClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+  else if (job.type === "Internship") badgeColorClass = "bg-amber-50 text-amber-700 border-amber-200";
 
   return (
     <div
-      className={`bg-white p-4 sm:p-5 rounded-xl shadow-xs border hover:border-indigo-400 transition-all min-w-0 ${
-        isRecommended ? "border-indigo-200 ring-2 ring-indigo-500/10" : "border-gray-200"
+      className={`bg-white p-4 sm:p-5 rounded-2xl shadow-xs border transition-all flex flex-col justify-between ${
+        isRecommended
+          ? "border-indigo-300 ring-2 ring-indigo-500/10 shadow-sm"
+          : "border-gray-150 hover:border-indigo-300"
       }`}
     >
-      <div className="flex justify-between items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-base sm:text-lg text-gray-900 break-words leading-snug">{job.title}</h3>
-          <p className="text-xs sm:text-sm text-gray-600 font-medium truncate mt-0.5">{job.company}</p>
-        </div>
-        <span className={`text-[11px] font-semibold py-0.5 px-2.5 rounded-full whitespace-nowrap shrink-0 ${badgeColorClass}`}>
-          {job.type}
-        </span>
-      </div>
-      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1.5 font-medium truncate">
-        <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" /> {job.location}
-      </p>
-
-      {job.postDate && (
-        <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
-          <Calendar className="h-3 w-3 shrink-0" /> Posted: {postDateFormatted}
-        </p>
-      )}
-
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {job.tags.map((tag, idx) => (
-          <span key={idx} className="text-[11px] bg-indigo-50 text-indigo-700 font-medium py-0.5 px-2 rounded-md">
-            {tag}
+      <div>
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-sm sm:text-base text-gray-900 leading-snug line-clamp-2">
+              {job.title}
+            </h3>
+            <p className="text-xs text-gray-600 font-semibold truncate mt-1">
+              {job.company}
+            </p>
+          </div>
+          <span
+            className={`text-[10px] font-bold py-0.5 px-2.5 rounded-full border shrink-0 ${badgeColorClass}`}
+          >
+            {job.type}
           </span>
-        ))}
+        </div>
+
+        <p className="text-xs text-gray-500 mt-2.5 flex items-center gap-1.5 font-medium truncate">
+          <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" /> {job.location}
+        </p>
+
+        {job.postDate && (
+          <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
+            <Calendar className="h-3 w-3 shrink-0" /> Posted: {postDateFormatted}
+          </p>
+        )}
+
+        {job.tags && job.tags.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {job.tags.map((tag, idx) => (
+              <span
+                key={idx}
+                className="text-[10px] bg-indigo-50 text-indigo-700 font-semibold py-0.5 px-2 rounded-md border border-indigo-100"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
+
+      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+        <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50/70 px-2.5 py-1 rounded-md">
+          {isRecommended ? "Top Match" : "Direct Role"}
+        </span>
         {job.url && (
           <a
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center bg-indigo-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-indigo-700 text-xs sm:text-sm transition min-h-[44px] shadow-xs active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-1.5 bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-indigo-700 text-xs sm:text-sm transition min-h-[48px] shadow-xs active:scale-[0.98]"
           >
-            Apply Now
+            <span>Apply Now</span>
+            <ExternalLink className="h-3.5 w-3.5" />
           </a>
         )}
       </div>
