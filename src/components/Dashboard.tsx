@@ -34,7 +34,7 @@ import LearnPractice from "./LearnPractice";
 import { UserData } from "../types/user";
 import { getInitials } from "../lib/imageUtils";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
-import { useAndroidBackButton, hapticLight } from "@/shared/platform";
+import { useBackHandler, dispatchBack, hapticLight } from "@/shared/platform";
 
 export default function Dashboard() {
   const [activePage, setActivePage] = useState("dashboard");
@@ -47,20 +47,31 @@ export default function Dashboard() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const { isOnline, wasOffline } = useNetworkStatus();
 
+  // Tab navigation history stack
+  const tabHistoryRef = React.useRef<string[]>([]);
+
   const navigateToSection = (pageId: string) => {
-    setActivePage(pageId);
+    if (pageId !== activePage) {
+      tabHistoryRef.current.push(activePage);
+      setActivePage(pageId);
+    }
     if (pageId === "learn") setLearnSubPage("hub");
     if (pageId === "interview") setInterviewTab("setup");
     if (pageId === "scholarships") setScholarshipTab("wizard");
   };
 
-  // Unified Mobile & Android hardware/gesture back button handling
-  const handleTopBarBack = () => {
-    hapticLight();
+  // Register Unified Back Handlers per Implementation Guide
+  // Priority 2: Overlay (More menu)
+  useBackHandler("overlay", () => {
     if (showMoreMenu) {
       setShowMoreMenu(false);
       return true;
     }
+    return false;
+  }, [showMoreMenu]);
+
+  // Priority 5: Sub-navigation in Learn, Interview, Scholarships
+  useBackHandler("in_screen", () => {
     // Sub-navigation within Learn & Practice
     if (activePage === "learn" && learnSubPage !== "hub") {
       if (learnSubPage === "resources-detail") {
@@ -80,17 +91,27 @@ export default function Dashboard() {
       setScholarshipTab("wizard");
       return true;
     }
-    // Return to dashboard from any top-level module
+    return false;
+  }, [activePage, learnSubPage, interviewTab, scholarshipTab]);
+
+  // Priority 7: Screen pop to previous tab or Home Dashboard
+  useBackHandler("screen_pop", () => {
     if (activePage !== "dashboard") {
-      setActivePage("dashboard");
+      if (tabHistoryRef.current.length > 0) {
+        const prev = tabHistoryRef.current.pop()!;
+        setActivePage(prev);
+      } else {
+        setActivePage("dashboard");
+      }
       return true;
     }
     return false;
-  };
+  }, [activePage]);
 
-  useAndroidBackButton({
-    onBack: handleTopBarBack,
-  });
+  // Unified top bar back button trigger
+  const handleTopBarBack = () => {
+    dispatchBack();
+  };
 
   // Fetch Supabase user profile
   useEffect(() => {
@@ -285,9 +306,9 @@ export default function Dashboard() {
         {/* Compact Sticky Top App Header with Safe Area Notch padding */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[56px] pt-[max(env(safe-area-inset-top,0px),0.5rem)] pb-2 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2 min-w-0">
-            {!["dashboard", "resume", "jobs", "interview", "learn"].includes(activePage) || (activePage === "interview" && interviewTab !== "setup") || (activePage === "learn" && learnSubPage !== "hub") ? (
+            {activePage !== "dashboard" ? (
               <button
-                onClick={handleTopBarBack}
+                onClick={() => dispatchBack()}
                 aria-label="Back"
                 className="md:hidden p-1.5 -ml-1 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition active:scale-95 flex items-center min-w-[36px] min-h-[36px]"
               >

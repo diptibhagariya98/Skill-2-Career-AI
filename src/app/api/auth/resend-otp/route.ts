@@ -23,15 +23,41 @@ export async function POST(request: NextRequest) {
     const validPurpose = purpose === "PASSWORD_RESET" ? "PASSWORD_RESET" : "EMAIL_VERIFY";
     const supabase = getServiceSupabase();
 
+    let resolvedName = name || "";
+
     // Look up Supabase Auth User ID if not provided as UUID
     if (!cleanUserId || cleanUserId.includes("@")) {
       try {
-        const { data: userList } = await supabase.auth.admin.listUsers();
-        const found = (userList?.users as any[])?.find((u: any) => u.email?.toLowerCase() === cleanEmail);
-        if (found) cleanUserId = found.id;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("email", cleanEmail)
+          .maybeSingle();
+
+        if (profile?.id) {
+          cleanUserId = profile.id;
+          if (!resolvedName && profile.full_name) resolvedName = profile.full_name;
+        } else {
+          const { data: userList } = await supabase.auth.admin.listUsers();
+          const found = (userList?.users as any[])?.find((u: any) => u.email?.toLowerCase() === cleanEmail);
+          if (found) {
+            cleanUserId = found.id;
+            if (!resolvedName && (found.user_metadata?.full_name || found.user_metadata?.name)) {
+              resolvedName = found.user_metadata?.full_name || found.user_metadata?.name;
+            }
+          }
+        }
       } catch {
         // fallback
       }
+    }
+
+    // For password reset, require that user account exists
+    if (validPurpose === "PASSWORD_RESET" && (!cleanUserId || cleanUserId.includes("@"))) {
+      return NextResponse.json(
+        { error: "No account found with this email address. Please register first." },
+        { status: 404 }
+      );
     }
 
     // Rate-limiting check: Don't allow resending more than once every 30 seconds
@@ -42,7 +68,7 @@ export async function POST(request: NextRequest) {
       .eq("purpose", validPurpose)
       .order("created_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (recentOtp?.created_at) {
       const diffSec = (Date.now() - new Date(recentOtp.created_at).getTime()) / 1000;

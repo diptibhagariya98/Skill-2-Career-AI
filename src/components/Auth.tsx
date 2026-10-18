@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
 import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
+import { useBackHandler, dispatchBack } from "@/shared/platform";
 
 export type AuthMode =
   | "login"
@@ -106,6 +107,51 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
     }, 1000);
     return () => clearInterval(interval);
   }, [cooldown]);
+
+  // Restore pendingEmail from sessionStorage on mount if lost across page refreshes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedEmail = sessionStorage.getItem("resumentor_pending_email");
+      const savedPurpose = sessionStorage.getItem("resumentor_pending_purpose") as any;
+      if (savedEmail && !pendingEmail) {
+        setPendingEmail(savedEmail);
+      }
+      if (savedPurpose && !pendingPurpose) {
+        setPendingPurpose(savedPurpose);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync pendingEmail and purpose to sessionStorage
+  useEffect(() => {
+    if (pendingEmail && typeof window !== "undefined") {
+      sessionStorage.setItem("resumentor_pending_email", pendingEmail);
+      sessionStorage.setItem("resumentor_pending_purpose", pendingPurpose);
+    }
+  }, [pendingEmail, pendingPurpose]);
+
+  // Register in-screen back navigation for Auth flows (Entry Layer per Implementation Guide)
+  useBackHandler("in_screen", () => {
+    if (mode === "set-new-password") {
+      setMode("verify-reset-otp");
+      return true;
+    }
+    if (mode === "verify-reset-otp") {
+      setMode("forgot");
+      return true;
+    }
+    if (mode === "forgot") {
+      setForgotError(null);
+      setMode("login");
+      return true;
+    }
+    if (mode === "otp") {
+      setMode("register");
+      return true;
+    }
+    return false;
+  }, [mode]);
 
   // Focus the first OTP box when entering OTP or reset-password verification mode
   useEffect(() => {
@@ -421,7 +467,18 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
 
   // --- Resend OTP Handler ---
   const handleResendOtp = async () => {
-    if (cooldown > 0) return;
+    if (cooldown > 0 || loading) return;
+
+    let targetEmail = (pendingEmail || email).trim().toLowerCase();
+    if (!targetEmail && typeof window !== "undefined") {
+      targetEmail = (sessionStorage.getItem("resumentor_pending_email") || "").trim().toLowerCase();
+    }
+
+    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      toast.error("Please provide a valid email address.");
+      setMode("forgot");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -429,10 +486,10 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: pendingEmail,
+          email: targetEmail,
           userId: pendingUserId,
           name: pendingName,
-          purpose: pendingPurpose,
+          purpose: pendingPurpose || (mode.includes("reset") ? "PASSWORD_RESET" : "EMAIL_VERIFY"),
         }),
       });
 
@@ -442,7 +499,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
       }
 
       setCooldown(60);
-      toast.success("Fresh 6-digit verification code sent to your email!");
+      toast.success(`Fresh 6-digit verification code sent to ${targetEmail}!`);
     } catch (error: any) {
       toast.error(error.message || "Failed to resend code.");
     } finally {
@@ -682,9 +739,9 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                 type="button"
                 disabled={cooldown > 0 || loading}
                 onClick={handleResendOtp}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-400 disabled:no-underline inline-flex items-center space-x-1.5 transition"
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-400 disabled:no-underline inline-flex items-center space-x-1.5 transition min-h-[32px] px-2 rounded-lg"
               >
-                <RotateCcw className={`h-3.5 w-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />
+                <RotateCcw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-indigo-600" : ""}`} />
                 <span>
                   {cooldown > 0 ? `Resend Code in ${cooldown}s` : "Didn't receive code? Resend"}
                 </span>
@@ -695,11 +752,11 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
             <div className="mt-6 pt-4 border-t border-slate-100 text-center">
               <button
                 type="button"
-                onClick={() => setMode("login")}
-                className="text-xs font-medium text-slate-500 hover:text-slate-800 inline-flex items-center space-x-1.5 transition"
+                onClick={() => dispatchBack()}
+                className="text-xs font-medium text-slate-500 hover:text-slate-800 inline-flex items-center space-x-1.5 transition min-h-[36px]"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Back to Login</span>
+                <span>Back to Sign Up</span>
               </button>
             </div>
           </div>
@@ -857,9 +914,9 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
                 type="button"
                 disabled={cooldown > 0 || loading}
                 onClick={handleResendOtp}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-400 disabled:no-underline inline-flex items-center space-x-1.5 transition"
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-400 disabled:no-underline inline-flex items-center space-x-1.5 transition min-h-[32px] px-2 rounded-lg"
               >
-                <RotateCcw className={`h-3.5 w-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />
+                <RotateCcw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-indigo-600" : ""}`} />
                 <span>
                   {cooldown > 0 ? `Resend Code in ${cooldown}s` : "Didn't receive code? Resend"}
                 </span>
@@ -870,19 +927,19 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
             <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
               <button
                 type="button"
-                onClick={() => {
-                  setForgotError(null);
-                  setMode("forgot");
-                }}
-                className="hover:text-indigo-600 inline-flex items-center space-x-1 transition"
+                onClick={() => dispatchBack()}
+                className="hover:text-indigo-600 inline-flex items-center space-x-1 transition min-h-[36px]"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span>Change Email</span>
               </button>
               <button
                 type="button"
-                onClick={() => setMode("login")}
-                className="hover:text-slate-800 transition"
+                onClick={() => {
+                  setForgotError(null);
+                  setMode("login");
+                }}
+                className="hover:text-slate-800 transition min-h-[36px]"
               >
                 Back to Sign In
               </button>
@@ -1012,15 +1069,15 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
               </button>
             </form>
 
-            {/* Back to Login */}
+            {/* Back to Previous Step */}
             <div className="mt-6 pt-4 border-t border-slate-100 text-center">
               <button
                 type="button"
-                onClick={() => setMode("login")}
-                className="text-xs font-medium text-slate-500 hover:text-slate-800 inline-flex items-center space-x-1.5 transition"
+                onClick={() => dispatchBack()}
+                className="text-xs font-medium text-slate-500 hover:text-slate-800 inline-flex items-center space-x-1.5 transition min-h-[36px]"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Back to Login</span>
+                <span>Back to Verify Code</span>
               </button>
             </div>
           </div>

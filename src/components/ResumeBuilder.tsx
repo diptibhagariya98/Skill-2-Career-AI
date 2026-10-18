@@ -31,7 +31,7 @@ import AIAnalysisReport from "./resume/AIAnalysisReport";
 import AIConsentModal, { CONSENT_STORAGE_KEY } from "./resume/AIConsentModal";
 import PDFPreflightModal, { PreflightWarning } from "./resume/PDFPreflightModal";
 import { ResumePreview } from "./resume/ResumePreview";
-import { hapticSuccess, hapticLight } from "@/shared/platform";
+import { hapticSuccess, hapticLight, useBackHandler, dispatchBack } from "@/shared/platform";
 
 import {
   Download,
@@ -74,6 +74,9 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
   const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "Idle">("Saved");
   const [showDataModal, setShowDataModal] = useState(false);
+
+  // In-screen section navigation history stack (Spec Section handling)
+  const sectionHistoryRef = useRef<SectionKey[]>([]);
 
   // Sync user and ensure newly registered users get clean, fresh state
   useEffect(() => {
@@ -221,9 +224,17 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   );
   const currentStepIndex = visibleSections.indexOf(activeSection);
 
+  const navigateToSection = (newSec: SectionKey) => {
+    if (newSec !== activeSection) {
+      sectionHistoryRef.current.push(activeSection);
+      setActiveSection(newSec);
+    }
+    setMobileTab("edit");
+  };
+
   const handleNextStep = () => {
     if (currentStepIndex < visibleSections.length - 1) {
-      setActiveSection(visibleSections[currentStepIndex + 1]);
+      navigateToSection(visibleSections[currentStepIndex + 1]);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       setMobileTab("preview");
@@ -231,11 +242,57 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   };
 
   const handlePrevStep = () => {
-    if (currentStepIndex > 0) {
+    if (sectionHistoryRef.current.length > 0) {
+      const prev = sectionHistoryRef.current.pop()!;
+      setActiveSection(prev);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (currentStepIndex > 0) {
       setActiveSection(visibleSections[currentStepIndex - 1]);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
+
+  // Register Back Navigation Handlers per Implementation Guide
+  // Priority 2: Modals and bottom sheets
+  useBackHandler("overlay", () => {
+    if (showDataModal) {
+      setShowDataModal(false);
+      return true;
+    }
+    if (showPreflightModal) {
+      setShowPreflightModal(false);
+      return true;
+    }
+    if (showConsentModal) {
+      setShowConsentModal(false);
+      return true;
+    }
+    if (showAnalysisReport) {
+      setShowAnalysisReport(false);
+      return true;
+    }
+    return false;
+  }, [showDataModal, showPreflightModal, showConsentModal, showAnalysisReport]);
+
+  // Priority 5: In-screen step history (Sections & Edit/Preview toggle)
+  useBackHandler("in_screen", () => {
+    // 1. If currently in Preview mode on mobile, back returns to Edit in the same section
+    if (mobileTab === "preview") {
+      setMobileTab("edit");
+      return true;
+    }
+
+    // 2. Pop to previous section if in-screen history exists
+    if (sectionHistoryRef.current.length > 0) {
+      const prevSection = sectionHistoryRef.current.pop()!;
+      setActiveSection(prevSection);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
+    }
+
+    // Step history is empty: return false to allow screen pop
+    return false;
+  }, [mobileTab, activeSection]);
 
   // Extract clean text in linear reading order (Phase 2 Spec 3.2 & 8.5)
   const getExtractedText = (): string => {
@@ -488,7 +545,17 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
       <header className="bg-white border-b border-gray-200 px-3 sm:px-6 py-2.5 sm:py-3 sticky top-0 z-20 shadow-xs flex flex-col lg:flex-row gap-2 lg:items-center justify-between">
         {/* Row 1: Document title & Action buttons */}
         <div className="flex items-center justify-between gap-2 w-full lg:w-auto">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            {/* Unified On-Screen Back Arrow Button */}
+            <button
+              type="button"
+              onClick={() => dispatchBack()}
+              aria-label="Back"
+              className="p-1.5 -ml-1 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center transition active:scale-95"
+              title="Go Back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
             <input
               type="text"
               value={resume.meta.title}
@@ -607,10 +674,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
         sectionOrder={resume.meta.sectionOrder}
         sectionVisibility={resume.meta.sectionVisibility}
         activeSection={activeSection}
-        onSelectSection={(sec) => {
-          setActiveSection(sec);
-          setMobileTab("edit");
-        }}
+        onSelectSection={(sec) => navigateToSection(sec)}
         completionMap={completionMap}
       />
 
