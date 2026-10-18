@@ -10,6 +10,7 @@ import {
   ActionStep,
   AnalysisRating,
 } from "@/types/analysis";
+import { WorkExperienceItem, EducationItem, ContactInfo } from "@/types/resume";
 
 const COMMON_ACTION_VERBS = new Set([
   "built", "developed", "led", "managed", "spearheaded", "designed", "architected",
@@ -59,9 +60,9 @@ export interface DeterministicResult {
  */
 export function computeDeterministicScores(request: AnalysisRequest): DeterministicResult {
   const { resumeData, extractedText, layoutMetrics, jobDescription } = request;
-  const contact = resumeData?.contact || {};
-  const experience: any[] = resumeData?.experience || [];
-  const education: any[] = resumeData?.education || [];
+  const contact: Partial<ContactInfo> = resumeData?.contact || {};
+  const experience: WorkExperienceItem[] = resumeData?.experience || [];
+  const education: EducationItem[] = resumeData?.education || [];
   const summary: string = resumeData?.summary || "";
   const skills = resumeData?.skills;
 
@@ -78,7 +79,7 @@ export function computeDeterministicScores(request: AnalysisRequest): Determinis
   if (contact.fullName?.trim()) contactScore += 35;
   if (contact.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) contactScore += 35;
   if (contact.phone?.trim() || contact.city?.trim() || contact.country?.trim()) contactScore += 20;
-  if (contact.linkedin?.trim() || contact.portfolio?.trim()) contactScore += 10;
+  if (contact.linkedin?.trim() || contact.website?.trim()) contactScore += 10;
   contactScore = Math.min(100, Math.max(0, contactScore));
 
   // 3. Content Quality baseline (weight: 25)
@@ -311,7 +312,7 @@ export function createRulesOnlyFallback(
   }
 
   const expWithoutMetrics = (request.resumeData?.experience || []).filter(
-    (exp: any) => !(exp.bullets || []).some((b: string) => /\d+%|\$\d+|\d+\+/.test(b))
+    (exp: WorkExperienceItem) => !(exp.bullets || []).some((b: string) => /\d+%|\$\d+|\d+\+/.test(b))
   );
 
   if (expWithoutMetrics.length > 0) {

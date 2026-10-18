@@ -11,8 +11,23 @@ interface ResumePreviewProps {
 
 export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
   ({ resume, scale = 1 }, ref) => {
-    const { contact, summary, experience, education, skills, projects, certifications, meta } =
-      resume;
+    const {
+      contact,
+      summary,
+      experience,
+      education,
+      skills,
+      projects,
+      certifications,
+      awards,
+      languages,
+      publications,
+      volunteer,
+      interests,
+      referencesText,
+      customSections,
+      meta,
+    } = resume;
     const template: TemplateId = meta.selectedTemplate || "classic";
     const pageSize: PageSize = meta.pageSize || "A4";
     const accentColor = meta.accentColor || "#0f766e";
@@ -312,6 +327,206 @@ export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
                     </p>
                   ))}
                 </div>
+              </section>
+            );
+          }
+
+          // 7. AWARDS & HONOURS
+          if (key === "awards" && awards && awards.length > 0) {
+            return (
+              <section key={key} className={sectionSpacingClass}>
+                <h2
+                  className={`text-sm sm:text-base font-bold uppercase tracking-wider mb-2 ${headingBorderClass}`}
+                  style={{
+                    color: template === "modern" ? accentColor : "#1f2937",
+                    borderColor: template === "modern" ? accentColor : undefined,
+                  }}
+                >
+                  {def.atsHeading}
+                </h2>
+                <div className="space-y-2 text-xs sm:text-sm">
+                  {awards.map((award) => (
+                    <div key={award.id} className="text-gray-800">
+                      <div className="flex flex-wrap justify-between items-baseline font-bold text-gray-900">
+                        <span>{award.title}</span>
+                        {award.date && (
+                          <span className="text-xs font-semibold text-gray-600">{award.date}</span>
+                        )}
+                      </div>
+                      {award.issuer && (
+                        <p className="text-xs italic text-gray-700">{award.issuer}</p>
+                      )}
+                      {award.description && (
+                        <p className="text-xs text-gray-700 mt-0.5">{award.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          // 8. LANGUAGES
+          if (key === "languages" && languages && languages.length > 0) {
+            return (
+              <section key={key} className={sectionSpacingClass}>
+                <h2
+                  className={`text-sm sm:text-base font-bold uppercase tracking-wider mb-2 ${headingBorderClass}`}
+                  style={{
+                    color: template === "modern" ? accentColor : "#1f2937",
+                    borderColor: template === "modern" ? accentColor : undefined,
+                  }}
+                >
+                  {def.atsHeading}
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-800">
+                  {languages
+                    .filter((l) => l.language.trim())
+                    .map((l) => `${l.language} (${l.proficiency.charAt(0).toUpperCase() + l.proficiency.slice(1)})`)
+                    .join(" • ")}
+                </p>
+              </section>
+            );
+          }
+
+          // 9. PUBLICATIONS
+          if (key === "publications" && publications && publications.length > 0) {
+            return (
+              <section key={key} className={sectionSpacingClass}>
+                <h2
+                  className={`text-sm sm:text-base font-bold uppercase tracking-wider mb-2 ${headingBorderClass}`}
+                  style={{
+                    color: template === "modern" ? accentColor : "#1f2937",
+                    borderColor: template === "modern" ? accentColor : undefined,
+                  }}
+                >
+                  {def.atsHeading}
+                </h2>
+                <div className="space-y-1.5 text-xs sm:text-sm">
+                  {publications.map((pub) => (
+                    <div key={pub.id} className="text-gray-800">
+                      <span className="font-bold text-gray-900">{pub.title}</span>
+                      {pub.venue && <span> – {pub.venue}</span>}
+                      {pub.date && <span className="text-gray-500"> ({pub.date})</span>}
+                      {pub.url && (
+                        <span className="text-xs font-normal text-indigo-700 underline ml-2">
+                          {pub.url}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          // 10. VOLUNTEER
+          if (key === "volunteer" && volunteer && volunteer.length > 0) {
+            return (
+              <section key={key} className={sectionSpacingClass}>
+                <h2
+                  className={`text-sm sm:text-base font-bold uppercase tracking-wider mb-2 ${headingBorderClass}`}
+                  style={{
+                    color: template === "modern" ? accentColor : "#1f2937",
+                    borderColor: template === "modern" ? accentColor : undefined,
+                  }}
+                >
+                  {def.atsHeading}
+                </h2>
+                <div className="space-y-2 text-xs sm:text-sm">
+                  {volunteer.map((vol) => (
+                    <div key={vol.id} className="text-gray-800">
+                      <div className="flex flex-wrap justify-between items-baseline font-bold text-gray-900">
+                        <span>{vol.role}</span>
+                        {(vol.startDate || vol.endDate) && (
+                          <span className="text-xs font-semibold text-gray-600">
+                            {vol.startDate || ""} – {vol.isCurrent ? "Present" : vol.endDate || ""}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs italic text-gray-700">{vol.organization}</p>
+                      {vol.bullets && vol.bullets.filter(Boolean).length > 0 && (
+                        <ul className="list-disc list-outside ml-4 mt-0.5 space-y-0.5 text-gray-700 text-xs">
+                          {vol.bullets.filter(Boolean).map((b, i) => (
+                            <li key={i}>{b}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          // 11. INTERESTS
+          if (key === "interests" && interests && interests.length > 0) {
+            return (
+              <section key={key} className={sectionSpacingClass}>
+                <h2
+                  className={`text-sm sm:text-base font-bold uppercase tracking-wider mb-2 ${headingBorderClass}`}
+                  style={{
+                    color: template === "modern" ? accentColor : "#1f2937",
+                    borderColor: template === "modern" ? accentColor : undefined,
+                  }}
+                >
+                  {def.atsHeading}
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-800">
+                  {interests.filter((i) => i.trim()).join(" • ")}
+                </p>
+              </section>
+            );
+          }
+
+          // 12. REFERENCES
+          if (key === "references" && referencesText?.trim()) {
+            return (
+              <section key={key} className={sectionSpacingClass}>
+                <h2
+                  className={`text-sm sm:text-base font-bold uppercase tracking-wider mb-2 ${headingBorderClass}`}
+                  style={{
+                    color: template === "modern" ? accentColor : "#1f2937",
+                    borderColor: template === "modern" ? accentColor : undefined,
+                  }}
+                >
+                  {def.atsHeading}
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-700 italic">
+                  {referencesText}
+                </p>
+              </section>
+            );
+          }
+
+          // 13. CUSTOM SECTIONS
+          if (key === "custom" && customSections && customSections.length > 0) {
+            return (
+              <section key={key} className={sectionSpacingClass}>
+                {customSections.map((sec) => (
+                  <div key={sec.id} className="mb-3">
+                    <h2
+                      className={`text-sm sm:text-base font-bold uppercase tracking-wider mb-2 ${headingBorderClass}`}
+                      style={{
+                        color: template === "modern" ? accentColor : "#1f2937",
+                        borderColor: template === "modern" ? accentColor : undefined,
+                      }}
+                    >
+                      {sec.title || def.atsHeading}
+                    </h2>
+                    {sec.type === "bullets" && Array.isArray(sec.content) ? (
+                      <ul className="list-disc list-outside ml-4 space-y-0.5 text-gray-800 text-xs sm:text-sm">
+                        {sec.content.filter(Boolean).map((bullet, idx) => (
+                          <li key={idx}>{bullet}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs sm:text-sm text-gray-800 leading-relaxed">
+                        {typeof sec.content === "string" ? sec.content : ""}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </section>
             );
           }

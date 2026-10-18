@@ -3,7 +3,7 @@
  * Conforms to Phase 2: AI ATS Analysis and One-Click PDF Export Spec (Sections 3.2, 3.7 & 5.3)
  */
 
-import { SectionKey } from "./resume";
+import { ResumeData, SectionKey } from "./resume";
 
 export type AnalysisRating = "needs work" | "fair" | "good" | "excellent";
 
@@ -33,7 +33,7 @@ export interface ActionStep {
 }
 
 export interface AnalysisRequest {
-  resumeData: any;
+  resumeData: ResumeData;
   extractedText: string;
   layoutMetrics: {
     pageCount: number;

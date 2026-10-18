@@ -24,7 +24,7 @@ import EducationSection from "./resume/EducationSection";
 import SkillsSection from "./resume/SkillsSection";
 import ProjectsSection from "./resume/ProjectsSection";
 import CertificationsSection from "./resume/CertificationsSection";
-import AdditionalSections from "./resume/AdditionalSections";
+import AdditionalSections, { AdditionalSectionKey } from "./resume/AdditionalSections";
 import ATSChecklist from "./resume/ATSChecklist";
 import DataManagementModal from "./resume/DataManagementModal";
 import AIAnalysisReport from "./resume/AIAnalysisReport";
@@ -61,7 +61,6 @@ interface ResumeBuilderProps {
     id?: string;
     name?: string;
     email?: string;
-    [key: string]: any;
   } | null;
 }
 
@@ -172,8 +171,8 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
         const activeUserId = currentUser?.id;
         saveLocalResume(updated, activeUserId);
 
-        // Async sync to Supabase PostgreSQL profiles table
-        if (activeUserId) {
+        // Async sync to Supabase PostgreSQL profiles table (skip for guests to avoid DB errors)
+        if (activeUserId && activeUserId !== "guest-user" && !activeUserId.startsWith("guest-")) {
           try {
             await supabase
               .from("profiles")
@@ -182,8 +181,11 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
                 updated_at: new Date().toISOString(),
               })
               .eq("id", activeUserId);
-          } catch (dbErr: any) {
-            console.warn("[Autosave Cloud Sync Notice]:", dbErr.message);
+          } catch (dbErr: unknown) {
+            console.warn(
+              "[Autosave Cloud Sync Notice]:",
+              dbErr instanceof Error ? dbErr.message : "Sync skipped"
+            );
           }
         }
 
@@ -337,6 +339,72 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
       parts.push(`SKILLS: ${resume.skills.flatList.join(", ")}`);
     }
 
+    if (resume.projects?.length > 0) {
+      parts.push("PROJECTS");
+      resume.projects.forEach((p) => {
+        parts.push(`${p.name}${p.role ? ` (${p.role})` : ""}`);
+        (p.bullets || []).forEach((b) => parts.push(`- ${b}`));
+      });
+    }
+
+    if (resume.certifications?.length > 0) {
+      parts.push("CERTIFICATIONS");
+      resume.certifications.forEach((c) => {
+        parts.push(`${c.name} - ${c.issuer}${c.issueDate ? ` (${c.issueDate})` : ""}`);
+      });
+    }
+
+    if (resume.awards?.length > 0) {
+      parts.push("AWARDS");
+      resume.awards.forEach((a) => {
+        parts.push(`${a.title} - ${a.issuer}${a.date ? ` (${a.date})` : ""}${a.description ? `: ${a.description}` : ""}`);
+      });
+    }
+
+    if (resume.languages?.length > 0) {
+      parts.push("LANGUAGES");
+      parts.push(
+        resume.languages
+          .filter((l) => l.language.trim())
+          .map((l) => `${l.language} (${l.proficiency})`)
+          .join(", ")
+      );
+    }
+
+    if (resume.publications?.length > 0) {
+      parts.push("PUBLICATIONS");
+      resume.publications.forEach((pub) => {
+        parts.push(`${pub.title} (${pub.venue}${pub.date ? `, ${pub.date}` : ""})`);
+      });
+    }
+
+    if (resume.volunteer?.length > 0) {
+      parts.push("VOLUNTEER");
+      resume.volunteer.forEach((v) => {
+        parts.push(`${v.role} at ${v.organization}`);
+        (v.bullets || []).forEach((b) => parts.push(`- ${b}`));
+      });
+    }
+
+    if (resume.interests?.length > 0) {
+      parts.push(`INTERESTS: ${resume.interests.join(", ")}`);
+    }
+
+    if (resume.referencesText) {
+      parts.push(`REFERENCES: ${resume.referencesText}`);
+    }
+
+    if (resume.customSections?.length > 0) {
+      resume.customSections.forEach((cs) => {
+        parts.push(cs.title.toUpperCase());
+        if (Array.isArray(cs.content)) {
+          cs.content.forEach((b) => parts.push(`- ${b}`));
+        } else {
+          parts.push(cs.content);
+        }
+      });
+    }
+
     return parts.join("\n\n");
   };
 
@@ -427,8 +495,11 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
       setAnalysisResponse(data);
       setShowAnalysisReport(true);
       toast.success("AI ATS Analysis complete!", { id: toastId });
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred during resume analysis.", { id: toastId });
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "An error occurred during resume analysis.",
+        { id: toastId }
+      );
     } finally {
       setAnalysisLoading(false);
     }
@@ -480,7 +551,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
       setExportFailCount(0);
       hapticSuccess();
       toast.success(`Downloaded ${filename}`, { id: toastId });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setExportState("failed");
       const nextFail = exportFailCount + 1;
       setExportFailCount(nextFail);
@@ -491,7 +562,9 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
         });
         window.print();
       } else {
-        toast.error(err.message || "Export failed. Tap again to retry.", { id: toastId });
+        toast.error(err instanceof Error ? err.message : "Export failed. Tap again to retry.", {
+          id: toastId,
+        });
       }
     }
   };
@@ -740,7 +813,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
             ].includes(activeSection) && (
               <AdditionalSections
                 resume={resume}
-                sectionKey={activeSection as any}
+                sectionKey={activeSection as AdditionalSectionKey}
                 onChange={handleUpdateResume}
               />
             )}

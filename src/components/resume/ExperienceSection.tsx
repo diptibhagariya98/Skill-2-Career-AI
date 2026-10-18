@@ -285,7 +285,9 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                         <select
                           value={exp.employmentType || "full-time"}
                           onChange={(e) =>
-                            handleUpdateItem(exp.id, { employmentType: e.target.value as any })
+                            handleUpdateItem(exp.id, {
+                              employmentType: e.target.value as WorkExperienceItem["employmentType"],
+                            })
                           }
                           className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] bg-white"
                         >

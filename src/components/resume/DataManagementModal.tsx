@@ -59,8 +59,8 @@ export default function DataManagementModal({
       setRevisions(loadRevisionHistory(userId));
       toast.success("Resume data imported successfully!");
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to import JSON file.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to import JSON file.");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }

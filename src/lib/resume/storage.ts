@@ -143,7 +143,7 @@ export async function importResumeDataFile(file: File, userId?: string): Promise
   }
 
   const text = await file.text();
-  let parsed: any;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {

@@ -227,41 +227,47 @@ export function createSampleResume(): ResumeData {
 /**
  * Migration helper to ensure imported data or old saved formats upgrade cleanly to schema v1
  */
-export function migrateResumeSchema(raw: any): ResumeData {
+export function migrateResumeSchema(raw: unknown): ResumeData {
   const fallback = createEmptyResume();
   if (!raw || typeof raw !== "object") return fallback;
+  const obj = raw as Record<string, unknown>;
+  const rawMeta = obj.meta && typeof obj.meta === "object" ? (obj.meta as Record<string, unknown>) : {};
+  const rawContact = obj.contact && typeof obj.contact === "object" ? (obj.contact as Record<string, unknown>) : {};
+  const rawSkills = obj.skills && typeof obj.skills === "object" ? (obj.skills as Record<string, unknown>) : {};
 
   return {
     meta: {
       ...fallback.meta,
-      ...(raw.meta || {}),
+      ...(rawMeta as unknown as typeof fallback.meta),
       schemaVersion: RESUME_SCHEMA_VERSION,
       updatedAt: new Date().toISOString(),
-      sectionOrder: Array.isArray(raw.meta?.sectionOrder) ? raw.meta.sectionOrder : fallback.meta.sectionOrder,
+      sectionOrder: Array.isArray(rawMeta.sectionOrder)
+        ? (rawMeta.sectionOrder as ResumeData["meta"]["sectionOrder"])
+        : fallback.meta.sectionOrder,
       sectionVisibility: {
         ...fallback.meta.sectionVisibility,
-        ...(raw.meta?.sectionVisibility || {}),
+        ...((rawMeta.sectionVisibility as Record<string, boolean>) || {}),
       },
     },
     contact: {
       ...fallback.contact,
-      ...(raw.contact || {}),
+      ...(rawContact as unknown as typeof fallback.contact),
     },
-    summary: typeof raw.summary === "string" ? raw.summary : fallback.summary,
-    experience: Array.isArray(raw.experience) ? raw.experience : fallback.experience,
-    education: Array.isArray(raw.education) ? raw.education : fallback.education,
+    summary: typeof obj.summary === "string" ? obj.summary : fallback.summary,
+    experience: Array.isArray(obj.experience) ? (obj.experience as ResumeData["experience"]) : fallback.experience,
+    education: Array.isArray(obj.education) ? (obj.education as ResumeData["education"]) : fallback.education,
     skills: {
       ...fallback.skills,
-      ...(raw.skills || {}),
+      ...(rawSkills as unknown as typeof fallback.skills),
     },
-    projects: Array.isArray(raw.projects) ? raw.projects : fallback.projects,
-    certifications: Array.isArray(raw.certifications) ? raw.certifications : fallback.certifications,
-    languages: Array.isArray(raw.languages) ? raw.languages : fallback.languages,
-    awards: Array.isArray(raw.awards) ? raw.awards : fallback.awards,
-    publications: Array.isArray(raw.publications) ? raw.publications : fallback.publications,
-    volunteer: Array.isArray(raw.volunteer) ? raw.volunteer : fallback.volunteer,
-    interests: Array.isArray(raw.interests) ? raw.interests : fallback.interests,
-    referencesText: typeof raw.referencesText === "string" ? raw.referencesText : fallback.referencesText,
-    customSections: Array.isArray(raw.customSections) ? raw.customSections : fallback.customSections,
+    projects: Array.isArray(obj.projects) ? (obj.projects as ResumeData["projects"]) : fallback.projects,
+    certifications: Array.isArray(obj.certifications) ? (obj.certifications as ResumeData["certifications"]) : fallback.certifications,
+    languages: Array.isArray(obj.languages) ? (obj.languages as ResumeData["languages"]) : fallback.languages,
+    awards: Array.isArray(obj.awards) ? (obj.awards as ResumeData["awards"]) : fallback.awards,
+    publications: Array.isArray(obj.publications) ? (obj.publications as ResumeData["publications"]) : fallback.publications,
+    volunteer: Array.isArray(obj.volunteer) ? (obj.volunteer as ResumeData["volunteer"]) : fallback.volunteer,
+    interests: Array.isArray(obj.interests) ? (obj.interests as ResumeData["interests"]) : fallback.interests,
+    referencesText: typeof obj.referencesText === "string" ? obj.referencesText : fallback.referencesText,
+    customSections: Array.isArray(obj.customSections) ? (obj.customSections as ResumeData["customSections"]) : fallback.customSections,
   };
 }
