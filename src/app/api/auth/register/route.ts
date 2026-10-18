@@ -86,7 +86,11 @@ export async function POST(request: NextRequest) {
 
     if (createErr || !newUser?.user) {
       const errLower = (createErr?.message || "").toLowerCase();
+      const errCode = (createErr as unknown as { code?: string })?.code || "";
       const isAlreadyExists =
+        errCode === "email_exists" ||
+        createErr?.status === 422 ||
+        (errLower.includes("already") && errLower.includes("register")) ||
         errLower.includes("already registered") ||
         errLower.includes("already exists") ||
         errLower.includes("violates unique constraint");
@@ -96,7 +100,7 @@ export async function POST(request: NextRequest) {
         const { data: existingProfile } = await supabase
           .from("profiles")
           .select("id, name, email")
-          .eq("email", sanitizedEmail)
+          .ilike("email", sanitizedEmail)
           .maybeSingle();
 
         let existingUserId = existingProfile?.id;
@@ -106,7 +110,7 @@ export async function POST(request: NextRequest) {
           const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
           const users = (userList?.users || []) as Array<{ id: string; email?: string }>;
           const matched = users.find(
-            (u) => (u.email || "").toLowerCase() === sanitizedEmail.toLowerCase()
+            (u) => (u.email || "").trim().toLowerCase() === sanitizedEmail.toLowerCase()
           );
           if (matched) {
             existingUserId = matched.id;

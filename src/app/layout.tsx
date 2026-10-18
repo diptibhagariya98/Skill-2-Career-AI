@@ -40,7 +40,54 @@ export default function RootLayout({
             {children}
           </NativeAppProvider>
         </TooltipProvider>
-        <Toaster position="top-right" reverseOrder={false} />
+        <Toaster
+          position="top-center"
+          reverseOrder={false}
+          containerStyle={{
+            top: "max(68px, calc(env(safe-area-inset-top, 0px) + 20px))",
+            left: "16px",
+            right: "16px",
+            pointerEvents: "none",
+          }}
+          gutter={8}
+          toastOptions={{
+            duration: 4000,
+            className: "resumentor-global-toast",
+            style: {
+              pointerEvents: "auto",
+              maxWidth: "92vw",
+              borderRadius: "14px",
+              padding: "12px 18px",
+              fontSize: "14px",
+              fontWeight: 500,
+              background: "#1e293b",
+              color: "#ffffff",
+              boxShadow: "0 12px 30px -4px rgba(0, 0, 0, 0.25), 0 6px 12px -3px rgba(0, 0, 0, 0.15)",
+            },
+            success: {
+              duration: 3500,
+              style: {
+                background: "#065f46",
+                color: "#ffffff",
+              },
+              iconTheme: {
+                primary: "#34d399",
+                secondary: "#065f46",
+              },
+            },
+            error: {
+              duration: 5000,
+              style: {
+                background: "#991b1b",
+                color: "#ffffff",
+              },
+              iconTheme: {
+                primary: "#f87171",
+                secondary: "#991b1b",
+              },
+            },
+          }}
+        />
       </body>
     </html>
   );

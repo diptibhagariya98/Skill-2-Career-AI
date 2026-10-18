@@ -133,6 +133,15 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         if (profile?.id && isUuid(profile.id)) {
           targetUserId = profile.id;
+        } else {
+          const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+          const users = (userList?.users || []) as Array<{ id: string; email?: string }>;
+          const matched = users.find(
+            (u) => (u.email || "").trim().toLowerCase() === cleanEmail.toLowerCase()
+          );
+          if (matched?.id && isUuid(matched.id)) {
+            targetUserId = matched.id;
+          }
         }
       }
 

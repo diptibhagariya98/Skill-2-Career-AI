@@ -161,3 +161,23 @@ body.keyboard-open .hide-on-keyboard {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* =========================================================================
+   Global Safe-Area Toast Notch & Status Bar Protection (Mobile UX)
+   Guarantees that toasts anywhere in the app never overlap notches,
+   Dynamic Islands, camera cutouts, or system status bars across all screens.
+   ========================================================================= */
+div[data-hot-toast-container],
+div:has(> [data-hot-toast-container]),
+div[style*="z-index: 9999"],
+.react-hot-toast-container {
+  top: max(68px, calc(env(safe-area-inset-top, 0px) + 20px)) !important;
+  pointer-events: none !important;
+}
+
+.resumentor-global-toast,
+div[data-hot-toast-container] > div,
+div[style*="z-index: 9999"] > div {
+  pointer-events: auto !important;
+  margin-top: 4px;
+}

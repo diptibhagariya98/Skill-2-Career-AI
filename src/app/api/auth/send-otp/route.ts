@@ -67,6 +67,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 1b. If not in profiles, search Supabase auth.users to avoid false 404 deadlocks
+    if (!cleanUserId) {
+      const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const users = (userList?.users || []) as Array<{
+        id: string;
+        email?: string;
+        user_metadata?: { name?: string; full_name?: string };
+      }>;
+      const matched = users.find(
+        (u) => (u.email || "").trim().toLowerCase() === cleanEmail.toLowerCase()
+      );
+      if (matched) {
+        cleanUserId = matched.id;
+        if (!resolvedName) {
+          resolvedName =
+            matched.user_metadata?.name ||
+            matched.user_metadata?.full_name ||
+            cleanEmail.split("@")[0];
+        }
+        try {
+          await supabase.from("profiles").upsert({
+            id: cleanUserId,
+            email: cleanEmail,
+            name: resolvedName,
+            full_name: resolvedName,
+            updated_at: new Date().toISOString(),
+          });
+        } catch (healErr: unknown) {
+          console.warn("[Profile Auto-Heal Notice]:", getErrorMessage(healErr));
+        }
+      }
+    }
+
     // 2. For password reset, require an existing account
     if (validPurpose === AuthPurpose.PASSWORD_RESET && !cleanUserId) {
       return NextResponse.json(
