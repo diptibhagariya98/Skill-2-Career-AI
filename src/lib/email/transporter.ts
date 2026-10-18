@@ -15,9 +15,11 @@ export const transporter = hasSmtpConfig
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
+      // In serverless environments like Vercel / AWS Lambda, pooling causes dead socket reuse.
+      pool: false,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     })
   : null;
 
