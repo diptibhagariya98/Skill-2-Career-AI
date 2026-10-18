@@ -152,8 +152,8 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs transition-all duration-300 pt-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <ResuMentorBrandLogo variant="A" size="md" showWordmark={true} theme="light" />
-            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full hidden sm:inline-block">
+            <ResuMentorBrandLogo variant="ready" colorScheme="teal" size="md" showWordmark={true} theme="light" />
+            <span className="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full hidden sm:inline-block">
               + AI
             </span>
           </div>
@@ -456,8 +456,8 @@ export default function LandingPage() {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <ResuMentorBrandLogo variant="A" size="lg" showWordmark={true} theme="dark" />
-              <span className="text-[11px] font-bold text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2 py-0.5 rounded-full">
+              <ResuMentorBrandLogo variant="ready" colorScheme="teal" size="lg" showWordmark={true} theme="dark" />
+              <span className="text-[11px] font-bold text-teal-300 bg-teal-950/60 border border-teal-800/80 px-2 py-0.5 rounded-full">
                 + AI
               </span>
             </div>

@@ -361,7 +361,7 @@ export default function IntroScreens({
       {/* Top Safe Area & Top Bar (~8% height) */}
       <header className="w-full pt-[calc(0.75rem+env(safe-area-inset-top,0px))] px-5 pb-2 flex items-center justify-between z-20">
         {/* Brand Logo & Name */}
-        <ResuMentorBrandLogo variant="A" size="sm" showWordmark={true} theme="light" />
+        <ResuMentorBrandLogo variant="ready" colorScheme="indigo" size="sm" showWordmark={true} theme="light" />
 
         {/* Skip or Close Button */}
         {isReplayModal ? (

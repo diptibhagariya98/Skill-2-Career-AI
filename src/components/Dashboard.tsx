@@ -245,7 +245,7 @@ export default function Dashboard() {
             className="flex items-center cursor-pointer transition hover:opacity-85"
             onClick={() => setActivePage("dashboard")}
           >
-            <ResuMentorBrandLogo variant="A" size="md" showWordmark={true} theme="light" />
+            <ResuMentorBrandLogo variant="ready" colorScheme="indigo" size="md" showWordmark={true} theme="light" />
           </div>
         </div>
 

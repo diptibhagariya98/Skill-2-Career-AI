@@ -544,7 +544,7 @@ export default function Auth({ initialMode = "login" }: AuthProps = {}) {
         
         {/* Brand Banner Header */}
         <div className="text-center mb-6 flex flex-col items-center">
-          <ResuMentorBrandLogo variant="A" size={48} showWordmark={true} theme="light" />
+          <ResuMentorBrandLogo variant="ready" colorScheme="indigo" size={48} showWordmark={true} theme="light" />
           <p className="text-xs font-semibold text-slate-500 mt-2">
             AI-Powered Career &amp; Student Portal
           </p>

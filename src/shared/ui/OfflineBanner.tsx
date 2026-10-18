@@ -9,8 +9,14 @@ export function OfflineBanner() {
   const [showReconnected, setShowReconnected] = useState(false);
   const [wasOffline, setWasOffline] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     if (!connected) {
       setWasOffline(true);
       setDismissed(false);
@@ -22,17 +28,19 @@ export function OfflineBanner() {
       }, 3500);
       return () => clearTimeout(timer);
     }
-  }, [connected, wasOffline]);
+  }, [connected, wasOffline, mounted]);
+
+  if (!mounted) return null;
 
   if (!connected && !dismissed) {
     return (
       <aside
         role="status"
         aria-live="polite"
-        className="w-full bg-slate-900 border-b border-slate-800 text-amber-200 text-xs px-3 py-1.5 flex items-center justify-between gap-2 shadow-xs z-40"
+        className="w-full bg-slate-900 border-b border-slate-800 text-amber-300 text-xs px-4 py-2 flex items-center justify-between gap-3 shadow-sm z-50 sticky top-0"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <WifiOff className="h-3.5 w-3.5 text-amber-400 shrink-0 animate-pulse" />
+          <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
           <span className="truncate font-medium text-[11px] sm:text-xs">
             Offline mode: Local tools remain active.
           </span>

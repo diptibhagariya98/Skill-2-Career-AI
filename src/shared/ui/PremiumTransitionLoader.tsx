@@ -45,8 +45,8 @@ export function PremiumTransitionLoader({
         
         {/* Glowing Brand Icon Capsule */}
         <div className="relative mb-5">
-          <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 to-cyan-400 rounded-3xl blur-md opacity-30 animate-pulse" />
-          <ResuMentorBrandLogo variant="A" size={64} showWordmark={false} />
+          <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 to-indigo-300 rounded-3xl blur-md opacity-30 animate-pulse" />
+          <ResuMentorBrandLogo variant="ready" colorScheme="indigo" size={64} showWordmark={false} />
         </div>
 
         {/* Brand & Loading Labels */}
