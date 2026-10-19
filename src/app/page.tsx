@@ -11,11 +11,16 @@ import { APP_ROUTES } from "@/constants/endpoints";
 import { PremiumTransitionLoader } from "@/shared/ui/PremiumTransitionLoader";
 import { AuthMode } from "@/constants/auth";
 
-type ScreenState = "evaluating" | "intro" | "auth" | "landing";
+enum ScreenState {
+  EVALUATING = "EVALUATING",
+  INTRO = "INTRO",
+  AUTH = "AUTH",
+  LANDING = "LANDING",
+}
 
 export default function Home() {
   const router = useRouter();
-  const [screenState, setScreenState] = useState<ScreenState>("evaluating");
+  const [screenState, setScreenState] = useState<ScreenState>(ScreenState.EVALUATING);
   const [authMode, setAuthMode] = useState<AuthMode>(AuthMode.LOGIN);
 
   useEffect(() => {
@@ -29,7 +34,7 @@ export default function Home() {
 
       if (!isMobile) {
         // Desktop website: Always show the full website landing page
-        if (isMounted) setScreenState("landing");
+        if (isMounted) setScreenState(ScreenState.LANDING);
         return;
       }
 
@@ -55,13 +60,13 @@ export default function Home() {
 
       if (!seen) {
         // First launch on mobile: Show Intro Tour
-        if (isMounted) setScreenState("intro");
+        if (isMounted) setScreenState(ScreenState.INTRO);
         return;
       }
 
       // 4. Mobile user has completed the intro tour and is not logged in:
       // Show Login / Sign Up directly — NEVER show the desktop marketing landing page!
-      if (isMounted) setScreenState("auth");
+      if (isMounted) setScreenState(ScreenState.AUTH);
     };
 
     evaluateScreen();
@@ -81,7 +86,7 @@ export default function Home() {
   }, [router]);
 
   // While evaluating first-launch decision, render the luxury branded loader
-  if (screenState === "evaluating") {
+  if (screenState === ScreenState.EVALUATING) {
     return (
       <PremiumTransitionLoader
         label="Welcome to ResuMentor"
@@ -92,7 +97,7 @@ export default function Home() {
   }
 
   // First-launch mobile users see the curated native intro screens
-  if (screenState === "intro") {
+  if (screenState === ScreenState.INTRO) {
     return (
       <IntroScreens
         onFinish={(action) => {
@@ -100,10 +105,10 @@ export default function Home() {
             router.replace(`${APP_ROUTES.DASHBOARD}?guest=true`);
           } else if (action === "login") {
             setAuthMode(AuthMode.LOGIN);
-            setScreenState("auth");
+            setScreenState(ScreenState.AUTH);
           } else {
             setAuthMode(AuthMode.REGISTER);
-            setScreenState("auth");
+            setScreenState(ScreenState.AUTH);
           }
         }}
       />
@@ -111,7 +116,7 @@ export default function Home() {
   }
 
   // Mobile users after tour or when returning: Show Login / Sign Up directly (never Landing Page)
-  if (screenState === "auth") {
+  if (screenState === ScreenState.AUTH) {
     return <Auth initialMode={authMode} />;
   }
 

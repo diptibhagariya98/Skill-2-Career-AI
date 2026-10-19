@@ -380,7 +380,7 @@ export default function InterviewThread({
   return (
     <div className="max-w-4xl mx-auto flex flex-col h-full bg-white rounded-none sm:rounded-3xl border-0 sm:border border-gray-200 shadow-none sm:shadow-xl overflow-hidden relative">
       {/* Top Header Bar - Single Unified Native App Bar with Safe Area Inset */}
-      <div className="pt-[max(env(safe-area-inset-top,0px),0.75rem)] px-3 sm:px-5 pb-2.5 bg-white/95 backdrop-blur-md border-b border-gray-150 shrink-0 space-y-2">
+      <div className="pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.625rem)] px-3 sm:px-5 pb-2.5 bg-white/95 backdrop-blur-md border-b border-gray-150 shrink-0 space-y-2">
         <div className="flex items-center justify-between gap-2 min-h-[44px]">
           {/* Back Chevron + Question Counter & Shortened Role Line */}
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -759,7 +759,7 @@ export default function InterviewThread({
 
       {/* Docked Next Question Action Bar for Instant Feedback Read Time (Item 5) */}
       {hasUnreadFeedback && (
-        <div className="p-3 sm:p-4 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] bg-white border-t border-gray-150 shrink-0 shadow-lg space-y-2 animate-fade-in">
+        <div className="p-3 sm:p-4 pb-[calc(var(--sab,env(safe-area-inset-bottom,0px))+0.75rem)] bg-white border-t border-gray-150 shrink-0 shadow-lg space-y-2 animate-fade-in">
           <p className="text-[11px] text-gray-500 text-center font-medium">
             Take a moment to review your feedback. When ready, continue.
           </p>
@@ -788,7 +788,7 @@ export default function InterviewThread({
 
       {/* Bottom Sticky Interactive Answer Box (Docked with Safe Area UX-05 & dynamic expansion) */}
       {!hasUnreadFeedback && !openCompareData && currentQuestion && (
-        <div className="p-2.5 sm:p-4 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] bg-white border-t border-gray-200 shrink-0 shadow-lg space-y-2">
+        <div className="p-2.5 sm:p-4 pb-[calc(var(--sab,env(safe-area-inset-bottom,0px))+0.75rem)] bg-white border-t border-gray-200 shrink-0 shadow-lg space-y-2">
           {/* Multiple Choice / Situational Selection Options */}
           {(currentQuestion.type === "multiple_choice_single" ||
             currentQuestion.type === "situational_judgement") && (

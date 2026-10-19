@@ -362,7 +362,7 @@ export default function IntroScreens({
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 text-gray-900 flex flex-col justify-between select-none relative overflow-hidden ${
+      className={`min-h-dvh bg-gradient-to-b from-gray-50 via-white to-gray-50 text-gray-900 flex flex-col justify-between select-none relative overflow-hidden ${
         isReplayModal ? "p-0" : "w-full"
       }`}
       onTouchStart={handleTouchStart}
@@ -372,7 +372,7 @@ export default function IntroScreens({
       aria-label="App Introduction"
     >
       {/* Top Safe Area & Top Bar (~8% height) */}
-      <header className="w-full pt-[calc(0.75rem+env(safe-area-inset-top,0px))] px-5 pb-2 flex items-center justify-between z-20">
+      <header className="w-full pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.75rem)] px-5 pb-2 flex items-center justify-between z-20">
         {/* Brand Logo & Name */}
         <ResuMentorBrandLogo variant="ready" colorScheme="indigo" size="sm" showWordmark={true} theme="light" />
 
@@ -420,7 +420,7 @@ export default function IntroScreens({
       </main>
 
       {/* Lower Zone: Text, Page Dots & Primary Actions (~35% height) */}
-      <footer className="w-full px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-2 flex flex-col items-center z-20">
+      <footer className="w-full px-5 pb-[calc(var(--sab,env(safe-area-inset-bottom,0px))+1.25rem)] pt-2 flex flex-col items-center z-20">
         {/* Text Block (~20% height): Headline (max 6 words) + Body */}
         <div className="w-full text-center max-w-sm mb-5 transition-all duration-300">
           <h2 className="text-2xl sm:text-[26px] font-extrabold tracking-tight text-gray-900 leading-tight mb-2">

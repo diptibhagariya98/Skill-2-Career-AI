@@ -73,7 +73,8 @@ export default function LearnPractice({
     }
   };
 
-  // Roadmap Detail View State
+  // Roadmap & Quiz Modal View State
+  const [quizOpen, setQuizOpen] = useState(false);
   const [selectedRoadmapDetail, setSelectedRoadmapDetail] = useState<RoadmapItem | null>(null);
   const [completedMilestones, setCompletedMilestones] = useState<Record<string, boolean>>({});
   const [roadmapModalView, setRoadmapModalView] = useState<"milestones" | "document">("milestones");
@@ -82,6 +83,10 @@ export default function LearnPractice({
 
   // Register Back Handler for Detail Modal & Subpages
   useBackHandler(BackPriority.OVERLAY, () => {
+    if (quizOpen) {
+      setQuizOpen(false);
+      return true;
+    }
     if (selectedRoadmapDetail) {
       setSelectedRoadmapDetail(null);
       return true;
@@ -91,7 +96,7 @@ export default function LearnPractice({
       return true;
     }
     return false;
-  });
+  }, [quizOpen, selectedRoadmapDetail, subPage]);
 
   // Native Share Helper for Roadmap Syllabi
   const handleShareRoadmap = async (item: RoadmapItem) => {
@@ -242,7 +247,6 @@ export default function LearnPractice({
   };
 
   // Quiz state
-  const [quizOpen, setQuizOpen] = useState(false);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState("");

@@ -727,7 +727,7 @@ export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
         </div>
 
         {/* Mobile Segmented Navigation Bar (Switch between Account, Security, Tour) */}
-        <div className="bg-slate-100/90 p-1 rounded-xl flex gap-1 border border-slate-200/60 sticky top-1 z-20 backdrop-blur-md">
+        <div className="bg-slate-100 p-1 rounded-xl flex gap-1 border border-slate-200/60">
           <button
             type="button"
             onClick={() => setMobileTab(MobileProfileTab.ACCOUNT)}

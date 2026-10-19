@@ -693,7 +693,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   return (
     <div className="min-h-dvh bg-gray-50 flex flex-col pb-6 lg:pb-8">
       {/* Top Action Toolbar: Clean layout without overlaps, full-width title row on mobile */}
-      <header className="bg-white border-b border-gray-200 px-3 sm:px-6 py-2.5 sm:py-3 sticky top-0 z-20 shadow-xs flex flex-col gap-2.5">
+      <header className="bg-white border-b border-gray-200 px-3 sm:px-6 pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.625rem)] pb-2.5 sm:py-3 sticky top-0 z-20 shadow-xs flex flex-col gap-2 sm:gap-2.5">
         {/* Row 1: Unified Back Arrow, Document Title (Full width on mobile with pencil), Save Status */}
         <div className="flex items-center justify-between gap-2 w-full">
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
@@ -701,7 +701,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
               type="button"
               onClick={() => dispatchBack()}
               aria-label="Back"
-              className="p-1.5 -ml-1 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center transition active:scale-95 shrink-0"
+              className="p-1.5 -ml-1 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center transition active:scale-95 shrink-0"
               title="Go Back"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -798,14 +798,14 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
           </div>
         </div>
 
-        {/* Row 2 (Mobile only): Segmented Controls & Action Buttons */}
-        <div className="flex lg:hidden items-center justify-between gap-1.5 w-full pt-1 border-t border-gray-100">
+        {/* Row 2 (Mobile only): Segmented Controls & Action Buttons with horizontal scroll protection */}
+        <div className="flex lg:hidden items-center justify-between gap-1 w-full pt-1 border-t border-gray-100 overflow-x-auto no-scrollbar py-0.5 -mx-1 px-1">
           {/* Edit vs Preview Segmented Control */}
           <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0">
             <button
               type="button"
               onClick={() => setMobileTab("edit")}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition min-h-[34px] ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition min-h-[34px] ${
                 mobileTab === "edit"
                   ? "bg-white text-indigo-700 shadow-2xs"
                   : "text-gray-600 hover:text-gray-900"
@@ -816,7 +816,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
             <button
               type="button"
               onClick={() => setMobileTab("preview")}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition min-h-[34px] ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition min-h-[34px] ${
                 mobileTab === "preview"
                   ? "bg-white text-indigo-700 shadow-2xs"
                   : "text-gray-600 hover:text-gray-900"
@@ -826,13 +826,13 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {/* AI ATS Analysis (Tonal Outline) */}
             <button
               type="button"
               disabled={analysisLoading}
               onClick={triggerAnalysisPipeline}
-              className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1.5 rounded-xl transition disabled:opacity-50 min-h-[34px]"
+              className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2 py-1 rounded-xl transition disabled:opacity-50 min-h-[34px] shrink-0"
               title="Evaluate ATS score with Gemini AI"
             >
               {analysisLoading ? (
@@ -847,7 +847,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
             <button
               type="button"
               onClick={() => setShowDataModal(true)}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-xl transition min-h-[34px]"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-xl transition min-h-[34px] shrink-0"
               title="Import/Export JSON or revision history"
             >
               <Database className="h-3.5 w-3.5" />
@@ -859,7 +859,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
               type="button"
               disabled={exportState === "preparing"}
               onClick={() => handleExportPDF(false)}
-              className={`inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl transition shadow-xs min-h-[34px] ${
+              className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-xl transition shadow-xs min-h-[34px] shrink-0 ${
                 exportState === "done"
                   ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                   : exportState === "failed"

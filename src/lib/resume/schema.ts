@@ -240,10 +240,30 @@ export function migrateResumeSchema(raw: unknown): ResumeData {
   const rawContact = obj.contact && typeof obj.contact === "object" ? (obj.contact as Record<string, unknown>) : {};
   const rawSkills = obj.skills && typeof obj.skills === "object" ? (obj.skills as Record<string, unknown>) : {};
 
+  // Rule 00 & Rule 05: Cleanse guest placeholders so real form fields are never prefilled with fake data
+  const migratedContact = {
+    ...fallback.contact,
+    ...(rawContact as unknown as typeof fallback.contact),
+  };
+  const rawFullName = typeof migratedContact.fullName === "string" ? migratedContact.fullName.trim() : "";
+  const rawContactEmail = typeof migratedContact.email === "string" ? migratedContact.email.trim() : "";
+  if (rawFullName.toLowerCase() === "guest explorer") {
+    migratedContact.fullName = "";
+  }
+  if (rawContactEmail.toLowerCase() === "guest@resumentor.app") {
+    migratedContact.email = "";
+  }
+
+  const rawTitle = typeof rawMeta.title === "string" ? rawMeta.title.trim() : "";
+  const cleanedTitle = rawTitle.toLowerCase().includes("guest explorer")
+    ? "My Resume"
+    : rawTitle || fallback.meta.title;
+
   return {
     meta: {
       ...fallback.meta,
       ...(rawMeta as unknown as typeof fallback.meta),
+      title: cleanedTitle,
       schemaVersion: RESUME_SCHEMA_VERSION,
       updatedAt: new Date().toISOString(),
       sectionOrder: Array.isArray(rawMeta.sectionOrder)
@@ -254,10 +274,7 @@ export function migrateResumeSchema(raw: unknown): ResumeData {
         ...((rawMeta.sectionVisibility as Record<string, boolean>) || {}),
       },
     },
-    contact: {
-      ...fallback.contact,
-      ...(rawContact as unknown as typeof fallback.contact),
-    },
+    contact: migratedContact,
     summary: typeof obj.summary === "string" ? obj.summary : fallback.summary,
     experience: Array.isArray(obj.experience) ? (obj.experience as ResumeData["experience"]) : fallback.experience,
     education: Array.isArray(obj.education) ? (obj.education as ResumeData["education"]) : fallback.education,

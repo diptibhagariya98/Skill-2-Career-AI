@@ -115,7 +115,7 @@ export default function Scholarships({
     <div className="space-y-6">
       {/* Navigation Sub-Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 pb-3">
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
           <button
             onClick={() => setActiveTab("wizard")}
             className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${

@@ -763,7 +763,7 @@ export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
   };
 
   return (
-    <div className="min-h-dvh flex items-center justify-center p-4 pt-safe pb-safe bg-gradient-to-br from-indigo-50/70 via-slate-50 to-teal-50/40 relative overflow-hidden">
+    <div className="min-h-dvh flex items-center justify-center p-4 pt-safe pb-safe bg-gradient-to-br from-indigo-50/70 via-slate-50 to-teal-50/40 relative overflow-y-auto">
       {/* Decorative ambient background glows */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-teal-200/25 rounded-full blur-3xl pointer-events-none" />

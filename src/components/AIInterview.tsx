@@ -213,7 +213,7 @@ export default function AIInterview({
       {/* Sub-Navigation Tabs (Hidden during live session to reclaim vertical space) */}
       {!isLiveSession && (
         <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
             <button
               type="button"
               onClick={() => setActiveTab("setup")}
