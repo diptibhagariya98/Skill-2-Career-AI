@@ -63,7 +63,16 @@ export default function InterviewScorecard({
 
     try {
       // Dynamic client-side import for Capacitor & static export compatibility
-      const html2pdf = (await import("html2pdf.js")).default;
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = (html2pdfModule.default || html2pdfModule) as unknown as (
+        options?: unknown
+      ) => {
+        set: (opt: unknown) => {
+          from: (el: HTMLElement) => {
+            outputPdf: (type: string) => Promise<Blob>;
+          };
+        };
+      };
       const safeJobTitle = scorecard.targetJobTitle.trim().replace(/[^a-zA-Z0-9_-]/g, "_") || "Role";
       const filename = `Scorecard_${safeJobTitle}.pdf`;
 

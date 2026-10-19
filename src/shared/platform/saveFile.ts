@@ -46,8 +46,6 @@ export async function saveTextFile(
         try {
           await Share.share({
             title: safeFilename,
-            text: `Backup data: ${safeFilename}`,
-            url: fileUri,
             files: [fileUri],
             dialogTitle: `Save or share ${safeFilename}`,
           });

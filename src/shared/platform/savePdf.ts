@@ -82,36 +82,14 @@ export async function savePdfAndShare(
 
       const fileUri = writeResult.uri;
 
-      // 1. Try native FileOpener first to open PDF in the system's preferred PDF viewer
-      let openedWithNativeViewer = false;
-      try {
-        const { FileOpener } = await import("@capawesome-team/capacitor-file-opener");
-        await FileOpener.openFile({
-          path: fileUri,
-          mimeType: "application/pdf",
-        });
-        openedWithNativeViewer = true;
-      } catch (openerErr: unknown) {
-        console.warn("[savePdf] FileOpener not available or no viewer, falling back to Share:", openerErr);
-      }
-
-      if (openedWithNativeViewer) {
-        return {
-          ok: true,
-          delivered: true,
-          filename: safeFilename,
-          message: `Opened ${safeFilename} in PDF viewer`,
-        };
-      }
-
-      // 2. Fallback to native Android Share Sheet (files array ONLY, do NOT pass url with local files)
+      // 1. Primary delivery: Native Android Share Sheet (files array ONLY, no text/url)
+      // This enables the OS dialog allowing the user to "Save to device", Drive, WhatsApp, or open with PDF viewer.
       const canShare = await Share.canShare();
 
       if (canShare.value) {
         try {
           await Share.share({
             title: safeFilename,
-            text: options.shareText || "ResuMentor Career Document",
             files: [fileUri],
             dialogTitle: options.dialogTitle || `Save or share ${safeFilename}`,
           });
@@ -132,8 +110,25 @@ export async function savePdfAndShare(
               message: "Share cancelled.",
             };
           }
-          throw new Error(`Share sheet failed: ${msg}`);
+          console.warn("[savePdf] Share sheet failed, falling back to FileOpener:", shareErr);
         }
+      }
+
+      // 2. Fallback: Try native FileOpener to open directly in installed PDF viewer
+      try {
+        const { FileOpener } = await import("@capawesome-team/capacitor-file-opener");
+        await FileOpener.openFile({
+          path: fileUri,
+          mimeType: "application/pdf",
+        });
+        return {
+          ok: true,
+          delivered: true,
+          filename: safeFilename,
+          message: `Opened ${safeFilename} in PDF viewer`,
+        };
+      } catch (openerErr: unknown) {
+        console.warn("[savePdf] FileOpener failed:", openerErr);
       }
 
       return {

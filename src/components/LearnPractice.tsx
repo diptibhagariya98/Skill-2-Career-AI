@@ -135,7 +135,16 @@ export default function LearnPractice({
 
       // 2. Client-side dynamic PDF generation via html2pdf if asset not bundled
       if (!pdfBlob) {
-        const html2pdf = (await import("html2pdf.js")).default;
+        const html2pdfModule = await import("html2pdf.js");
+        const html2pdf = (html2pdfModule.default || html2pdfModule) as unknown as (
+          options?: unknown
+        ) => {
+          from: (el: HTMLElement) => {
+            set: (opt: unknown) => {
+              outputPdf: (type: string) => Promise<Blob>;
+            };
+          };
+        };
         const element = roadmapPrintRef.current;
         if (!element) throw new Error("Printable template not found.");
 

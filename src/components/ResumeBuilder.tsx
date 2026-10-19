@@ -533,12 +533,27 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
     const toastId = toast.loading("Generating your PDF…");
 
     try {
-      const element = previewPrintRef.current || offscreenPrintRef.current;
-      if (!element) {
-        throw new Error("Resume preview not found. Switch to Preview tab and try again.");
+      // Ensure preview is visible in the DOM on mobile before capturing
+      if (mobileTab !== "preview") {
+        setMobileTab("preview");
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
-      const html2pdf = (await import("html2pdf.js")).default;
+      const element = previewPrintRef.current;
+      if (!element) {
+        throw new Error("Resume preview not found. Please switch to Preview tab and try again.");
+      }
+
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = (html2pdfModule.default || html2pdfModule) as unknown as (
+        options?: unknown
+      ) => {
+        from: (el: HTMLElement) => {
+          set: (opt: unknown) => {
+            outputPdf: (type: string) => Promise<Blob>;
+          };
+        };
+      };
 
       // Sanitise filename — strip apostrophes, spaces and all special chars so Android
       // doesn't reject the filename at the filesystem layer.
