@@ -118,12 +118,13 @@ export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
         className={`w-full flex justify-center items-start ${className}`}
       >
         <div
-          className="relative bg-white shadow-xl transition-all duration-100 ease-out border border-gray-300/80 rounded-xs"
+          className="relative bg-white shadow-xl border border-gray-300/80 rounded-xs"
           style={{
             width: `${scaledWidth}px`,
             height: `${scaledHeight}px`,
             overflow: "hidden",
             flexShrink: 0,
+            willChange: "width, height",
           }}
         >
           <div

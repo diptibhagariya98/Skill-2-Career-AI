@@ -120,6 +120,83 @@ export function FullScreenResumePreview({
     setManualZoom(1.0);
   };
 
+  // Touch Gesture Handling (Pinch-to-Zoom & Finger Panning)
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef<number>(1.0);
+  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
+  const lastTapTimeRef = useRef<number>(0);
+  const isPinchingRef = useRef<boolean>(false);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      // Two-finger pinch start
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      pinchStartDistRef.current = dist;
+      pinchStartZoomRef.current = currentZoom;
+      isPinchingRef.current = true;
+    } else if (e.touches.length === 1) {
+      // Single-finger: check double tap or start pan
+      const now = Date.now();
+      if (now - lastTapTimeRef.current < 300) {
+        // Quick double tap -> Toggle zoom between fit_page and 1.35x
+        if (zoomMode === "fit_page") {
+          setZoomMode("manual");
+          setManualZoom(1.35);
+        } else {
+          setZoomMode("fit_page");
+          setManualZoom(1.0);
+        }
+        lastTapTimeRef.current = 0;
+        return;
+      }
+      lastTapTimeRef.current = now;
+
+      if (containerRef.current) {
+        panStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          scrollLeft: containerRef.current.scrollLeft,
+          scrollTop: containerRef.current.scrollTop,
+        };
+      }
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2 && pinchStartDistRef.current && isPinchingRef.current) {
+      // Two-finger pinch-to-zoom calculation
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = dist / pinchStartDistRef.current;
+      const targetZoom = Number((pinchStartZoomRef.current * factor).toFixed(2));
+      const clampedZoom = Math.min(Math.max(targetZoom, 0.35), 2.5);
+
+      setZoomMode("manual");
+      setManualZoom(clampedZoom);
+    } else if (e.touches.length === 1 && panStartRef.current && containerRef.current && !isPinchingRef.current) {
+      // Smooth finger pan
+      const dx = e.touches[0].clientX - panStartRef.current.x;
+      const dy = e.touches[0].clientY - panStartRef.current.y;
+      containerRef.current.scrollLeft = panStartRef.current.scrollLeft - dx;
+      containerRef.current.scrollTop = panStartRef.current.scrollTop - dy;
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length < 2) {
+      pinchStartDistRef.current = null;
+      isPinchingRef.current = false;
+    }
+    if (e.touches.length === 0) {
+      panStartRef.current = null;
+    }
+  };
+
   return (
     <div
       role="dialog"
@@ -325,12 +402,20 @@ export function FullScreenResumePreview({
         </div>
       </header>
 
-      {/* Main Canvas Scroll Area */}
+      {/* Main Canvas Scroll Area with Multi-touch Gestures (Pinch-to-zoom & Smooth Pan) */}
       <main
         ref={containerRef}
-        className="flex-1 overflow-auto bg-slate-950 flex justify-center items-start p-4 sm:p-8"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        className="flex-1 overflow-auto bg-slate-950 flex justify-center items-start p-3 sm:p-8 overscroll-contain select-none"
+        style={{
+          touchAction: "pan-x pan-y pinch-zoom",
+          WebkitOverflowScrolling: "touch",
+        }}
       >
-        <div className="relative my-auto flex flex-col items-center">
+        <div className="relative flex flex-col items-center justify-start min-w-full pb-28 pt-2">
           <ResumePreview
             resume={resume}
             scale={currentZoom}

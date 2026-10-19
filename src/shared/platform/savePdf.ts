@@ -54,14 +54,11 @@ async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /**
- * Save a PDF Blob and surface it to the user.
- *
- * @param pdfBlob  - The generated PDF as a Blob.
- * @param filename - Sanitised filename, e.g. "John_Doe_Resume.pdf".
- * @param options  - Optional share text and dialog title.
+ * Generic cross-platform file save and surface helper.
+ * Handles both binary Blobs (PDF, images) and text Blobs (JSON, TXT).
  */
-export async function savePdfAndShare(
-  pdfBlob: Blob,
+export async function saveFileAndShare(
+  fileBlob: Blob,
   filename: string,
   options: SavePdfOptions = {}
 ): Promise<SavePdfResult> {
@@ -71,7 +68,7 @@ export async function savePdfAndShare(
     // ── Native Android path ───────────────────────────────────────────────
     try {
       const { Filesystem, Directory } = await import("@capacitor/filesystem");
-      const base64Data = await blobToBase64(pdfBlob);
+      const base64Data = await blobToBase64(fileBlob);
 
       // Strategy 1: Save directly to public Documents directory (accessible to user)
       let savedUri = "";
@@ -191,7 +188,7 @@ export async function savePdfAndShare(
 
   // ── Browser / web path ────────────────────────────────────────────────
   try {
-    const blobUrl = URL.createObjectURL(pdfBlob);
+    const blobUrl = URL.createObjectURL(fileBlob);
     const link = document.createElement("a");
     link.href = blobUrl;
     link.download = safeFilename;
@@ -208,7 +205,7 @@ export async function savePdfAndShare(
       message: `Saved as ${safeFilename}`,
     };
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to download PDF";
+    const msg = err instanceof Error ? err.message : "Failed to download file";
     return {
       ok: false,
       delivered: false,
@@ -217,6 +214,9 @@ export async function savePdfAndShare(
     };
   }
 }
+
+/** Backward compatibility alias for PDF calls */
+export const savePdfAndShare = saveFileAndShare;
 
 /**
  * Calls the server-side Next.js headless rendering API (/api/resumes/export)
