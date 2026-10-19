@@ -38,7 +38,7 @@ import {
   dispatchBack,
   shareContent,
   isNative,
-  savePdfAndShare,
+  exportResumeFromServer,
 } from "@/shared/platform";
 import { SECTION_REGISTRY } from "@/lib/resume/registry";
 
@@ -527,73 +527,19 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
     triggerAnalysisPipeline();
   };
 
-  // Part B: One-Click PDF Export with Pre-flight (Section 4.1 & 4.2)
+  // Part B: Server-Side PDF Export with Pre-flight (Section 4.1 & 4.2)
   const executePDFExport = async () => {
     setExportState("preparing");
-    const toastId = toast.loading("Generating your PDF…");
+    const toastId = toast.loading("Generating your high-resolution PDF…");
 
     try {
-      // Ensure preview is visible in the DOM on mobile before capturing
-      if (mobileTab !== "preview") {
-        setMobileTab("preview");
-        await new Promise((resolve) => setTimeout(resolve, 300));
+      const result = await exportResumeFromServer(resume);
+
+      if (!result.ok) {
+        throw new Error(result.message || "Failed to generate PDF on server");
       }
 
-      const element = previewPrintRef.current;
-      if (!element) {
-        throw new Error("Resume preview not found. Please switch to Preview tab and try again.");
-      }
-
-      const html2pdfModule = await import("html2pdf.js");
-      const html2pdf = (html2pdfModule.default || html2pdfModule) as unknown as (
-        options?: unknown
-      ) => {
-        from: (el: HTMLElement) => {
-          set: (opt: unknown) => {
-            outputPdf: (type: string) => Promise<Blob>;
-          };
-        };
-      };
-
-      // Sanitise filename — strip apostrophes, spaces and all special chars so Android
-      // doesn't reject the filename at the filesystem layer.
-      const cleanName = (resume.contact.fullName || "")
-        .trim()
-        .replace(/[^a-zA-Z0-9]/g, "_")
-        .replace(/_+/g, "_")
-        .replace(/^_|_$/g, "");
-      const filename = cleanName ? `${cleanName}_Resume.pdf` : "Resume.pdf";
-
-      // Native devices use scale 1.5 to prevent high-DPI GPU canvas allocation OOM crashes
-      const opt = {
-        margin: 0,
-        filename,
-        image: { type: "jpeg" as const, quality: 0.95 },
-        html2canvas: {
-          scale: isNative() ? 1.5 : 2,
-          useCORS: false,
-          logging: false,
-        },
-        jsPDF: {
-          unit: "mm",
-          format: resume.meta.pageSize === "Letter" ? "letter" : "a4",
-          orientation: "portrait" as const,
-        },
-      };
-
-      const worker = html2pdf().from(element).set(opt);
-      const pdfBlob = (await worker.outputPdf("blob")) as Blob;
-
-      if (!pdfBlob || pdfBlob.size < 500) {
-        throw new Error("PDF is empty — the preview may still be loading. Please try again.");
-      }
-
-      // savePdfAndShare handles both paths:
-      //   Native → Filesystem.writeFile (CACHE dir) + Share.share(file:// URI)
-      //   Web    → <a download> blob URL
-      const result = await savePdfAndShare(pdfBlob, filename);
-
-      setExportState("ready"); // always reset so the user can export again
+      setExportState("ready");
       setExportFailCount(0);
       hapticSuccess();
 
@@ -1088,8 +1034,8 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
               </span>
 
               {/* Template Switcher */}
-              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
-                {(["classic", "modern", "compact", "academic"] as TemplateId[]).map((tId) => (
+              <div className="flex flex-wrap items-center gap-1 bg-gray-100 p-1 rounded-xl">
+                {(["classic", "modern", "compact", "academic", "minimalist", "creative"] as TemplateId[]).map((tId) => (
                   <button
                     key={tId}
                     type="button"

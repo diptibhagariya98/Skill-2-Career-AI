@@ -15,6 +15,8 @@
  */
 
 import { isNative } from "./device";
+import { ResumeData } from "@/types/resume";
+import { API_ROUTES } from "@/constants/endpoints";
 
 /** Result returned to the caller after a save attempt. */
 export interface SavePdfResult {
@@ -172,6 +174,58 @@ export async function savePdfAndShare(
       ok: false,
       delivered: false,
       filename: safeFilename,
+      message: msg,
+    };
+  }
+}
+
+/**
+ * Calls the server-side Next.js headless rendering API (/api/resumes/export)
+ * and delivers the resulting high-res vector PDF via browser download or native Android Share Sheet.
+ */
+export async function exportResumeFromServer(
+  resume: ResumeData,
+  options: SavePdfOptions = {}
+): Promise<SavePdfResult> {
+  const cleanName = (resume.contact.fullName || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  const filename = cleanName ? `${cleanName}_Resume.pdf` : "Resume.pdf";
+
+  try {
+    const res = await fetch(API_ROUTES.RESUME_EXPORT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ resume }),
+    });
+
+    if (!res.ok) {
+      let errorMsg = `Server error (${res.status})`;
+      try {
+        const errorJson = (await res.json()) as { error?: { message?: string } };
+        if (errorJson?.error?.message) {
+          errorMsg = errorJson.error.message;
+        }
+      } catch {}
+      throw new Error(errorMsg);
+    }
+
+    const pdfBlob = await res.blob();
+    if (!pdfBlob || pdfBlob.size < 500) {
+      throw new Error("Received an empty or corrupted PDF from the server.");
+    }
+
+    return await savePdfAndShare(pdfBlob, filename, options);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to export PDF from server";
+    return {
+      ok: false,
+      delivered: false,
+      filename,
       message: msg,
     };
   }
