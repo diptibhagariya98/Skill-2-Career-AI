@@ -686,8 +686,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* True Native Mobile Bottom Navigation Bar (Hidden during active live interview session) */}
-      {!isLiveInterviewSession && (
+      {/* True Native Mobile Bottom Navigation Bar (Hidden during active live interview session and in the Resume Builder which has its own step bar) */}
+      {!isLiveInterviewSession && activePage !== DashboardSection.RESUME && (
         <nav
           data-hide-on-keyboard="true"
           className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] flex items-center justify-around shadow-2xl transition-all duration-200"

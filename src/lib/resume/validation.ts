@@ -13,12 +13,39 @@ export function normalizeText(text?: string | null): string {
 
 export function normalizeUrl(rawUrl?: string | null): string {
   if (!rawUrl) return "";
-  let clean = rawUrl.trim();
+  const clean = rawUrl.trim();
   if (!clean) return "";
+  const lower = clean.toLowerCase();
+  if (
+    lower === "none" ||
+    lower === "null" ||
+    lower === "undefined" ||
+    lower === "n/a" ||
+    lower === "na" ||
+    lower === "no" ||
+    lower === "https://none" ||
+    lower === "http://none" ||
+    lower === "https://" ||
+    lower === "http://"
+  ) {
+    return "";
+  }
   if (!/^https?:\/\//i.test(clean)) {
-    clean = `https://${clean}`;
+    return `https://${clean}`;
   }
   return clean;
+}
+
+export function isValidHttpUrl(url?: string | null): boolean {
+  if (!url) return false;
+  const clean = normalizeUrl(url);
+  if (!clean) return false;
+  try {
+    const parsed = new URL(clean);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function splitBullets(rawText?: string | null): string[] {

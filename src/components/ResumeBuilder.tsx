@@ -38,6 +38,7 @@ import {
   dispatchBack,
   shareContent,
   isNative,
+  savePdfAndShare,
 } from "@/shared/platform";
 import { SECTION_REGISTRY } from "@/lib/resume/registry";
 
@@ -208,6 +209,8 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   const handleUpdateResume = (next: ResumeData) => {
     setResume(next);
     triggerAutosave(next);
+    // Reset export state when content changes — the previous export no longer matches the current content
+    if (exportState === "done") setExportState("ready");
   };
 
   // Section completion calculator
@@ -527,99 +530,67 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   // Part B: One-Click PDF Export with Pre-flight (Section 4.1 & 4.2)
   const executePDFExport = async () => {
     setExportState("preparing");
-    const toastId = toast.loading("Preparing ATS print-ready PDF...");
+    const toastId = toast.loading("Generating your PDF…");
 
     try {
       const element = offscreenPrintRef.current || previewPrintRef.current;
-      if (!element) throw new Error("Preview canvas not found.");
+      if (!element) {
+        throw new Error("Resume preview not found. Switch to Preview tab and try again.");
+      }
 
       const html2pdf = (await import("html2pdf.js")).default;
 
-      // Sanitized clean file name (Section 4.4)
+      // Sanitise filename — strip apostrophes, spaces and all special chars so Android
+      // doesn't reject the filename at the filesystem layer.
       const cleanName = (resume.contact.fullName || "")
         .trim()
-        .replace(/[^a-zA-Z0-9]/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-      const filename = cleanName ? `${cleanName}-Resume.pdf` : "Resume.pdf";
+        .replace(/[^a-zA-Z0-9]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "");
+      const filename = cleanName ? `${cleanName}_Resume.pdf` : "Resume.pdf";
 
+      // Always output a Blob — never call .save() which triggers a browser download that
+      // does nothing inside Android's WebView.
       const opt = {
-        margin: 0.3,
+        margin: 0,
         filename,
         image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { scale: 2.5, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: {
-          unit: "in",
+          unit: "mm",
           format: resume.meta.pageSize === "Letter" ? "letter" : "a4",
           orientation: "portrait" as const,
         },
       };
 
-      // Generate PDF output
       const worker = html2pdf().from(element).set(opt);
       const pdfBlob = (await worker.outputPdf("blob")) as Blob;
 
-      if (isNative()) {
-        // Native Android: Convert to Base64 Data URL and use native share/save sheet
-        const reader = new FileReader();
-        reader.readAsDataURL(pdfBlob);
-        reader.onloadend = async () => {
-          const dataUrl = reader.result as string;
-          try {
-            const shared = await shareContent({
-              title: filename,
-              text: "My ATS-optimized resume",
-              url: dataUrl,
-              dialogTitle: `Save or Share ${filename}`,
-            });
-            if (shared) {
-              setExportState("done");
-              setExportFailCount(0);
-              hapticSuccess();
-              toast.success(`Exported ${filename}`, { id: toastId });
-            } else {
-              setExportState("done");
-              toast.success(`PDF generated: ${filename}`, { id: toastId });
-            }
-          } catch {
-            // Native fallback
-            window.print();
-            setExportState("done");
-          }
-        };
-      } else {
-        // Web Browser: Programmatic Blob download
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = filename;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      if (!pdfBlob || pdfBlob.size < 500) {
+        throw new Error("PDF is empty — the preview may still be loading. Please try again.");
+      }
 
-        setExportState("done");
-        setExportFailCount(0);
-        hapticSuccess();
-        toast.success(`Downloaded ${filename}`, { id: toastId });
+      // savePdfAndShare handles both paths:
+      //   Native → Filesystem.writeFile (CACHE dir) + Share.share(file:// URI)
+      //   Web    → <a download> blob URL
+      const result = await savePdfAndShare(pdfBlob, filename);
+
+      setExportState("ready"); // always reset so the user can export again
+      setExportFailCount(0);
+      hapticSuccess();
+
+      if (result.delivered) {
+        toast.success(result.message, { id: toastId, duration: 5000 });
+      } else {
+        // User cancelled the share sheet — dismiss the loading toast silently
+        toast.dismiss(toastId);
       }
     } catch (err: unknown) {
       setExportState("failed");
-      const nextFail = exportFailCount + 1;
-      setExportFailCount(nextFail);
-
-      if (nextFail >= 2) {
-        toast.error("PDF export failed. Opening browser print dialog as fallback...", {
-          id: toastId,
-        });
-        window.print();
-      } else {
-        toast.error(err instanceof Error ? err.message : "Export failed. Tap again to retry.", {
-          id: toastId,
-        });
-      }
+      setExportFailCount((prev) => prev + 1);
+      const msg =
+        err instanceof Error ? err.message : "Export failed. Tap Retry to try again.";
+      toast.error(msg, { id: toastId, duration: 8000 });
     }
   };
 
@@ -773,9 +744,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
               disabled={exportState === "preparing"}
               onClick={() => handleExportPDF(false)}
               className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition shadow-xs min-h-[40px] ${
-                exportState === "done"
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                  : exportState === "failed"
+                exportState === "failed"
                   ? "bg-red-600 hover:bg-red-700 text-white"
                   : "bg-indigo-600 hover:bg-indigo-700 text-white"
               } disabled:opacity-50`}
@@ -787,7 +756,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
               )}
               <span>
                 {exportState === "preparing"
-                  ? "Exporting..."
+                  ? "Generating PDF…"
                   : exportState === "done"
                   ? "Exported"
                   : exportState === "failed"
@@ -860,9 +829,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
               disabled={exportState === "preparing"}
               onClick={() => handleExportPDF(false)}
               className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-xl transition shadow-xs min-h-[34px] shrink-0 ${
-                exportState === "done"
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                  : exportState === "failed"
+                exportState === "failed"
                   ? "bg-red-600 hover:bg-red-700 text-white"
                   : "bg-indigo-600 hover:bg-indigo-700 text-white"
               } disabled:opacity-50`}
@@ -874,9 +841,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
               )}
               <span>
                 {exportState === "preparing"
-                  ? "Exporting..."
-                  : exportState === "done"
-                  ? "Exported"
+                  ? "Generating…"
                   : exportState === "failed"
                   ? "Retry"
                   : "Export"}

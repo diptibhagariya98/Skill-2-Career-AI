@@ -8,7 +8,7 @@ description: Self-audit and fix protocol for every module, screen, page and shar
 Applies to every module, screen, page and shared component. Works with files 00 to 04 (native feel) and 06 (browser and styling). The app is mobile first and must also run correctly in a normal browser.
 
 ## 0. Guardrails
-- Do not install, upgrade or set up anything. Use only scripts and tools the project already has.
+- Packages & Tools: When new tools, Capacitor plugins, or libraries are required to enable mobile capabilities, native device features, or browser functionality, installing them is allowed. Avoid unnecessary UI kits that conflict with existing design tokens.
 - Do not change business logic, API contracts, data models, auth or native project files while auditing UI.
 - If a wrong value on screen comes from business logic (for example a total that does not match its parts), do not silently change the logic. Record it with evidence in the report. Fix only the presentation layer.
 - Do not hide problems. Never "fix" with `overflow: hidden`, `display: none`, shrinking fonts, fixed heights, `!important` or magic numbers.

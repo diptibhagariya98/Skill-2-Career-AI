@@ -3,6 +3,37 @@
 import React, { forwardRef } from "react";
 import { ResumeData, TemplateId, PageSize } from "@/types/resume";
 import { SECTION_REGISTRY } from "@/lib/resume/registry";
+import { normalizeUrl } from "@/lib/resume/validation";
+
+function formatGrade(rawGrade: string): string {
+  const trimmed = rawGrade.trim();
+  if (!trimmed) return "";
+  const lower = trimmed.toLowerCase();
+  if (lower.includes("/") || lower.includes("out of")) {
+    return lower.startsWith("cgpa") || lower.startsWith("gpa") ? trimmed : `CGPA ${trimmed}`;
+  }
+  const num = parseFloat(trimmed);
+  if (!isNaN(num)) {
+    const scale = num <= 4 ? 4 : num <= 10 ? 10 : 100;
+    return `CGPA ${trimmed} / ${scale}`;
+  }
+  return trimmed;
+}
+
+function isCleanString(val?: string | null): boolean {
+  if (!val) return false;
+  const lower = val.trim().toLowerCase();
+  return (
+    lower.length > 0 &&
+    lower !== "none" &&
+    lower !== "null" &&
+    lower !== "undefined" &&
+    lower !== "n/a" &&
+    lower !== "na" &&
+    lower !== "https://none" &&
+    lower !== "http://none"
+  );
+}
 
 interface ResumePreviewProps {
   resume: ResumeData;
@@ -58,6 +89,45 @@ export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
       padding: "0.65in",
     };
 
+    // Assemble clean, verified contact items
+    const contactItems: { id: string; text: string }[] = [];
+    if (isCleanString(contact.email)) {
+      contactItems.push({ id: "email", text: contact.email.trim() });
+    }
+    if (isCleanString(contact.phone)) {
+      contactItems.push({ id: "phone", text: contact.phone.trim() });
+    }
+
+    const locationTokens = [contact.city, contact.state, contact.country]
+      .map((part) => (part || "").trim())
+      .filter((part) => isCleanString(part));
+    if (locationTokens.length > 0) {
+      contactItems.push({ id: "location", text: locationTokens.join(", ") });
+    }
+
+    if (isCleanString(contact.linkedin)) {
+      const cleanUrl = normalizeUrl(contact.linkedin);
+      if (cleanUrl) {
+        contactItems.push({ id: "linkedin", text: cleanUrl });
+      }
+    }
+
+    if (isCleanString(contact.website)) {
+      const cleanUrl = normalizeUrl(contact.website);
+      if (cleanUrl) {
+        contactItems.push({ id: "website", text: cleanUrl });
+      }
+    }
+
+    (contact.links || []).forEach((lnk) => {
+      if (isCleanString(lnk.url)) {
+        const cleanUrl = normalizeUrl(lnk.url);
+        if (cleanUrl) {
+          contactItems.push({ id: lnk.id, text: cleanUrl });
+        }
+      }
+    });
+
     return (
       <div
         ref={ref}
@@ -82,21 +152,19 @@ export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
             <p className="text-sm font-semibold text-gray-700 mt-1">{contact.headline}</p>
           )}
 
-          {/* Contact Line - Plain text for ATS parsers */}
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-gray-600 mt-2 font-medium">
-            {contact.email && <span>{contact.email}</span>}
-            {contact.phone && <span>• {contact.phone}</span>}
-            {(contact.city || contact.country) && (
-              <span>
-                • {[contact.city, contact.state, contact.country].filter(Boolean).join(", ")}
-              </span>
-            )}
-            {contact.linkedin && <span>• {contact.linkedin}</span>}
-            {contact.website && <span>• {contact.website}</span>}
-            {(contact.links || []).map((lnk) =>
-              lnk.url ? <span key={lnk.id}>• {lnk.url}</span> : null
-            )}
-          </div>
+          {/* Contact Line - Plain text for ATS parsers, trailing separators so wrapped lines never start with bullet */}
+          {contactItems.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center text-xs text-gray-600 mt-2 font-medium">
+              {contactItems.map((item, idx) => (
+                <span key={item.id} className="inline-flex items-center">
+                  <span>{item.text}</span>
+                  {idx < contactItems.length - 1 && (
+                    <span className="mx-2 text-gray-400 select-none">|</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
 
           {contact.workAuthorization && (
             <p className="text-[11px] text-gray-500 mt-1 italic">{contact.workAuthorization}</p>
@@ -121,7 +189,7 @@ export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
                 >
                   {def.atsHeading}
                 </h2>
-                <p className="text-xs sm:text-sm text-gray-800 leading-relaxed text-justify">
+                <p className="text-xs sm:text-sm text-gray-800 leading-relaxed text-left">
                   {summary}
                 </p>
               </section>
@@ -209,7 +277,7 @@ export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
                       </div>
                       {edu.grade && (
                         <p className="text-[11px] text-gray-600 font-medium">
-                          <strong>Grade:</strong> {edu.grade}
+                          <strong>Grade / Performance:</strong> {formatGrade(edu.grade)}
                         </p>
                       )}
                       {edu.highlights && edu.highlights.filter(Boolean).length > 0 && (

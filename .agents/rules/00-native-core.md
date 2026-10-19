@@ -8,9 +8,9 @@ description: Core rules for a native Android 15/16 look and feel in a Next.js + 
 Files in this set: 00 core (this), 01 design tokens, 02 components, 03 navigation, insets, gestures, 04 performance, accessibility, quality gate. Read 00 always. Read the others when the task touches them.
 
 ## 0. Hard guardrails
-- DO NOT install, upgrade, remove or set up anything. No new packages, UI kits, plugins, fonts, icon sets, generators, or config regeneration. Work only inside the existing project.
-- DO NOT edit native Android project files, manifest, Gradle files or Capacitor config unless the task names them. If a native change would help, list it in the final report as a recommendation.
-- If a needed capability is missing, build it from the existing code and tokens. If that is impossible, report the gap. Never add a dependency silently.
+- Packages & Plugins: Installing NPM packages and Capacitor plugins (e.g., `@capacitor/filesystem`, native device APIs) is permitted and required when needed to implement mobile integration, native features, and web capabilities. Run `npx cap sync` to synchronize plugins with native platforms.
+- Native Android build files: DO NOT manually edit internal native Android project files, `AndroidManifest.xml`, Gradle scripts, or native generated build artifacts unless the task explicitly names them. Let Capacitor manage native plugin linkage.
+- Visual components: Maintain the single in-house Material 3 Expressive token & component layer; do not install competing visual UI kits that duplicate or conflict with design tokens.
 - Do not change business logic, API contracts, data models or auth while restyling. UI and UX only.
 - Work audit-first: read the screen, list issues by severity (critical, high, medium, low), then fix in that order.
 
