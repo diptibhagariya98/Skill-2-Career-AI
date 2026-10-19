@@ -533,7 +533,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
     const toastId = toast.loading("Generating your PDF…");
 
     try {
-      const element = offscreenPrintRef.current || previewPrintRef.current;
+      const element = previewPrintRef.current || offscreenPrintRef.current;
       if (!element) {
         throw new Error("Resume preview not found. Switch to Preview tab and try again.");
       }
@@ -549,13 +549,16 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
         .replace(/^_|_$/g, "");
       const filename = cleanName ? `${cleanName}_Resume.pdf` : "Resume.pdf";
 
-      // Always output a Blob — never call .save() which triggers a browser download that
-      // does nothing inside Android's WebView.
+      // Native devices use scale 1.5 to prevent high-DPI GPU canvas allocation OOM crashes
       const opt = {
         margin: 0,
         filename,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        image: { type: "jpeg" as const, quality: 0.95 },
+        html2canvas: {
+          scale: isNative() ? 1.5 : 2,
+          useCORS: false,
+          logging: false,
+        },
         jsPDF: {
           unit: "mm",
           format: resume.meta.pageSize === "Letter" ? "letter" : "a4",

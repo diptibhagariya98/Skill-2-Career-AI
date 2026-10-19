@@ -10,6 +10,10 @@ export * from "./browser";
 export * from "./preferences";
 export * from "./keyboard";
 export * from "./NativeAppProvider";
+export * from "./dialogs";
+export * from "./speech";
+export * from "./speechRecognition";
+export * from "./notifications";
 
 /**
  * Feature capability detector (Rule 08 Platform Wrapper Contract)
@@ -24,12 +28,15 @@ export function has(capability: string): boolean {
     case "haptics":
     case "backButton":
     case "preferences":
+    case "dialog":
+    case "toast":
+    case "tts":
+    case "stt":
+    case "notifications":
       return true;
     case "voice":
-      // Web speech is only supported in browser, not Android WebView
-      return typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+      return true;
     default:
       return false;
   }
 }
-

@@ -81,6 +81,30 @@ export async function savePdfAndShare(
       });
 
       const fileUri = writeResult.uri;
+
+      // 1. Try native FileOpener first to open PDF in the system's preferred PDF viewer
+      let openedWithNativeViewer = false;
+      try {
+        const { FileOpener } = await import("@capawesome-team/capacitor-file-opener");
+        await FileOpener.openFile({
+          path: fileUri,
+          mimeType: "application/pdf",
+        });
+        openedWithNativeViewer = true;
+      } catch (openerErr: unknown) {
+        console.warn("[savePdf] FileOpener not available or no viewer, falling back to Share:", openerErr);
+      }
+
+      if (openedWithNativeViewer) {
+        return {
+          ok: true,
+          delivered: true,
+          filename: safeFilename,
+          message: `Opened ${safeFilename} in PDF viewer`,
+        };
+      }
+
+      // 2. Fallback to native Android Share Sheet (files array ONLY, do NOT pass url with local files)
       const canShare = await Share.canShare();
 
       if (canShare.value) {
@@ -88,7 +112,6 @@ export async function savePdfAndShare(
           await Share.share({
             title: safeFilename,
             text: options.shareText || "ResuMentor Career Document",
-            url: fileUri,
             files: [fileUri],
             dialogTitle: options.dialogTitle || `Save or share ${safeFilename}`,
           });

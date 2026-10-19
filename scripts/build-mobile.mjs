@@ -198,9 +198,10 @@ async function main() {
   try {
     stubRoutes();
 
-    console.log("[build:mobile] Cleaning previous static export directory...");
+    console.log("[build:mobile] Cleaning previous static export directory and .next cache...");
     const outDir = path.join(projectRoot, "out");
     safeCleanDir(outDir);
+    safeCleanDir(path.join(projectRoot, ".next"));
 
     console.log("[build:mobile] Starting Next.js static export build (BUILD_TARGET=mobile)...");
     await runNodeScript(nextBin, ["build"], { BUILD_TARGET: "mobile" });

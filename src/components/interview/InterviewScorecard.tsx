@@ -17,7 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { InterviewScorecardData } from "../../types/interview";
-import { savePdfAndShare, hapticSuccess } from "@/shared/platform";
+import { savePdfAndShare, hapticSuccess, isNative } from "@/shared/platform";
 import { toast } from "react-hot-toast";
 
 interface InterviewScorecardProps {
@@ -70,8 +70,8 @@ export default function InterviewScorecard({
       const opt = {
         margin: [10, 10, 10, 10],
         filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: isNative() ? 1.5 : 2, useCORS: false, logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
