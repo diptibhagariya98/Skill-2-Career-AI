@@ -9,6 +9,7 @@ android/keystore.properties
 
 # testing
 /coverage
+scripts/artifacts/
 
 # next.js
 /.next/

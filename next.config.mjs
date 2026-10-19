@@ -3,6 +3,9 @@ const isMobile = process.env.BUILD_TARGET === "mobile";
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverComponentsExternalPackages: ["puppeteer-core", "@sparticuz/chromium-min"],
+  },
   ...(isMobile
     ? {
         output: "export",

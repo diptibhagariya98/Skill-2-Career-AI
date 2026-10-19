@@ -31,6 +31,7 @@ export const API_ROUTES = {
   AUTH_VERIFY_OTP: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/auth-verify-otp` : `${API_BASE}/api/auth/verify-otp`,
   AUTH_RESEND_OTP: isUsingEdge ? `${SUPABASE_FUNCTIONS_BASE}/auth-send-otp` : `${API_BASE}/api/auth/resend-otp`,
   AUTH_REGISTER: `${API_BASE}/api/auth/register`,
+  RESUME_EXPORT: `${API_BASE}/api/resumes/export`,
 } as const;
 
 export type ApiRouteKey = keyof typeof API_ROUTES;
