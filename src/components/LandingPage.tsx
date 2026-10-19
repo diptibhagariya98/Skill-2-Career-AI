@@ -647,7 +647,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 border-t border-gray-800 mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-500">
           <p>© {new Date().getFullYear()} ResuMentor. All rights reserved.</p>
           <p className="font-semibold text-gray-400">
-            Built by Saikiran Rudra
+            Built by Manish
           </p>
         </div>
       </footer>

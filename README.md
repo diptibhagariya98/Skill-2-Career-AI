@@ -90,7 +90,7 @@ graph TB
 
 > A **User** is anyone who signs up with their email. Here is everything you can do after logging in:
 
-```
+```text
 User Journey
 ─────────────────────────────────────────────────────────────────
 
@@ -139,7 +139,7 @@ User Journey
 > A **Super Admin** is a special account (usually the platform owner or administrator).
 > The admin has access to an extra Control Center that regular users never see.
 
-```
+```text
 Admin Control Center (only visible after admin login)
 ─────────────────────────────────────────────────────────────────
 
@@ -197,7 +197,7 @@ Admin Control Center (only visible after admin login)
 - **Interactive Conversation**: Questions flow one by one, with follow-ups based on your answers — like a real interview.
 - **Mathematical Scoring**: Each answer is scored with a weighted formula:
 
-  ```
+  ```text
   Total Score = round(
     (Accuracy x 0.40) + (Context x 0.35) + (Confidence x 0.25)
   ) x 10
@@ -603,7 +603,7 @@ ResuMentor follows **Material 3 Expressive** — Google's official Android 15/16
 
 ## Contributors and Acknowledgements
 
-- **Lead Architect and Developer**: Saikiran Rudra
+- **Lead Architect and Developer**: Manish
 - **Core Contributors**: ResuMentor Team and Community Contributors
 - **Powered by**: Google Gemini API, Supabase, Next.js, and Capacitor
 
