@@ -11,6 +11,7 @@ import {
   Bot,
   CheckCircle2,
   AlertTriangle,
+  ChevronLeft,
   ChevronDown,
   ChevronUp,
   Award,
@@ -65,6 +66,7 @@ export default function InterviewThread({
   const [hasUnreadFeedback, setHasUnreadFeedback] = useState(false);
   const [sensitiveWarning, setSensitiveWarning] = useState<string | null>(null);
   const [showRationale, setShowRationale] = useState(false);
+  const [showScoreMethod, setShowScoreMethod] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [isListening, setIsListening] = useState(false);
 
@@ -72,9 +74,37 @@ export default function InterviewThread({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
 
-  // Reset rationale drawer on question change
+  // Trigger light haptic when instant feedback is revealed
+  useEffect(() => {
+    if (hasUnreadFeedback) {
+      hapticLight();
+    }
+  }, [hasUnreadFeedback]);
+
+  // Metric color helper: green for >=8, amber for 5-7, red for <5
+  const getMetricColor = (score: number) => {
+    if (score >= 8) return "text-emerald-700";
+    if (score >= 5) return "text-amber-700";
+    return "text-rose-700";
+  };
+
+  const getMetricBarColor = (score: number) => {
+    if (score >= 8) return "bg-emerald-500";
+    if (score >= 5) return "bg-amber-500";
+    return "bg-rose-500";
+  };
+
+  const getScoreBadge = (score: number) => {
+    if (score >= 85) return { label: "Strong answer", bg: "bg-emerald-100 text-emerald-800 border-emerald-200" };
+    if (score >= 70) return { label: "Good answer", bg: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    if (score >= 50) return { label: "Developing", bg: "bg-amber-100 text-amber-800 border-amber-200" };
+    return { label: "Needs practice", bg: "bg-rose-100 text-rose-800 border-rose-200" };
+  };
+
+  // Reset rationale and score info drawers on question change
   useEffect(() => {
     setShowRationale(false);
+    setShowScoreMethod(false);
   }, [currentIdx]);
 
   // Clean up voice transcription on unmount
@@ -348,32 +378,50 @@ export default function InterviewThread({
   };
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100dvh-64px)] sm:h-[calc(100dvh-76px)] bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-md sm:shadow-xl overflow-hidden relative">
-      {/* Top Header Bar - Structured 2-Row Layout to Eliminate Text Wrapping */}
-      <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-gray-50/95 backdrop-blur-xs border-b border-gray-200 shrink-0 space-y-2">
-        {/* Row 1: Question counter, Mode pill, Pause action & End button */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs sm:text-sm font-extrabold text-gray-900 whitespace-nowrap">
-              Question {currentIdx + 1} of {questions.length}
-            </span>
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
-                config.interviewMode === "full_ai"
-                  ? "bg-purple-100 text-purple-700 border border-purple-200"
-                  : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-              }`}
+    <div className="max-w-4xl mx-auto flex flex-col h-full bg-white rounded-none sm:rounded-3xl border-0 sm:border border-gray-200 shadow-none sm:shadow-xl overflow-hidden relative">
+      {/* Top Header Bar - Single Unified Native App Bar with Safe Area Inset */}
+      <div className="pt-[max(env(safe-area-inset-top,0px),0.75rem)] px-3 sm:px-5 pb-2.5 bg-white/95 backdrop-blur-md border-b border-gray-150 shrink-0 space-y-2">
+        <div className="flex items-center justify-between gap-2 min-h-[44px]">
+          {/* Back Chevron + Question Counter & Shortened Role Line */}
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => setShowEndModal(true)}
+              className="w-10 h-10 -ml-1 rounded-xl text-gray-700 hover:text-indigo-600 hover:bg-gray-100 transition-colors flex items-center justify-center shrink-0 min-w-[44px] min-h-[44px] active:scale-95"
+              aria-label="Exit or end interview session"
+              title="End interview"
             >
-              {config.interviewMode === "full_ai" ? "Smart AI" : "Quick Practice"}
-            </span>
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-extrabold text-gray-900 whitespace-nowrap">
+                  Question {currentIdx + 1} of {questions.length}
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+                    config.interviewMode === "full_ai"
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  {config.interviewMode === "full_ai" ? "Smart AI" : "Quick practice"}
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-500 font-medium truncate leading-tight">
+                {config.targetJobTitle} · {formatExperienceLevel(config.experienceLevel)}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Action Icons: 48px Pause & End Pill */}
+          <div className="flex items-center gap-1 shrink-0">
             {onPauseSession && (
               <button
                 type="button"
                 onClick={() => onPauseSession(turns)}
-                className="w-10 h-10 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-200/70 transition-colors flex items-center justify-center active:scale-95"
+                className="w-10 h-10 min-w-[44px] min-h-[44px] rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors flex items-center justify-center active:scale-95"
                 title="Pause and resume later"
                 aria-label="Pause interview session"
               >
@@ -383,152 +431,223 @@ export default function InterviewThread({
             <button
               type="button"
               onClick={() => setShowEndModal(true)}
-              className="px-3 py-1.5 min-h-[34px] rounded-lg border border-gray-300 text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 text-xs font-semibold transition-colors flex items-center gap-1 active:scale-95"
+              className="px-3 py-1.5 min-h-[38px] rounded-xl text-xs font-semibold text-gray-600 hover:text-rose-600 hover:bg-rose-50 border border-gray-200 transition-colors flex items-center gap-1 active:scale-95"
               aria-label="End interview"
             >
-              <StopCircle className="w-3.5 h-3.5" />
+              <StopCircle className="w-3.5 h-3.5 text-rose-500" />
               <span>End</span>
             </button>
           </div>
         </div>
 
-        {/* Row 2: Thin Segmented Progress Bar & Capitalized Role Target */}
-        <div className="space-y-1.5">
-          {/* Segmented thin progress indicator */}
-          <div
-            className="grid gap-1"
-            style={{ gridTemplateColumns: `repeat(${Math.max(questions.length, 1)}, minmax(0, 1fr))` }}
-          >
-            {questions.map((_, qIdx) => (
-              <div
-                key={qIdx}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  qIdx < currentIdx
-                    ? "bg-indigo-600"
-                    : qIdx === currentIdx
-                    ? "bg-indigo-500 shadow-xs"
-                    : "bg-gray-200"
-                }`}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between text-2xs text-gray-600 font-medium">
-            <span className="truncate">
-              Target: <strong className="text-gray-800 font-semibold">{config.targetJobTitle}</strong> · {formatExperienceLevel(config.experienceLevel)}
-            </span>
-            <span className="text-gray-500 shrink-0 hidden sm:inline">
-              ~2 min suggested
-            </span>
-          </div>
+        {/* Thin Segmented Progress Bar Integrated at Bottom of App Bar */}
+        <div
+          className="grid gap-1 pt-0.5"
+          style={{ gridTemplateColumns: `repeat(${Math.max(questions.length, 1)}, minmax(0, 1fr))` }}
+        >
+          {questions.map((_, qIdx) => (
+            <div
+              key={qIdx}
+              className={`h-1 rounded-full transition-all duration-300 ${
+                qIdx < currentIdx
+                  ? "bg-indigo-600"
+                  : qIdx === currentIdx
+                  ? "bg-indigo-500 shadow-xs"
+                  : "bg-gray-200"
+              }`}
+            />
+          ))}
         </div>
       </div>
 
-      {/* Conversation Thread Message Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+      {/* Conversation Thread Message Area (Hidden Scrollbars, Tonal Background) */}
+      <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-5 bg-slate-50/50 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {/* Previous Answered Turns */}
-        {turns.map((turn, idx) => (
-          <div key={turn.id} className="space-y-4">
-            {/* Interviewer Question Box */}
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5">
-                <Bot className="w-4 h-4" />
-              </div>
-              <div className="bg-gray-100/80 rounded-2xl p-4 max-w-[85%] text-gray-900 text-sm leading-relaxed border border-gray-200">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-2xs font-extrabold uppercase tracking-wider text-indigo-600">
-                    AI Interviewer
+        {turns.map((turn) => (
+          <div key={turn.id} className="space-y-3.5">
+            {/* Interviewer Question Bubble (Full Width, No Avatar Overhead) */}
+            <div className="mr-auto w-full max-w-[94%] sm:max-w-[85%] bg-white rounded-2xl p-3.5 sm:p-4 text-gray-900 text-sm leading-relaxed border border-gray-150/70 shadow-2xs">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[11px] font-semibold text-indigo-700">
+                  AI Interviewer
+                </span>
+                {turn.targetSkill && (
+                  <span className="text-[10px] font-medium px-2 py-0.5 bg-gray-100 text-gray-700 rounded-md">
+                    {turn.targetSkill}
                   </span>
-                  {turn.targetSkill && (
-                    <span className="text-2xs px-2 py-0.5 bg-white rounded-md text-gray-500 border border-gray-200">
-                      {turn.targetSkill}
-                    </span>
-                  )}
-                </div>
-                <p className="font-medium">{turn.questionText}</p>
+                )}
               </div>
+              <p className="font-medium text-gray-900">{turn.questionText}</p>
             </div>
 
-            {/* Candidate Answer Box */}
-            <div className="flex items-start gap-3 justify-end">
+            {/* Candidate Answer Bubble (Right-Aligned, No Avatar Squeeze) */}
+            <div className="ml-auto w-full max-w-[94%] sm:max-w-[85%] flex justify-end">
               <div
-                className={`rounded-2xl p-4 max-w-[85%] text-sm leading-relaxed ${
+                className={`rounded-2xl p-3.5 sm:p-4 text-sm leading-relaxed ${
                   turn.isSkipped
-                    ? "bg-amber-50 border border-amber-200 text-amber-800 italic"
+                    ? "bg-amber-50 border border-amber-200 text-amber-900 italic"
                     : "bg-indigo-600 text-white shadow-xs"
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1 justify-end">
-                  <span className={`text-2xs font-bold uppercase ${turn.isSkipped ? "text-amber-700" : "text-indigo-200"}`}>
-                    Your Response
+                  <span className={`text-[11px] font-medium ${turn.isSkipped ? "text-amber-700" : "text-indigo-200"}`}>
+                    Your response
                   </span>
                 </div>
                 <p className="whitespace-pre-wrap font-sans">{turn.userAnswer}</p>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-                <User className="w-4 h-4" />
               </div>
             </div>
 
             {/* Instant Feedback Card (Practice Mode) */}
             {turn.evaluation && config.feedbackTiming === "instant" && (
-              <div className="ml-11 max-w-[85%] bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 space-y-3 animate-in fade-in">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-indigo-900">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    Answer Score: {turn.evaluation.answerScore}/100
+              <div
+                className="w-full max-w-[94%] sm:max-w-[85%] mr-auto bg-indigo-50/70 rounded-2xl p-4 sm:p-5 space-y-3.5 border-0 shadow-2xs animate-fade-in"
+                aria-live="polite"
+              >
+                {/* Score Hero Section */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                        {turn.evaluation.answerScore}
+                      </span>
+                      <span className="text-xs font-semibold text-gray-500">/100</span>
+                    </div>
+                    {(() => {
+                      const badge = getScoreBadge(turn.evaluation.answerScore);
+                      return (
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${badge.bg}`}>
+                          {badge.label}
+                        </span>
+                      );
+                    })()}
                   </div>
-                  <span className="text-2xs text-indigo-600 font-semibold">
-                    {turn.evaluation.isAIEvaluated ? "Gemini Rubric" : "Key-Point Blend"}
-                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowScoreMethod((prev) => !prev)}
+                    className="text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 transition"
+                    title="How this score was calculated"
+                  >
+                    <span>Scoring info</span>
+                    {showScoreMethod ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
                 </div>
 
-                {/* 3 Dimension Chips */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-white p-2 rounded-xl border border-indigo-100 text-center">
-                    <span className="text-2xs text-gray-500 block">Accuracy (40%)</span>
-                    <span className="text-xs font-black text-indigo-700">
-                      {turn.evaluation.accuracyScore}/10
-                    </span>
+                {/* Expandable Scoring Method Explanation */}
+                {showScoreMethod && (
+                  <div className="p-2.5 bg-white rounded-xl border border-indigo-150 text-[11px] text-gray-600 leading-relaxed space-y-1 animate-fade-in">
+                    <div className="font-semibold text-gray-800">Standard assessment formula:</div>
+                    <p>
+                      Weighted 40% Accuracy, 35% Context, and 25% Confidence (rounded to nearest integer).
+                    </p>
+                    <p className="text-gray-500 text-[10px]">
+                      Method: {turn.evaluation.isAIEvaluated ? "Gemini Dynamic Rubric" : "Key-Point Benchmark Evaluation"}
+                    </p>
                   </div>
-                  <div className="bg-white p-2 rounded-xl border border-indigo-100 text-center">
-                    <span className="text-2xs text-gray-500 block">Confidence (25%)</span>
-                    <span className="text-xs font-black text-purple-700">
-                      {turn.evaluation.confidenceScore}/10
-                    </span>
+                )}
+
+                {/* 3 Dimension Metric Rows (replaces clipped 3-column tiles) */}
+                <div className="space-y-2 pt-0.5">
+                  {/* Accuracy Row */}
+                  <div className="bg-white rounded-xl p-2.5 space-y-1 border border-indigo-150/60 shadow-2xs">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-gray-800">Accuracy</span>
+                        <span className="text-[10px] text-gray-500 font-normal">· 40% weight</span>
+                      </div>
+                      <span className={`font-black text-xs ${getMetricColor(turn.evaluation.accuracyScore)}`}>
+                        {turn.evaluation.accuracyScore}/10
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${getMetricBarColor(turn.evaluation.accuracyScore)}`}
+                        style={{ width: `${Math.min(100, turn.evaluation.accuracyScore * 10)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="bg-white p-2 rounded-xl border border-indigo-100 text-center">
-                    <span className="text-2xs text-gray-500 block">Context (35%)</span>
-                    <span className="text-xs font-black text-emerald-700">
-                      {turn.evaluation.contextScore}/10
-                    </span>
+
+                  {/* Confidence Row */}
+                  <div className="bg-white rounded-xl p-2.5 space-y-1 border border-indigo-150/60 shadow-2xs">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-gray-800">Confidence</span>
+                        <span className="text-[10px] text-gray-500 font-normal">· 25% weight</span>
+                      </div>
+                      <span className={`font-black text-xs ${getMetricColor(turn.evaluation.confidenceScore)}`}>
+                        {turn.evaluation.confidenceScore}/10
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${getMetricBarColor(turn.evaluation.confidenceScore)}`}
+                        style={{ width: `${Math.min(100, turn.evaluation.confidenceScore * 10)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Context Row */}
+                  <div className="bg-white rounded-xl p-2.5 space-y-1 border border-indigo-150/60 shadow-2xs">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-gray-800">Context</span>
+                        <span className="text-[10px] text-gray-500 font-normal">· 35% weight</span>
+                      </div>
+                      <span className={`font-black text-xs ${getMetricColor(turn.evaluation.contextScore)}`}>
+                        {turn.evaluation.contextScore}/10
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${getMetricBarColor(turn.evaluation.contextScore)}`}
+                        style={{ width: `${Math.min(100, turn.evaluation.contextScore * 10)}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Bullets */}
+                {/* Bullets: What Went Well */}
                 {turn.evaluation.whatWentWell.length > 0 && (
-                  <div className="text-xs text-indigo-950 space-y-1">
-                    <span className="font-bold text-emerald-700 block">What went well:</span>
-                    <ul className="list-disc pl-4 space-y-0.5 text-gray-700 text-2xs">
+                  <div className="text-xs space-y-1">
+                    <span className="font-bold text-emerald-800 block">What went well:</span>
+                    <ul className="space-y-1 text-gray-700 text-xs pl-0.5">
                       {turn.evaluation.whatWentWell.map((pt, i) => (
-                        <li key={i}>{pt}</li>
+                        <li key={i} className="flex items-start gap-1.5 leading-relaxed">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                          <span>{pt}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>
                 )}
 
+                {/* Concept Context / Why this matters */}
+                {questions[turn.questionIndex - 1]?.contextOrScenario && (
+                  <div className="p-2.5 bg-white/80 rounded-xl border border-indigo-150/60 text-xs text-gray-700 space-y-0.5">
+                    <span className="font-bold text-indigo-900 block text-[11px]">Why this matters:</span>
+                    <p className="text-[11px] text-gray-600 leading-relaxed italic">
+                      {questions[turn.questionIndex - 1].contextOrScenario}
+                    </p>
+                  </div>
+                )}
+
+                {/* Bullets: What to Improve */}
                 {turn.evaluation.whatToImprove.length > 0 && (
-                  <div className="text-xs text-indigo-950 space-y-1">
-                    <span className="font-bold text-amber-700 block">What to improve:</span>
-                    <ul className="list-disc pl-4 space-y-0.5 text-gray-700 text-2xs">
+                  <div className="text-xs space-y-1">
+                    <span className="font-bold text-amber-800 block">What to improve:</span>
+                    <ul className="space-y-1 text-gray-700 text-xs pl-0.5">
                       {turn.evaluation.whatToImprove.map((pt, i) => (
-                        <li key={i}>{pt}</li>
+                        <li key={i} className="flex items-start gap-1.5 leading-relaxed">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                          <span>{pt}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>
                 )}
 
-                {/* Collapsible Stronger Outline */}
+                {/* Collapsible Model Answer Outline */}
                 {turn.evaluation.improvedAnswerOutline && (
                   <div>
                     <button
@@ -536,24 +655,24 @@ export default function InterviewThread({
                       onClick={() =>
                         setShowOutlineForTurnId((prev) => (prev === turn.id ? null : turn.id))
                       }
-                      className="text-2xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mt-1"
+                      className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 mt-1 transition"
                     >
                       {showOutlineForTurnId === turn.id ? (
                         <>
-                          <ChevronUp className="w-3.5 h-3.5" /> Hide Stronger Answer Outline
+                          <ChevronUp className="w-3.5 h-3.5" /> Hide Model Answer Outline
                         </>
                       ) : (
                         <>
-                          <ChevronDown className="w-3.5 h-3.5" /> Show Stronger Answer Outline
+                          <ChevronDown className="w-3.5 h-3.5" /> Show Model Answer Outline
                         </>
                       )}
                     </button>
                     {showOutlineForTurnId === turn.id && (
-                      <div className="mt-2 p-3 bg-white rounded-xl border border-indigo-100 text-2xs text-gray-700 space-y-1">
+                      <div className="mt-2 p-3 bg-white rounded-xl border border-indigo-150 text-xs text-gray-700 space-y-1.5 animate-fade-in">
                         {turn.evaluation.improvedAnswerOutline.map((step, idx) => (
                           <div key={idx} className="flex items-start gap-1.5">
-                            <span className="font-bold text-indigo-600">{idx + 1}.</span>
-                            <span>{step}</span>
+                            <span className="font-bold text-indigo-600 shrink-0">{idx + 1}.</span>
+                            <span className="leading-relaxed">{step}</span>
                           </div>
                         ))}
                       </div>
@@ -565,50 +684,45 @@ export default function InterviewThread({
           </div>
         ))}
 
-        {/* Current Active Question */}
+        {/* Current Active Question (No Avatar Overhead) */}
         {!hasUnreadFeedback && !openCompareData && currentQuestion && (
-          <div className="flex items-start gap-2.5 sm:gap-3 animate-in fade-in">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-              <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-            <div className="flex-1 bg-gradient-to-b from-indigo-50/90 to-indigo-50/50 rounded-2xl p-3.5 sm:p-5 text-gray-900 border border-indigo-150 shadow-xs max-w-[90%] sm:max-w-[85%] space-y-2">
-              {/* Stacked header: Chip on top, category caption below */}
-              <div className="space-y-0.5">
-                <span className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">
-                  AI Interviewer
+          <div className="mr-auto w-full max-w-[94%] sm:max-w-[85%] bg-gradient-to-b from-indigo-50/90 to-indigo-50/50 rounded-2xl p-4 sm:p-5 text-gray-900 border border-indigo-150/70 shadow-2xs space-y-2.5 animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-indigo-700">
+                AI Interviewer
+              </span>
+              {currentQuestion.skills[0] && (
+                <span className="text-[10px] font-medium px-2 py-0.5 bg-white text-gray-700 rounded-md border border-gray-200/80">
+                  {currentQuestion.skills[0]}
                 </span>
-                <div className="text-[11px] text-gray-600 font-medium truncate" title={currentQuestion.skills[0] || "Foundational Experience"}>
-                  {currentQuestion.skills[0] || "Foundational Experience"}
-                </div>
-              </div>
-
-              {/* Balanced typography for question text (Item 8) */}
-              <p className="text-sm sm:text-base font-semibold text-gray-900 leading-relaxed">
-                {currentQuestion.questionText}
-              </p>
-
-              {/* Collapsible Question Rationale / Scenario (Item 5) */}
-              {currentQuestion.contextOrScenario && (
-                <div className="pt-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowRationale((prev) => !prev)}
-                    className="flex items-center gap-1.5 text-2xs text-gray-600 hover:text-indigo-600 font-medium transition-colors"
-                    aria-label="Toggle question rationale"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5 text-indigo-500" />
-                    <span>Why this question?</span>
-                    {showRationale ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                  </button>
-
-                  {showRationale && (
-                    <div className="mt-1.5 p-2.5 bg-white/90 rounded-xl border border-indigo-100 text-xs text-gray-700 italic leading-relaxed animate-in fade-in">
-                      {currentQuestion.contextOrScenario}
-                    </div>
-                  )}
-                </div>
               )}
             </div>
+
+            <p className="text-sm sm:text-base font-semibold text-gray-900 leading-relaxed">
+              {currentQuestion.questionText}
+            </p>
+
+            {/* Collapsible Question Rationale / Scenario */}
+            {currentQuestion.contextOrScenario && (
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowRationale((prev) => !prev)}
+                  className="flex items-center gap-1.5 text-2xs text-gray-600 hover:text-indigo-600 font-medium transition-colors"
+                  aria-label="Toggle question rationale"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Why this question?</span>
+                  {showRationale ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+
+                {showRationale && (
+                  <div className="mt-1.5 p-2.5 bg-white/90 rounded-xl border border-indigo-100 text-xs text-gray-700 italic leading-relaxed animate-in fade-in">
+                    {currentQuestion.contextOrScenario}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -632,23 +746,6 @@ export default function InterviewThread({
           </div>
         )}
 
-        {/* Continue Button for Instant Feedback Read Time */}
-        {hasUnreadFeedback && (
-          <div className="p-4 bg-white rounded-2xl border border-indigo-200 shadow-sm flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-600">
-              Take a moment to review your feedback. When ready, proceed to the next question.
-            </span>
-            <button
-              type="button"
-              onClick={() => advanceToNextQuestion(turns)}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-all"
-            >
-              <span>{isLastQuestion ? "View Final Scorecard" : "Next Question"}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
         <div ref={messagesEndRef} />
       </div>
 
@@ -657,6 +754,35 @@ export default function InterviewThread({
         <div className="px-5 py-2 bg-red-50 border-t border-red-200 flex items-center gap-2 text-xs text-red-700 font-medium">
           <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
           <span>{sensitiveWarning}</span>
+        </div>
+      )}
+
+      {/* Docked Next Question Action Bar for Instant Feedback Read Time (Item 5) */}
+      {hasUnreadFeedback && (
+        <div className="p-3 sm:p-4 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] bg-white border-t border-gray-150 shrink-0 shadow-lg space-y-2 animate-fade-in">
+          <p className="text-[11px] text-gray-500 text-center font-medium">
+            Take a moment to review your feedback. When ready, continue.
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setHasUnreadFeedback(false);
+                setTurns((prev) => prev.slice(0, -1));
+              }}
+              className="px-4 py-3 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-100 active:scale-95 transition min-h-[48px] whitespace-nowrap"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              onClick={() => advanceToNextQuestion(turns)}
+              className="flex-1 min-h-[48px] px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm shadow-xs transition flex items-center justify-center gap-2"
+            >
+              <span className="whitespace-nowrap">{isLastQuestion ? "Finish interview" : "Next question"}</span>
+              <ArrowRight className="w-4 h-4 shrink-0" />
+            </button>
+          </div>
         </div>
       )}
 

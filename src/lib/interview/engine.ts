@@ -211,12 +211,19 @@ export function evaluateOpenAnswerDeterministic(
   const blendedScore = Math.round((automatedScore + userScore) / 2);
 
   // Derive 0-10 dimension scores
-  const accuracyScore = Math.min(10, Math.max(1, Math.round(blendedScore / 10)));
-  const confidenceScore = Math.min(10, Math.max(1, selfRatedConfidence * 2));
-  const contextScore = Math.min(
+  let accuracyScore = Math.min(10, Math.max(1, Math.round(blendedScore / 10)));
+  let confidenceScore = Math.min(10, Math.max(1, selfRatedConfidence * 2));
+  let contextScore = Math.min(
     10,
     Math.max(1, cleanAnswer.length > 200 ? accuracyScore : Math.max(2, accuracyScore - 1))
   );
+
+  // Guard against one-word / extremely brief answers (e.g. "useMemo")
+  const wordCount = cleanAnswer.split(/\s+/).filter(Boolean).length;
+  if (wordCount <= 3 || cleanAnswer.length < 25) {
+    confidenceScore = Math.min(confidenceScore, 4);
+    contextScore = Math.min(contextScore, 3);
+  }
 
   const finalAnswerScore = calculateAnswerScore({
     accuracy: accuracyScore,
@@ -237,7 +244,9 @@ export function evaluateOpenAnswerDeterministic(
   if (missedKp.length > 0) {
     whatToImprove.push(`Incorporate key concepts: ${missedKp.map((k) => k.point).slice(0, 2).join("; ")}.`);
   }
-  if (confidenceScore < 6) {
+  if (wordCount <= 3 || cleanAnswer.length < 25) {
+    whatToImprove.push("Expand brief keywords with practical use cases, constraints, and architectural tradeoffs.");
+  } else if (confidenceScore < 6) {
     whatToImprove.push("Use more decisive, proactive language ('I built', 'I decided').");
   }
 
@@ -271,14 +280,21 @@ export function evaluateChoiceQuestion(
 ): AnswerEvaluation {
   if (question.type === "multiple_choice_single") {
     const correctOpt = question.options?.find((o) => o.isCorrect);
-    const isCorrect = correctOpt && selectedOptionIds.includes(correctOpt.id);
-    const score = isCorrect ? 100 : 0;
-    const dimension = isCorrect ? 10 : 0;
+    const isCorrect = Boolean(correctOpt && selectedOptionIds.includes(correctOpt.id));
+    const accuracyScore = isCorrect ? 10 : 0;
+    // For a fully correct multiple-choice response, all 3 dimensions are 10 (yielding 100/100)
+    const confidenceScore = isCorrect ? 10 : 2;
+    const contextScore = isCorrect ? 10 : 0;
+    const score = calculateAnswerScore({
+      accuracy: accuracyScore,
+      confidence: confidenceScore,
+      context: contextScore,
+    });
 
     return {
-      accuracyScore: dimension,
-      confidenceScore: dimension > 0 ? 9 : 3,
-      contextScore: dimension,
+      accuracyScore,
+      confidenceScore,
+      contextScore,
       answerScore: score,
       reasons: {
         accuracy: isCorrect ? "Correct option selected." : "Selected incorrect answer.",
@@ -293,13 +309,20 @@ export function evaluateChoiceQuestion(
   if (question.type === "situational_judgement") {
     const selected = question.options?.find((o) => selectedOptionIds.includes(o.id));
     const rating = selected?.rating ?? 50;
-    const dim = Math.round(rating / 10);
+    const accuracyScore = Math.min(10, Math.max(0, Math.round(rating / 10)));
+    const confidenceScore = Math.min(10, Math.max(0, Math.round(rating / 10)));
+    const contextScore = Math.min(10, Math.max(0, Math.round(rating / 10)));
+    const score = calculateAnswerScore({
+      accuracy: accuracyScore,
+      confidence: confidenceScore,
+      context: contextScore,
+    });
 
     return {
-      accuracyScore: dim,
-      confidenceScore: Math.min(10, dim + 1),
-      contextScore: dim,
-      answerScore: rating,
+      accuracyScore,
+      confidenceScore,
+      contextScore,
+      answerScore: score,
       reasons: {
         accuracy: `Response rating evaluated at ${rating}%.`,
         confidence: "Demonstrated situational instincts.",
@@ -310,11 +333,16 @@ export function evaluateChoiceQuestion(
     };
   }
 
+  const defaultDim = 5;
   return {
-    accuracyScore: 5,
-    confidenceScore: 5,
-    contextScore: 5,
-    answerScore: 50,
+    accuracyScore: defaultDim,
+    confidenceScore: defaultDim,
+    contextScore: defaultDim,
+    answerScore: calculateAnswerScore({
+      accuracy: defaultDim,
+      confidence: defaultDim,
+      context: defaultDim,
+    }),
     reasons: {
       accuracy: "Answer recorded.",
       confidence: "Standard confidence.",

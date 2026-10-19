@@ -373,7 +373,7 @@ export default function Dashboard() {
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-7xl mx-auto flex flex-col min-w-0 overflow-x-hidden">
         {/* Compact Sticky Top App Header with Safe Area Notch padding */}
-        <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[56px] pt-[max(env(safe-area-inset-top,0px),0.5rem)] pb-2 ${activePage === "resume" ? "hidden md:flex" : "flex"} items-center justify-between shadow-xs`}>
+        <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[56px] pt-[max(env(safe-area-inset-top,0px),0.75rem)] pb-2 ${activePage === "resume" || isLiveInterviewSession ? "hidden md:flex" : "flex"} items-center justify-between shadow-xs`}>
           <div className="flex items-center gap-2 min-w-0">
             {activePage !== "dashboard" ? (
               <button
@@ -428,22 +428,24 @@ export default function Dashboard() {
                 {userData?.email || ""}
               </span>
             </div>
-            {userData?.photoURL ? (
-              <img
-                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full ring-2 ring-offset-1 ring-indigo-400 object-cover cursor-pointer hover:opacity-90 transition shadow-xs"
-                src={userData.photoURL}
-                alt={`${displayName}'s avatar`}
-                title="View Profile Settings"
-                onClick={() => setActivePage("profile")}
-              />
-            ) : (
-              <div
-                onClick={() => setActivePage("profile")}
-                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full ring-2 ring-offset-1 ring-indigo-400 bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm cursor-pointer hover:opacity-90 transition shadow-xs tracking-wide"
-                title="View Profile Settings"
-              >
-                {initials}
-              </div>
+            {!isLiveInterviewSession && (
+              userData?.photoURL ? (
+                <img
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-full ring-2 ring-offset-1 ring-indigo-400 object-cover cursor-pointer hover:opacity-90 transition shadow-xs"
+                  src={userData.photoURL}
+                  alt={`${displayName}'s avatar`}
+                  title="View Profile Settings"
+                  onClick={() => setActivePage("profile")}
+                />
+              ) : (
+                <div
+                  onClick={() => setActivePage("profile")}
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-full ring-2 ring-offset-1 ring-indigo-400 bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm cursor-pointer hover:opacity-90 transition shadow-xs tracking-wide"
+                  title="View Profile Settings"
+                >
+                  {initials}
+                </div>
+              )
             )}
           </div>
         </header>
