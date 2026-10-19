@@ -26,6 +26,8 @@ import {
   Check,
   ChevronRight,
   Maximize2,
+  Share2,
+  Printer,
 } from "lucide-react";
 import { useBackHandler, BackPriority, shareContent, isNative } from "@/shared/platform";
 
@@ -91,12 +93,44 @@ export default function LearnPractice({
     return false;
   });
 
+  // Native Share Helper for Roadmap Syllabi
+  const handleShareRoadmap = async (item: RoadmapItem) => {
+    const summaryText = `${item.title} Career Roadmap (${item.duration})\nLevel: ${item.level}\n\nMilestones:\n${item.milestones
+      .map((m) => `• ${m.phase} (${m.duration}): ${m.summary}`)
+      .join("\n")}\n\nVerified Curriculum from ResuMentor`;
+
+    const shared = await shareContent({
+      title: `${item.title} - Career Roadmap`,
+      text: summaryText,
+      dialogTitle: `Share ${item.title} Roadmap`,
+    });
+    if (shared) {
+      toast.success("Roadmap shared successfully");
+    }
+  };
+
   // Client-Side Robust Roadmap PDF Generator and Downloader
   const handleExportRoadmapPdf = async (item: RoadmapItem) => {
     setIsExportingRoadmap(true);
     const toastId = toast.loading(`Preparing ${item.fileName}...`);
     try {
-      // 1. Check if bundled static asset can be fetched directly as blob
+      if (isNative()) {
+        // Native mobile environment:
+        // Automatically open the formatted curriculum document
+        setSelectedRoadmapDetail(item);
+        setRoadmapModalView("document");
+
+        // Android WebView print spooler natively creates "Save as PDF" file
+        window.print();
+        toast.success(`Select 'Save as PDF' to save ${item.fileName}`, {
+          id: toastId,
+          duration: 4000,
+        });
+        setIsExportingRoadmap(false);
+        return;
+      }
+
+      // 1. Web Browser: Check if bundled static asset can be fetched directly as blob
       try {
         const response = await fetch(item.pdfUrl);
         if (response.ok) {
@@ -157,24 +191,25 @@ export default function LearnPractice({
     }
   };
 
-  // Robust PDF Download & Native Share Helper
-  const handleDownloadPdf = async (url: string, fileName: string) => {
+  // Robust PDF Download & Native Share Helper for Study Notes
+  const handleDownloadPdf = async (url: string, fileName: string, noteTitle?: string) => {
     const toastId = toast.loading(`Preparing ${fileName}...`);
     try {
       if (isNative()) {
-        const fullUrl = url.startsWith("http")
-          ? url
-          : `${typeof window !== "undefined" ? window.location.origin : ""}${url}`;
         const shared = await shareContent({
-          title: fileName,
-          text: `Download or open ${fileName}`,
-          url: fullUrl,
-          dialogTitle: `Save or Open ${fileName}`,
+          title: noteTitle || fileName,
+          text: `${noteTitle || fileName}\nVerified Study Notes & Curriculum Reference - ResuMentor`,
+          dialogTitle: `Share or Save ${fileName}`,
         });
         if (shared) {
-          toast.success("Ready to save or open", { id: toastId });
+          toast.success("Ready to save or share", { id: toastId });
           return;
         }
+
+        // Native print spooler fallback to save as PDF
+        window.print();
+        toast.success(`Select 'Save as PDF' to save ${fileName}`, { id: toastId, duration: 4000 });
+        return;
       }
 
       // Web Browser: fetch as blob and trigger download
@@ -768,10 +803,19 @@ export default function LearnPractice({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleExportRoadmapPdf(r);
+                        if (isNative()) {
+                          setSelectedRoadmapDetail(r);
+                          setRoadmapModalView("document");
+                          toast.success(
+                            `Opened ${r.title} — Tap 'Save as PDF' to save locally`,
+                            { duration: 3500 }
+                          );
+                        } else {
+                          handleExportRoadmapPdf(r);
+                        }
                       }}
                       className="py-3 px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-[0.99] text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[48px] min-w-[48px]"
-                      title="Download PDF File"
+                      title="Download or View PDF"
                     >
                       <Download className="w-4 h-4" />
                       <span className="text-[11px]">PDF</span>
@@ -996,23 +1040,39 @@ export default function LearnPractice({
                 </div>
 
                 {/* Modal Footer with 48px touch targets */}
-                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    disabled={isExportingRoadmap}
-                    onClick={() => handleExportRoadmapPdf(selectedRoadmapDetail)}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] transition shadow-xs min-h-[48px]"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>
-                      {isExportingRoadmap ? "Generating PDF…" : "Download Roadmap PDF"}
-                    </span>
-                  </button>
+                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2 flex-1">
+                    <button
+                      type="button"
+                      disabled={isExportingRoadmap}
+                      onClick={() => handleExportRoadmapPdf(selectedRoadmapDetail)}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] transition shadow-xs min-h-[48px]"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>
+                        {isNative()
+                          ? "Save as PDF"
+                          : isExportingRoadmap
+                          ? "Generating PDF…"
+                          : "Download PDF"}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleShareRoadmap(selectedRoadmapDetail)}
+                      className="py-3 px-3.5 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[48px] min-w-[48px] shadow-2xs"
+                      title="Share Roadmap"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Share</span>
+                    </button>
+                  </div>
 
                   <button
                     type="button"
                     onClick={() => setSelectedRoadmapDetail(null)}
-                    className="px-5 py-3 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-200 transition min-h-[48px]"
+                    className="px-4 py-3 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-200 transition min-h-[48px]"
                   >
                     Done
                   </button>
@@ -1394,7 +1454,7 @@ export default function LearnPractice({
       {selectedRoadmapDetail && (
         <div
           ref={roadmapPrintRef}
-          className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 w-[800px] z-[-100] bg-white p-8 text-gray-900 font-sans"
+          className="printable-document fixed -left-[9999px] top-0 pointer-events-none opacity-0 w-[800px] z-[-100] bg-white p-8 text-gray-900 font-sans"
           aria-hidden="true"
         >
           <div className="border-b-2 border-indigo-600 pb-4 mb-6">

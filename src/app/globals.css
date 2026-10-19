@@ -181,3 +181,55 @@ div[style*="z-index: 9999"] > div {
   pointer-events: auto !important;
   margin-top: 4px;
 }
+
+/* =========================================================================
+   Global Print Stylesheet for Native Spooler & Browser Print-to-PDF
+   ========================================================================= */
+@media print {
+  /* Hide all app chrome, buttons, modals, and toasts */
+  header,
+  nav,
+  footer,
+  aside,
+  button,
+  .mobile-bottom-nav,
+  .no-print,
+  [data-no-print="true"],
+  div[data-hot-toast-container],
+  div[style*="z-index: 9999"] {
+    display: none !important;
+  }
+
+  /* Reset document flow and typography */
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    overflow: visible !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force offscreen printable container to format as clean A4 document */
+  .printable-document {
+    display: block !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1.5cm !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+  }
+
+  @page {
+    margin: 1.2cm;
+    size: A4 portrait;
+  }
+}

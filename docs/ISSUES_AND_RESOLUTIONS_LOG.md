@@ -561,3 +561,38 @@ This document serves as an immutable, timestamped record of every technical, bui
   3. `node scripts/test-back-navigation.mjs` &rarr; 17/17 PASSED.
   4. `npm test` &rarr; 49/49 PASSED.
 
+---
+
+### [ISSUE-020] Android WebView Silent Download Dropping & False Download Confirmation Toasts
+
+- **Date:** October 19, 2026
+- **Timestamp:** 12:20:00 IST
+- **Component / Subsystem:** `src/components/LearnPractice.tsx`, `src/app/globals.css`
+- **Severity:** High (Broken Core Export / Phantom Download Status / UX Integrity)
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  When tapping the "PDF" action button on Career Roadmap cards on Android, the app displayed a green confirmation toast: `Downloaded full-stack-roadmap.pdf`. However, no file was ever actually written or saved to the user's Android phone storage or `/Downloads` folder.
+- **Root Cause:**
+  1. Android WebView under Capacitor does not attach a native `DownloadListener` to synthetic `<a href="blob:..." download="...">` clicks by default. The WebView silently dropped the download event.
+  2. The frontend client code executed `link.click()` synchronously and immediately fired `toast.success("Downloaded...")` without checking whether the platform supported programmatic blob downloads.
+  3. When invoking the print fallback, there were no `@media print` rules, causing page chrome and toasts to obscure the printable syllabus.
+- **Resolution:**
+  1. **Platform Detection (`isNative()`):**
+     - On native Android (`isNative()`), decoupled from the broken `<a download>` mechanism to prevent phantom success toasts.
+     - When tapping "PDF" on a roadmap card on mobile, immediately opens the formatted in-app Curriculum Document syllabus and prompts: *"Opened [Track] — Tap 'Save as PDF' to save locally"*.
+  2. **Native Print Spooler Integration ("Save as PDF"):**
+     - Primary modal action on native mobile changed to **"Save as PDF"**, which triggers `window.print()`.
+     - In Android WebView, `window.print()` natively invokes the Android Print Spooler ("Save as PDF"), allowing the user to select their destination folder (`Downloads`, `Documents`, or `Drive`) and save the actual `.pdf` document.
+  3. **Native OS Share Integration:**
+     - Added a dedicated secondary **"Share"** button in the roadmap modal footer using `shareContent` (`@capacitor/share`), enabling candidates to share the complete structured syllabus via WhatsApp, Gmail, Drive, or Notes.
+  4. **Global Print Stylesheet (`src/app/globals.css`):**
+     - Added comprehensive `@media print` CSS rules: hides mobile bottom nav, buttons, toasts, and headers; sets clean white background, black typography, and formats `.printable-document` for clean A4 multi-page output.
+  5. **Study Notes Download Realignment:**
+     - Updated `handleDownloadPdf` in `LearnPractice.tsx` to use native share/spooler on Android and blob download on web without phantom success toasts.
+- **Verification:**
+  1. `npx tsc --noEmit` &rarr; 0 TypeScript errors (Strict Typing Policy: Zero `any`).
+  2. `npm test` &rarr; 49/49 PASSED, 0 FAILED.
+  3. `node scripts/test-back-navigation.mjs` &rarr; 17/17 PASSED, 0 FAILED.
+  4. `npm run build:mobile` &rarr; Static export of 15 pages and Capacitor Android sync succeeded with exit code 0.
+
+
