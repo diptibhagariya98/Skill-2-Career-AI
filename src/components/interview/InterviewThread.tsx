@@ -21,9 +21,18 @@ import {
   Mic,
   MicOff,
   HelpCircle,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { useBackHandler, BackPriority, hapticLight } from "@/shared/platform";
+import {
+  useBackHandler,
+  BackPriority,
+  hapticLight,
+  speakText,
+  stopSpeaking,
+  startSpeechListening,
+} from "@/shared/platform";
 import {
   BankQuestion,
   InterviewSetupConfig,
@@ -69,10 +78,11 @@ export default function InterviewThread({
   const [showScoreMethod, setShowScoreMethod] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const stopListeningRef = useRef<(() => void) | null>(null);
 
   // Trigger light haptic when instant feedback is revealed
   useEffect(() => {
@@ -101,16 +111,26 @@ export default function InterviewThread({
     return { label: "Needs practice", bg: "bg-rose-100 text-rose-800 border-rose-200" };
   };
 
-  // Reset rationale and score info drawers on question change
+  // Reset rationale, score info drawers, and stop speaking on question change
   useEffect(() => {
     setShowRationale(false);
     setShowScoreMethod(false);
+    stopSpeaking();
+    setIsSpeaking(false);
+    if (stopListeningRef.current) {
+      stopListeningRef.current();
+      stopListeningRef.current = null;
+      setIsListening(false);
+    }
   }, [currentIdx]);
 
-  // Clean up voice transcription on unmount
+  // Clean up voice transcription and TTS on unmount
   useEffect(() => {
     return () => {
-      recognitionRef.current?.stop();
+      stopSpeaking();
+      if (stopListeningRef.current) {
+        stopListeningRef.current();
+      }
     };
   }, []);
 
@@ -302,78 +322,53 @@ export default function InterviewThread({
     return level.charAt(0).toUpperCase() + level.slice(1);
   };
 
-  const handleToggleVoice = () => {
-    if (typeof window === "undefined") return;
-
-    interface SpeechResult {
-      [index: number]: { transcript: string };
-    }
-    interface SpeechEvent {
-      results: {
-        length: number;
-        [index: number]: SpeechResult;
-      };
-    }
-    interface SpeechRecInstance {
-      continuous: boolean;
-      interimResults: boolean;
-      lang: string;
-      onresult: (e: SpeechEvent) => void;
-      onerror: () => void;
-      onend: () => void;
-      start: () => void;
-      stop: () => void;
-    }
-
-    const windowWithSpeech = window as unknown as {
-      SpeechRecognition?: new () => SpeechRecInstance;
-      webkitSpeechRecognition?: new () => SpeechRecInstance;
-    };
-    const SpeechAPI = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
-
-    if (!SpeechAPI) {
-      toast("Voice transcription is not supported in this browser. Please type your answer.", { icon: "🎙️" });
-      return;
-    }
-
+  const handleToggleVoice = async () => {
     if (isListening) {
-      recognitionRef.current?.stop();
+      if (stopListeningRef.current) {
+        stopListeningRef.current();
+        stopListeningRef.current = null;
+      }
       setIsListening(false);
+      hapticLight();
       return;
     }
 
     try {
-      const rec = new SpeechAPI();
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = "en-US";
-
-      rec.onresult = (e: SpeechEvent) => {
-        let transcript = "";
-        for (let i = 0; i < e.results.length; i++) {
-          const item = e.results[i];
-          if (item && item[0]) {
-            transcript += item[0].transcript + " ";
-          }
-        }
-        if (transcript.trim()) {
+      const stopFn = await startSpeechListening((result) => {
+        if (result.transcript?.trim()) {
           setUserText((prev) => {
             const sep = prev.length > 0 && !prev.endsWith(" ") ? " " : "";
-            return prev + sep + transcript.trim();
+            return prev + sep + result.transcript.trim();
           });
         }
-      };
+      });
 
-      rec.onerror = () => setIsListening(false);
-      rec.onend = () => setIsListening(false);
-
-      rec.start();
-      recognitionRef.current = rec;
+      stopListeningRef.current = stopFn;
       setIsListening(true);
       hapticLight();
       toast.success("Listening... speak your response", { duration: 2500 });
-    } catch {
+    } catch (err: unknown) {
+      console.warn("Speech listening error:", err);
       setIsListening(false);
+      toast("Voice transcription not available. Please type your response.", { icon: "🎙️" });
+    }
+  };
+
+  const handleToggleTTS = async () => {
+    if (isSpeaking) {
+      await stopSpeaking();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!currentQuestion?.questionText) return;
+
+    setIsSpeaking(true);
+    hapticLight();
+    const success = await speakText({ text: currentQuestion.questionText });
+    setIsSpeaking(false);
+    if (!success) {
+      toast("Audio playback not supported.", { icon: "🔊" });
     }
   };
 
@@ -687,15 +682,36 @@ export default function InterviewThread({
         {/* Current Active Question (No Avatar Overhead) */}
         {!hasUnreadFeedback && !openCompareData && currentQuestion && (
           <div className="mr-auto w-full max-w-[94%] sm:max-w-[85%] bg-gradient-to-b from-indigo-50/90 to-indigo-50/50 rounded-2xl p-4 sm:p-5 text-gray-900 border border-indigo-150/70 shadow-2xs space-y-2.5 animate-fade-in">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-indigo-700">
-                AI Interviewer
-              </span>
-              {currentQuestion.skills[0] && (
-                <span className="text-[10px] font-medium px-2 py-0.5 bg-white text-gray-700 rounded-md border border-gray-200/80">
-                  {currentQuestion.skills[0]}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-indigo-700">
+                  AI Interviewer
                 </span>
-              )}
+                {currentQuestion.skills[0] && (
+                  <span className="text-[10px] font-medium px-2 py-0.5 bg-white text-gray-700 rounded-md border border-gray-200/80">
+                    {currentQuestion.skills[0]}
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleTTS}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition border min-h-[32px] active:scale-95 ${
+                  isSpeaking
+                    ? "bg-indigo-600 text-white border-indigo-700 shadow-xs animate-pulse"
+                    : "bg-white text-indigo-700 border-indigo-200/80 hover:bg-indigo-50"
+                }`}
+                title={isSpeaking ? "Stop reading aloud" : "Listen to question aloud"}
+                aria-label={isSpeaking ? "Stop reading aloud" : "Listen to question aloud"}
+              >
+                {isSpeaking ? (
+                  <VolumeX className="w-3.5 h-3.5" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5" />
+                )}
+                <span>{isSpeaking ? "Stop" : "Listen"}</span>
+              </button>
             </div>
 
             <p className="text-sm sm:text-base font-semibold text-gray-900 leading-relaxed">
