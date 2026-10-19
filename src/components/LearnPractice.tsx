@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "react-hot-toast";
 import {
   ArrowLeft,
@@ -74,21 +74,12 @@ export default function LearnPractice({
   // Roadmap Detail View State
   const [selectedRoadmapDetail, setSelectedRoadmapDetail] = useState<RoadmapItem | null>(null);
   const [completedMilestones, setCompletedMilestones] = useState<Record<string, boolean>>({});
+  const [roadmapModalView, setRoadmapModalView] = useState<"milestones" | "document">("milestones");
+  const [isExportingRoadmap, setIsExportingRoadmap] = useState(false);
+  const roadmapPrintRef = useRef<HTMLDivElement>(null);
 
-  // In-App PDF Viewer Modal State
-  const [activePdfViewer, setActivePdfViewer] = useState<{
-    title: string;
-    url: string;
-    fileName: string;
-    size?: string;
-  } | null>(null);
-
-  // Register Back Handler for PDF Viewer, Detail Modal & Subpages
+  // Register Back Handler for Detail Modal & Subpages
   useBackHandler(BackPriority.OVERLAY, () => {
-    if (activePdfViewer) {
-      setActivePdfViewer(null);
-      return true;
-    }
     if (selectedRoadmapDetail) {
       setSelectedRoadmapDetail(null);
       return true;
@@ -99,6 +90,72 @@ export default function LearnPractice({
     }
     return false;
   });
+
+  // Client-Side Robust Roadmap PDF Generator and Downloader
+  const handleExportRoadmapPdf = async (item: RoadmapItem) => {
+    setIsExportingRoadmap(true);
+    const toastId = toast.loading(`Preparing ${item.fileName}...`);
+    try {
+      // 1. Check if bundled static asset can be fetched directly as blob
+      try {
+        const response = await fetch(item.pdfUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          if (blob.size > 1000) {
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = item.fileName;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+            toast.success(`Downloaded ${item.fileName}`, { id: toastId });
+            setIsExportingRoadmap(false);
+            return;
+          }
+        }
+      } catch (fetchErr) {
+        console.warn("Direct file fetch fallback", fetchErr);
+      }
+
+      // 2. Client-side dynamic PDF generation via html2pdf
+      const html2pdf = (await import("html2pdf.js")).default;
+      const element = roadmapPrintRef.current;
+      if (!element) throw new Error("Printable template not found.");
+
+      const opt = {
+        margin: 0.4,
+        filename: item.fileName,
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: "in", format: "a4", orientation: "portrait" as const },
+      };
+
+      const worker = html2pdf().from(element).set(opt);
+      const pdfBlob = (await worker.outputPdf("blob")) as Blob;
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = item.fileName;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+      toast.success(`Downloaded ${item.fileName}`, { id: toastId });
+    } catch (err: unknown) {
+      console.warn("Export fallback to print", err);
+      window.print();
+      toast.success(`Print preview opened for ${item.title}`, { id: toastId });
+    } finally {
+      setIsExportingRoadmap(false);
+    }
+  };
 
   // Robust PDF Download & Native Share Helper
   const handleDownloadPdf = async (url: string, fileName: string) => {
@@ -293,7 +350,7 @@ export default function LearnPractice({
     {
       id: "ai-engineer",
       title: "AI & Machine Learning Engineer",
-      badge: "High Growth",
+      badge: "High growth",
       badgeColor: "bg-purple-100 text-purple-700 border-purple-200",
       icon: Cpu,
       duration: "6–8 Months",
@@ -352,7 +409,7 @@ export default function LearnPractice({
     {
       id: "frontend",
       title: "Frontend UI/UX Specialist",
-      badge: "Core Track",
+      badge: "Core track",
       badgeColor: "bg-emerald-100 text-emerald-700 border-emerald-200",
       icon: Layout,
       duration: "3–5 Months",
@@ -411,7 +468,7 @@ export default function LearnPractice({
     {
       id: "backend",
       title: "Backend & Systems Architect",
-      badge: "Enterprise",
+      badge: "Enterprise systems",
       badgeColor: "bg-blue-100 text-blue-700 border-blue-200",
       icon: Server,
       duration: "4–6 Months",
@@ -633,13 +690,17 @@ export default function LearnPractice({
               return (
                 <div
                   key={r.id}
-                  className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                  onClick={() => {
+                    setSelectedRoadmapDetail(r);
+                    setRoadmapModalView("milestones");
+                  }}
+                  className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer active:scale-[0.99]"
                 >
                   <div>
-                    {/* Top Row: Single-line badge pill & duration */}
+                    {/* Top Row: Sentence-case micro-pill & duration */}
                     <div className="flex items-center justify-between gap-2 mb-2.5">
                       <span
-                        className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border whitespace-nowrap ${r.badgeColor}`}
+                        className={`text-[11px] font-semibold tracking-normal px-2.5 py-0.5 rounded-full border whitespace-nowrap ${r.badgeColor}`}
                       >
                         {r.badge}
                       </span>
@@ -688,39 +749,32 @@ export default function LearnPractice({
                     </div>
                   </div>
 
-                  {/* Actions: Milestones + View PDF + Download */}
+                  {/* Actions: View Roadmap (Primary 48px) + Download PDF (Secondary 48px) */}
                   <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                     <button
                       type="button"
-                      onClick={() => setSelectedRoadmapDetail(r)}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 min-h-[42px]"
-                    >
-                      <Layers className="w-4 h-4" />
-                      <span>Milestones</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActivePdfViewer({
-                          title: r.title,
-                          url: r.pdfUrl,
-                          fileName: r.fileName,
-                          size: "Official Roadmap",
-                        })
-                      }
-                      className="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-[0.99] text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[42px]"
-                      title="View PDF Document"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRoadmapDetail(r);
+                        setRoadmapModalView("milestones");
+                      }}
+                      className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 min-h-[48px]"
                     >
                       <Eye className="w-4 h-4" />
-                      <span>View PDF</span>
+                      <span>View Roadmap</span>
+                      <ChevronRight className="w-4 h-4 ml-auto text-indigo-200" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDownloadPdf(r.pdfUrl, r.fileName)}
-                      className="p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 active:scale-[0.99] text-gray-700 border border-gray-200 font-bold text-xs transition flex items-center justify-center min-h-[42px] min-w-[42px]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleExportRoadmapPdf(r);
+                      }}
+                      className="py-3 px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-[0.99] text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[48px] min-w-[48px]"
                       title="Download PDF File"
                     >
                       <Download className="w-4 h-4" />
+                      <span className="text-[11px]">PDF</span>
                     </button>
                   </div>
                 </div>
@@ -728,12 +782,15 @@ export default function LearnPractice({
             })}
           </div>
 
-          {/* Interactive In-App Roadmap Detail Modal */}
+          {/* Interactive In-App Roadmap Detail Sheet / Modal */}
           {selectedRoadmapDetail && (
-            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-fade-in">
-              <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-scale-up">
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+              <div className="bg-white w-full max-w-2xl max-h-[92vh] sm:max-h-[88vh] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-scale-up">
+                {/* Mobile Drag Handle */}
+                <div className="w-8 h-1 bg-gray-300 rounded-full mx-auto my-2 sm:hidden" />
+
                 {/* Modal Header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 bg-gradient-to-r from-gray-50 to-indigo-50/30">
+                <div className="px-5 py-3.5 border-b border-gray-100 flex items-start justify-between gap-3 bg-gradient-to-r from-gray-50 to-indigo-50/30">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                       {selectedRoadmapDetail.icon && (
@@ -741,9 +798,9 @@ export default function LearnPractice({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
                         <span
-                          className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border whitespace-nowrap ${selectedRoadmapDetail.badgeColor}`}
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap ${selectedRoadmapDetail.badgeColor}`}
                         >
                           {selectedRoadmapDetail.badge}
                         </span>
@@ -767,126 +824,195 @@ export default function LearnPractice({
                   </button>
                 </div>
 
-                {/* Modal Scrollable Body */}
-                <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed bg-gray-50 p-3.5 rounded-xl border border-gray-150">
-                    {selectedRoadmapDetail.description}
-                  </p>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
-                        Curriculum Phases & Milestones
-                      </h4>
-                      <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
-                        {
-                          selectedRoadmapDetail.milestones.filter(
-                            (_, idx) => completedMilestones[`${selectedRoadmapDetail.id}_${idx}`]
-                          ).length
-                        }{" "}
-                        of {selectedRoadmapDetail.milestones.length} completed
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      {selectedRoadmapDetail.milestones.map((m, idx) => {
-                        const isDone = Boolean(
-                          completedMilestones[`${selectedRoadmapDetail.id}_${idx}`]
-                        );
-                        return (
-                          <div
-                            key={idx}
-                            onClick={() => toggleMilestone(selectedRoadmapDetail.id, idx)}
-                            className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                              isDone
-                                ? "bg-indigo-50/50 border-indigo-200"
-                                : "bg-white border-gray-200 hover:border-gray-300 shadow-2xs"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div
-                                className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 border transition ${
-                                  isDone
-                                    ? "bg-indigo-600 border-indigo-600 text-white"
-                                    : "border-gray-300 bg-white"
-                                }`}
-                              >
-                                {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2 flex-wrap">
-                                  <h5
-                                    className={`text-xs sm:text-sm font-bold ${
-                                      isDone ? "text-indigo-950 line-through" : "text-gray-900"
-                                    }`}
-                                  >
-                                    {m.phase}
-                                  </h5>
-                                  <span className="text-[11px] font-semibold text-gray-500">
-                                    {m.duration}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                  {m.summary}
-                                </p>
-                                <div className="flex flex-wrap gap-1 mt-2.5">
-                                  {m.topics.map((t, ti) => (
-                                    <span
-                                      key={ti}
-                                      className="text-[10px] font-medium bg-gray-100 text-gray-700 px-2 py-0.5 rounded"
-                                    >
-                                      {t}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                {/* Segmented View Switcher: Interactive Milestones vs Curriculum Document */}
+                <div className="flex p-1 bg-gray-100 rounded-xl mx-5 mt-3 mb-1">
+                  <button
+                    type="button"
+                    onClick={() => setRoadmapModalView("milestones")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                      roadmapModalView === "milestones"
+                        ? "bg-white text-indigo-700 shadow-2xs"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Interactive Milestones
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRoadmapModalView("document")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                      roadmapModalView === "document"
+                        ? "bg-white text-indigo-700 shadow-2xs"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Curriculum Document
+                  </button>
                 </div>
 
-                {/* Modal Footer */}
-                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const target = selectedRoadmapDetail;
-                        setSelectedRoadmapDetail(null);
-                        setActivePdfViewer({
-                          title: target.title,
-                          url: target.pdfUrl,
-                          fileName: target.fileName,
-                          size: "Official Roadmap",
-                        });
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>View Official PDF</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleDownloadPdf(
-                          selectedRoadmapDetail.pdfUrl,
-                          selectedRoadmapDetail.fileName
-                        )
-                      }
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 border border-gray-200 transition"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download</span>
-                    </button>
-                  </div>
+                {/* Modal Scrollable Body */}
+                <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+                  {roadmapModalView === "milestones" ? (
+                    <>
+                      <p className="text-xs sm:text-sm text-gray-700 leading-relaxed bg-gray-50 p-3.5 rounded-xl border border-gray-150">
+                        {selectedRoadmapDetail.description}
+                      </p>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                            Curriculum Phases & Milestones
+                          </h4>
+                          <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full">
+                            {
+                              selectedRoadmapDetail.milestones.filter(
+                                (_, idx) => completedMilestones[`${selectedRoadmapDetail.id}_${idx}`]
+                              ).length
+                            }{" "}
+                            of {selectedRoadmapDetail.milestones.length} completed
+                          </span>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-indigo-600 h-1.5 transition-all duration-300"
+                            style={{
+                              width: `${
+                                (selectedRoadmapDetail.milestones.filter(
+                                  (_, idx) => completedMilestones[`${selectedRoadmapDetail.id}_${idx}`]
+                                ).length /
+                                  selectedRoadmapDetail.milestones.length) *
+                                100
+                              }%`,
+                            }}
+                          />
+                        </div>
+
+                        <div className="space-y-3 pt-1">
+                          {selectedRoadmapDetail.milestones.map((m, idx) => {
+                            const isDone = Boolean(
+                              completedMilestones[`${selectedRoadmapDetail.id}_${idx}`]
+                            );
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() => toggleMilestone(selectedRoadmapDetail.id, idx)}
+                                className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                                  isDone
+                                    ? "bg-indigo-50/50 border-indigo-200"
+                                    : "bg-white border-gray-200 hover:border-gray-300 shadow-2xs"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div
+                                    className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 border transition ${
+                                      isDone
+                                        ? "bg-indigo-600 border-indigo-600 text-white"
+                                        : "border-gray-300 bg-white"
+                                    }`}
+                                  >
+                                    {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                      <h5
+                                        className={`text-xs sm:text-sm font-bold ${
+                                          isDone ? "text-indigo-950 line-through" : "text-gray-900"
+                                        }`}
+                                      >
+                                        {m.phase}
+                                      </h5>
+                                      <span className="text-[11px] font-semibold text-gray-500">
+                                        {m.duration}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                      {m.summary}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1 mt-2.5">
+                                      {m.topics.map((t, ti) => (
+                                        <span
+                                          key={ti}
+                                          className="text-[10px] font-medium bg-gray-100 text-gray-700 px-2 py-0.5 rounded"
+                                        >
+                                          {t}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* In-App Formatted Printable Curriculum Document */
+                    <div className="bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-200 space-y-5 text-gray-900">
+                      <div className="border-b border-gray-200 pb-3">
+                        <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+                          Verified Career Track Syllabus
+                        </span>
+                        <h4 className="text-base sm:text-lg font-black text-gray-900 mt-0.5">
+                          {selectedRoadmapDetail.title}
+                        </h4>
+                        <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                          {selectedRoadmapDetail.description}
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        {selectedRoadmapDetail.milestones.map((m, idx) => (
+                          <div key={idx} className="border-l-2 border-indigo-400 pl-3 py-1">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <h5 className="text-xs sm:text-sm font-bold text-gray-900">{m.phase}</h5>
+                              <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                                {m.duration}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 mb-2 leading-relaxed">{m.summary}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {m.topics.map((t, ti) => (
+                                <span
+                                  key={ti}
+                                  className="text-[10px] font-medium bg-white border border-gray-200 text-gray-700 px-2 py-0.5 rounded"
+                                >
+                                  • {t}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="pt-3 border-t border-gray-200 flex items-center justify-between text-[11px] text-gray-500">
+                        <span>Career Level: {selectedRoadmapDetail.level}</span>
+                        <span>Estimated: {selectedRoadmapDetail.duration}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer with 48px touch targets */}
+                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    disabled={isExportingRoadmap}
+                    onClick={() => handleExportRoadmapPdf(selectedRoadmapDetail)}
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] transition shadow-xs min-h-[48px]"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>
+                      {isExportingRoadmap ? "Generating PDF…" : "Download Roadmap PDF"}
+                    </span>
+                  </button>
 
                   <button
                     type="button"
                     onClick={() => setSelectedRoadmapDetail(null)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-200 transition"
+                    className="px-5 py-3 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-200 transition min-h-[48px]"
                   >
                     Done
                   </button>
@@ -951,27 +1077,20 @@ export default function LearnPractice({
                     </div>
                   </div>
 
-                  {/* Actions: View Notes + Download */}
+                  {/* Actions: Open Notes + Download (48px targets) */}
                   <div className="flex items-center gap-2 pt-2 border-t border-gray-100 mt-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        setActivePdfViewer({
-                          title: n.title,
-                          url: n.pdfUrl,
-                          fileName: n.fileName,
-                          size: n.size,
-                        })
-                      }
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 active:scale-[0.99] text-amber-900 border border-amber-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[42px]"
+                      onClick={() => handleDownloadPdf(n.pdfUrl, n.fileName)}
+                      className="flex-1 py-3 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 active:scale-[0.99] text-amber-900 border border-amber-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[48px]"
                     >
                       <Eye className="w-4 h-4" />
-                      <span>View Notes</span>
+                      <span>Open Notes</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDownloadPdf(n.pdfUrl, n.fileName)}
-                      className="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 min-h-[42px]"
+                      className="py-3 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 min-h-[48px]"
                       title="Download PDF Notes"
                     >
                       <Download className="w-4 h-4" />
@@ -1271,85 +1390,57 @@ export default function LearnPractice({
         </div>
       )}
 
-      {/* Interactive In-App PDF Viewer Modal */}
-      {activePdfViewer && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-5 animate-fade-in">
-          <div className="bg-white w-full max-w-4xl h-[92vh] sm:h-[88vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-scale-up">
-            {/* Viewer Header */}
-            <div className="px-4 sm:px-6 py-3.5 border-b border-gray-200 flex items-center justify-between gap-3 bg-gray-50/90">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4" />
+      {/* Dedicated Offscreen Printable Container for html2pdf Roadmap Generation */}
+      {selectedRoadmapDetail && (
+        <div
+          ref={roadmapPrintRef}
+          className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 w-[800px] z-[-100] bg-white p-8 text-gray-900 font-sans"
+          aria-hidden="true"
+        >
+          <div className="border-b-2 border-indigo-600 pb-4 mb-6">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
+                ResuMentor Official Career Roadmap
+              </span>
+              <span className="text-xs font-semibold text-gray-500">
+                {selectedRoadmapDetail.duration} · {selectedRoadmapDetail.level}
+              </span>
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 mb-1.5">
+              {selectedRoadmapDetail.title}
+            </h1>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              {selectedRoadmapDetail.description}
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {selectedRoadmapDetail.milestones.map((m, idx) => (
+              <div key={idx} className="border-l-2 border-indigo-300 pl-4 py-1">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h2 className="text-sm font-bold text-gray-900">{m.phase}</h2>
+                  <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                    {m.duration}
+                  </span>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-xs sm:text-sm text-gray-900 truncate">
-                    {activePdfViewer.title}
-                  </h3>
-                  {activePdfViewer.size && (
-                    <span className="text-[10px] font-semibold text-gray-500">
-                      {activePdfViewer.size}
+                <p className="text-xs text-gray-600 mb-2 leading-relaxed">{m.summary}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {m.topics.map((t, ti) => (
+                    <span
+                      key={ti}
+                      className="text-[10px] font-medium bg-gray-100 text-gray-800 px-2 py-0.5 rounded"
+                    >
+                      • {t}
                     </span>
-                  )}
+                  ))}
                 </div>
               </div>
+            ))}
+          </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => window.open(activePdfViewer.url, "_blank")}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 hover:text-indigo-600 hover:bg-gray-100 transition"
-                  title="Open in new window"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Fullscreen</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDownloadPdf(activePdfViewer.url, activePdfViewer.fileName)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-2xs"
-                  title="Download / Save PDF"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePdfViewer(null)}
-                  aria-label="Close PDF Viewer"
-                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition min-w-[36px] min-h-[36px] flex items-center justify-center"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Viewer Iframe Content */}
-            <div className="flex-1 bg-gray-100 relative overflow-hidden flex flex-col">
-              <iframe
-                src={`${activePdfViewer.url}#view=FitH&toolbar=1`}
-                className="w-full flex-1 border-0"
-                title={activePdfViewer.title}
-              />
-              <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-center text-[11px] text-gray-500">
-                Previewing official document. If inline preview is unsupported on your device, tap{" "}
-                <button
-                  type="button"
-                  onClick={() => window.open(activePdfViewer.url, "_blank")}
-                  className="font-bold text-indigo-600 hover:underline"
-                >
-                  Fullscreen
-                </button>{" "}
-                or{" "}
-                <button
-                  type="button"
-                  onClick={() => handleDownloadPdf(activePdfViewer.url, activePdfViewer.fileName)}
-                  className="font-bold text-indigo-600 hover:underline"
-                >
-                  Download
-                </button>
-                .
-              </div>
-            </div>
+          <div className="mt-8 pt-4 border-t border-gray-200 flex items-center justify-between text-[11px] text-gray-400">
+            <span>Generated by ResuMentor AI Career System</span>
+            <span>resumentor.app</span>
           </div>
         </div>
       )}

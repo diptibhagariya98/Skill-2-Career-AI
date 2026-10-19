@@ -484,6 +484,8 @@ This document serves as an immutable, timestamped record of every technical, bui
      - Limited skill tag display to 4 chips with a `+{N} more` counter.
      - Elevated contrast of all metadata and descriptions to WCAG AA 4.5:1+.
      - Promoted "View Roadmap" to primary action with an interactive slide-over curriculum detail modal with milestone checklists and `useBackHandler(BackPriority.OVERLAY)`. Relegated "Download PDF" to tonal secondary action.
+     - Added dual-mode In-App Roadmap Sheet: "Interactive Milestones" (with persistent topic checklists and progress bar) and "Curriculum Document" (crisp printable A4 syllabus eliminating blank iframe bugs on Android WebView).
+     - Integrated client-side `html2pdf.js` dynamic roadmap generator with `window.print()` fallback and programmatic blob download to guarantee reliable PDF exports across Android mobile and desktop browsers.
      - Added `pb-28 sm:pb-12` bottom clearance so cards never collide with mobile bottom navigation.
   2. **Guest Prefill Sanitization:**
      - In `schema.ts`: `createEmptyResume` detects guest placeholders and leaves `userName` and `userEmail` blank.
