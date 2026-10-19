@@ -71,7 +71,7 @@ export function WelcomeEmail({ name }: WelcomeEmailProps) {
                   borderRadius: "8px",
                 }}
               >
-                Go to Dashboard
+                Go to dashboard
               </Link>
             </td>
           </tr>

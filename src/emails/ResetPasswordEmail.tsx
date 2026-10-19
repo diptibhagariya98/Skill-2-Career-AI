@@ -44,13 +44,12 @@ export function ResetPasswordEmail({
           style={{
             margin: "0 0 4px",
             fontSize: "12px",
-            textTransform: "uppercase",
-            letterSpacing: "1px",
+            letterSpacing: "0.5px",
             fontWeight: 600,
             color: c.primary,
           }}
         >
-          Password Reset Code
+          Password reset code
         </Text>
         <Text
           style={{

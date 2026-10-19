@@ -199,7 +199,7 @@ export default function AdminConsole({ schemes }: AdminConsoleProps) {
             </h3>
             {evaluation && (
               <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase ${
+                className={`text-xs font-bold px-3 py-1 rounded-full capitalize ${
                   evaluation.classification === "eligible"
                     ? "bg-emerald-100 text-emerald-800"
                     : evaluation.classification === "check_details"

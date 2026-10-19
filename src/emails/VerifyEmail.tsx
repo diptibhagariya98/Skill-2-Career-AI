@@ -45,13 +45,12 @@ export function VerifyEmail({
           style={{
             margin: "0 0 4px",
             fontSize: "12px",
-            textTransform: "uppercase",
-            letterSpacing: "1px",
+            letterSpacing: "0.5px",
             fontWeight: 600,
             color: c.primary,
           }}
         >
-          One-Time Verification Code
+          One-time verification code
         </Text>
         <Text
           style={{

@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import Dashboard from "../../components/Dashboard";
+import Dashboard from "@/components/Dashboard";
 import { APP_ROUTES } from "@/constants/endpoints";
 import { SkeletonDashboard } from "@/shared/ui/Skeleton";
+import { STORAGE_KEYS } from "@/constants/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,8 @@ export default function DashboardPage() {
     const checkAccess = (sessionUser: unknown) => {
       const isGuest =
         typeof window !== "undefined" &&
-        (localStorage.getItem("resumentor_guest_mode") === "true" ||
-          sessionStorage.getItem("resumentor_guest_mode") === "true" ||
+        (localStorage.getItem(STORAGE_KEYS.GUEST_MODE) === "true" ||
+          sessionStorage.getItem(STORAGE_KEYS.GUEST_MODE) === "true" ||
           window.location.search.includes("guest=true"));
 
       if (!sessionUser && !isGuest) {
