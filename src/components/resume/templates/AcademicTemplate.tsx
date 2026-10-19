@@ -156,7 +156,7 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
                 {publications.map((pub, idx) => (
                   <div key={pub.id} className="page-break-avoid">
                     <p className="text-gray-900">
-                      [{idx + 1}] <strong>"{pub.title}"</strong>, <em>{pub.venue}</em>{pub.date ? `, ${pub.date}` : ""}.
+                      [{idx + 1}] <strong>&ldquo;{pub.title}&rdquo;</strong>, <em>{pub.venue}</em>{pub.date ? `, ${pub.date}` : ""}.
                       {pub.url && (
                         <a href={pub.url} className="ml-1 text-blue-700 hover:underline">
                           [Link]
