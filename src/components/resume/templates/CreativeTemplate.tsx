@@ -29,17 +29,17 @@ export function CreativeTemplate({ resume, accentColor }: TemplateProps) {
   const visibility = meta.sectionVisibility || {};
 
   return (
-    <div className="font-sans text-gray-900 leading-normal text-xs sm:text-sm">
+    <div className="font-sans text-gray-900 leading-normal text-xs">
       {/* High-Impact Top Banner Header */}
       <header
-        className="rounded-lg p-4 sm:p-5 text-white mb-4 shadow-sm"
+        className="rounded-lg p-5 text-white mb-4 shadow-sm"
         style={{ backgroundColor: accentColor }}
       >
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1">
+        <h1 className="text-2xl font-extrabold tracking-tight text-white mb-1">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
-          <p className="text-xs sm:text-sm font-medium text-white/90 tracking-wide uppercase mb-3">
+          <p className="text-xs font-medium text-white/90 tracking-wide uppercase mb-3">
             {contact.headline}
           </p>
         )}
@@ -76,7 +76,7 @@ export function CreativeTemplate({ resume, accentColor }: TemplateProps) {
                   {def.atsHeading}
                 </h2>
               </div>
-              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed pl-4 border-l-2 border-gray-200">
+              <p className="text-xs text-gray-700 leading-relaxed pl-4 border-l-2 border-gray-200">
                 {summary}
               </p>
             </section>

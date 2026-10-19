@@ -25,6 +25,17 @@ export type TemplateId =
   | "minimalist"
   | "creative";
 
+export const ACCENT_COLORS = [
+  { name: "Teal", hex: "#0f766e" },
+  { name: "Navy", hex: "#1e3a8a" },
+  { name: "Slate", hex: "#334155" },
+  { name: "Emerald", hex: "#047857" },
+  { name: "Burgundy", hex: "#881337" },
+  { name: "Charcoal", hex: "#1f2937" },
+  { name: "Royal Blue", hex: "#1d4ed8" },
+  { name: "Purple", hex: "#6b21a8" },
+];
+
 export enum ExportStatus {
   IDLE = "idle",
   PREPARING = "preparing",

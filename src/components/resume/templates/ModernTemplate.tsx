@@ -30,10 +30,10 @@ export function ModernTemplate({ resume, accentColor }: TemplateProps) {
   const visibility = meta.sectionVisibility || {};
 
   return (
-    <div className="font-sans text-gray-900 leading-normal text-xs sm:text-sm">
+    <div className="font-sans text-gray-900 leading-normal text-xs">
       {/* Modern Header: Left-aligned with accent indicator */}
       <header className="border-b-2 pb-3 mb-4" style={{ borderColor: accentColor }}>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 mb-0.5">
+        <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 mb-0.5">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
@@ -75,7 +75,7 @@ export function ModernTemplate({ resume, accentColor }: TemplateProps) {
               >
                 {def.atsHeading}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{summary}</p>
+              <p className="text-xs text-gray-700 leading-relaxed">{summary}</p>
             </section>
           );
         }
@@ -93,7 +93,7 @@ export function ModernTemplate({ resume, accentColor }: TemplateProps) {
               <div className="space-y-3">
                 {experience.map((exp) => (
                   <div key={exp.id} className="page-break-avoid">
-                    <div className="flex justify-between items-baseline font-bold text-gray-900 text-xs sm:text-sm">
+                    <div className="flex justify-between items-baseline font-bold text-gray-900 text-sm">
                       <span className="text-gray-900">{exp.title}</span>
                       <span className="text-xs font-medium text-gray-500">
                         {exp.startMonth} {exp.startYear} — {exp.isCurrent ? "Present" : `${exp.endMonth || ""} ${exp.endYear || ""}`}
@@ -129,7 +129,7 @@ export function ModernTemplate({ resume, accentColor }: TemplateProps) {
               <div className="space-y-2">
                 {education.map((edu) => (
                   <div key={edu.id} className="page-break-avoid">
-                    <div className="flex justify-between items-baseline text-xs sm:text-sm font-bold text-gray-900">
+                    <div className="flex justify-between items-baseline text-sm font-bold text-gray-900">
                       <span>{edu.institution}</span>
                       <span className="text-xs font-medium text-gray-500">
                         {edu.startMonth} {edu.startYear} — {edu.isExpected ? "Expected " : ""}{edu.endMonth || ""} {edu.endYear || ""}
@@ -195,7 +195,7 @@ export function ModernTemplate({ resume, accentColor }: TemplateProps) {
               <div className="space-y-2.5">
                 {projects.map((proj) => (
                   <div key={proj.id} className="page-break-avoid">
-                    <div className="flex justify-between items-baseline font-bold text-xs sm:text-sm text-gray-900">
+                    <div className="flex justify-between items-baseline font-bold text-sm text-gray-900">
                       <span>{proj.name}</span>
                       {proj.startYear && (
                         <span className="text-xs font-normal text-gray-500">

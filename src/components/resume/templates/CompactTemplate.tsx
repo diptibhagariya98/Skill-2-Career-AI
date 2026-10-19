@@ -32,7 +32,7 @@ export function CompactTemplate({ resume, accentColor }: TemplateProps) {
     <div className="font-sans text-gray-900 leading-tight text-xs">
       {/* High-Density Header */}
       <header className="border-b border-gray-400 pb-1.5 mb-2.5 text-center">
-        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 mb-0.5">
+        <h1 className="text-2xl font-black tracking-tight text-gray-900 mb-0.5">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (

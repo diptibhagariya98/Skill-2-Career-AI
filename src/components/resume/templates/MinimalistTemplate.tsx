@@ -29,14 +29,14 @@ export function MinimalistTemplate({ resume, accentColor }: TemplateProps) {
   const visibility = meta.sectionVisibility || {};
 
   return (
-    <div className="font-sans text-gray-800 leading-normal text-xs sm:text-sm">
+    <div className="font-sans text-gray-800 leading-normal text-xs">
       {/* Swiss Clean Header */}
       <header className="mb-5 pb-2">
         <h1 className="text-3xl font-light tracking-tight text-gray-950 mb-1">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
-          <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-widest mb-2">
             {contact.headline}
           </p>
         )}
@@ -70,7 +70,7 @@ export function MinimalistTemplate({ resume, accentColor }: TemplateProps) {
               <h2 className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1">
                 {def.atsHeading}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed font-normal">{summary}</p>
+              <p className="text-xs text-gray-700 leading-relaxed font-normal">{summary}</p>
             </section>
           );
         }

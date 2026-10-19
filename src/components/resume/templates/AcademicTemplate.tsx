@@ -31,10 +31,10 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
   const visibility = meta.sectionVisibility || {};
 
   return (
-    <div className="font-serif text-gray-900 leading-normal text-xs sm:text-sm">
+    <div className="font-serif text-gray-900 leading-normal text-xs">
       {/* Formal Academic CV Header */}
       <header className="border-b-2 border-gray-900 pb-3 mb-4 text-center">
-        <h1 className="text-2xl sm:text-3xl font-normal tracking-wide text-gray-900 mb-1 uppercase">
+        <h1 className="text-2xl font-normal tracking-wide text-gray-900 mb-1 uppercase">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
@@ -73,7 +73,7 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
               <h2 className="text-xs uppercase font-bold tracking-widest text-gray-900 border-b border-gray-400 pb-1 mb-2">
                 {def.atsHeading}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-800 leading-relaxed text-justify">{summary}</p>
+              <p className="text-xs text-gray-800 leading-relaxed text-justify">{summary}</p>
             </section>
           );
         }
@@ -226,7 +226,7 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
               <div className="space-y-2">
                 {projects.map((proj) => (
                   <div key={proj.id} className="page-break-avoid">
-                    <div className="flex justify-between items-baseline font-bold text-xs sm:text-sm">
+                    <div className="flex justify-between items-baseline font-bold text-sm">
                       <span>{proj.name}</span>
                       {proj.startYear && <span className="text-xs font-normal text-gray-600">{proj.startYear}</span>}
                     </div>

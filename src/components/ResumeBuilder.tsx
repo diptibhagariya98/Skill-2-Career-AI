@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ResumeData, SectionKey, TemplateId, PageSize } from "@/types/resume";
+import { ResumeData, SectionKey, TemplateId, PageSize, ACCENT_COLORS } from "@/types/resume";
 import { AnalysisResponse } from "@/types/analysis";
 import { supabase } from "@/lib/supabase";
 import { createEmptyResume, migrateResumeSchema } from "@/lib/resume/schema";
@@ -31,6 +31,7 @@ import AIAnalysisReport from "./resume/AIAnalysisReport";
 import AIConsentModal, { CONSENT_STORAGE_KEY } from "./resume/AIConsentModal";
 import PDFPreflightModal, { PreflightWarning } from "./resume/PDFPreflightModal";
 import { ResumePreview } from "./resume/ResumePreview";
+import FullScreenResumePreview from "./resume/FullScreenResumePreview";
 import {
   hapticSuccess,
   hapticLight,
@@ -57,15 +58,11 @@ import {
   RotateCw,
   Pencil,
   MoreVertical,
+  Eye,
+  Maximize2,
 } from "lucide-react";
 
-const ACCENT_COLORS = [
-  { name: "Teal", hex: "#0f766e" },
-  { name: "Navy", hex: "#1e3a8a" },
-  { name: "Slate", hex: "#334155" },
-  { name: "Burgundy", hex: "#831843" },
-  { name: "Forest", hex: "#14532d" },
-];
+
 
 interface ResumeBuilderProps {
   user?: {
@@ -82,6 +79,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   );
   const [activeSection, setActiveSection] = useState<SectionKey>("contact");
   const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
+  const [isFullScreenPreviewOpen, setIsFullScreenPreviewOpen] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "Idle">("Saved");
   const [showDataModal, setShowDataModal] = useState(false);
   const [showMobileMoreMenu, setShowMobileMoreMenu] = useState(false);
@@ -254,7 +252,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
       navigateToSection(visibleSections[currentStepIndex + 1]);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      setMobileTab("preview");
+      setIsFullScreenPreviewOpen(true);
     }
   };
 
@@ -269,9 +267,12 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
     }
   };
 
-  // Register Back Navigation Handlers per Implementation Guide
   // Priority 2: Modals and bottom sheets
   useBackHandler("overlay", () => {
+    if (isFullScreenPreviewOpen) {
+      setIsFullScreenPreviewOpen(false);
+      return true;
+    }
     if (showDataModal) {
       setShowDataModal(false);
       return true;
@@ -289,7 +290,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
       return true;
     }
     return false;
-  }, [showDataModal, showPreflightModal, showConsentModal, showAnalysisReport]);
+  }, [isFullScreenPreviewOpen, showDataModal, showPreflightModal, showConsentModal, showAnalysisReport]);
 
   // Priority 5: In-screen step history (Sections & Edit/Preview toggle)
   useBackHandler("in_screen", () => {
@@ -696,12 +697,9 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
             </button>
             <button
               type="button"
-              onClick={() => setMobileTab("preview")}
-              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition min-h-[36px] flex items-center justify-center ${
-                mobileTab === "preview"
-                  ? "bg-white text-indigo-700 shadow-2xs"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              onClick={() => setIsFullScreenPreviewOpen(true)}
+              className="px-2.5 py-1.5 text-xs font-bold rounded-lg transition min-h-[36px] flex items-center justify-center text-gray-600 hover:text-indigo-600"
+              title="Full screen PDF preview"
             >
               Preview
             </button>
@@ -815,6 +813,16 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
           >
             <Database className="h-4 w-4" />
             <span>Data</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsFullScreenPreviewOpen(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3.5 py-2.5 rounded-xl transition min-h-[48px]"
+            title="Open full screen PDF preview"
+          >
+            <Eye className="h-4 w-4 text-indigo-600" />
+            <span>Preview</span>
           </button>
 
           <button
@@ -1152,8 +1160,30 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
           </div>
 
           {/* Paper Canvas Preview Container */}
-          <div className="bg-gray-200/80 p-1.5 sm:p-6 rounded-xl sm:rounded-2xl overflow-x-auto shadow-inner border border-gray-300/60 flex justify-center">
-            <ResumePreview ref={previewPrintRef} resume={resume} />
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between pb-1 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-800">
+                  Document Preview
+                </span>
+                <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                  {resume.meta.pageSize || "A4"} • 1 Page
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFullScreenPreviewOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition border border-indigo-200/80 active:scale-95"
+                title="Expand to Full Screen Preview"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span>Fullscreen</span>
+              </button>
+            </div>
+
+            <div className="bg-slate-100/90 p-2 sm:p-4 rounded-xl shadow-inner border border-gray-200/80 flex justify-center overflow-hidden">
+              <ResumePreview ref={previewPrintRef} resume={resume} autoFit padding={12} />
+            </div>
           </div>
 
           {/* ATS Checklist Scorecard (Local Rule-based) */}
@@ -1239,6 +1269,17 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
           user={currentUser}
           onUpdateResume={handleUpdateResume}
           onClose={() => setShowDataModal(false)}
+        />
+      )}
+
+      {/* Full-Screen PDF Previewer Modal */}
+      {isFullScreenPreviewOpen && (
+        <FullScreenResumePreview
+          resume={resume}
+          onUpdateResume={handleUpdateResume}
+          onExportPDF={() => handleExportPDF(false)}
+          exportState={exportState}
+          onClose={() => setIsFullScreenPreviewOpen(false)}
         />
       )}
 
