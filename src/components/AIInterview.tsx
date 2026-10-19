@@ -200,64 +200,68 @@ export default function AIInterview({
     }
   };
 
+  const isLiveSession = activeTab === "session";
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Sub-Navigation Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-200">
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full">
-          <button
-            type="button"
-            onClick={() => setActiveTab("setup")}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
-              activeTab === "setup"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
-                : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
-            }`}
-          >
-            <Sparkles className="w-4 h-4" /> Setup & Role
-          </button>
-          {currentQuestions.length > 0 && (
+    <div className={`${isLiveSession ? "h-full" : "space-y-6"} animate-fade-in`}>
+      {/* Sub-Navigation Tabs (Hidden during live session to reclaim vertical space) */}
+      {!isLiveSession && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full">
             <button
               type="button"
-              onClick={() => setActiveTab("session")}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
-                activeTab === "session"
+              onClick={() => setActiveTab("setup")}
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "setup"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
-                  : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
+                  : "bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200"
               }`}
             >
-              <Play className="w-4 h-4" /> Live Session
+              <Sparkles className="w-4 h-4" />
+              <span>Setup</span>
             </button>
-          )}
-          {currentScorecard && (
+            {currentQuestions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("session")}
+                className="px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200"
+              >
+                <Play className="w-4 h-4" />
+                <span>Resume Live</span>
+              </button>
+            )}
+            {currentScorecard && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("scorecard")}
+                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === "scorecard"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                    : "bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200"
+                }`}
+              >
+                <Award className="w-4 h-4" />
+                <span>Scorecard</span>
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setActiveTab("scorecard")}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
-                activeTab === "scorecard"
+              onClick={() => setActiveTab("history")}
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "history"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
-                  : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
+                  : "bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200"
               }`}
             >
-              <Award className="w-4 h-4" /> Scorecard
+              <History className="w-4 h-4" />
+              <span>History ({sessions.length})</span>
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setActiveTab("history")}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
-              activeTab === "history"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
-                : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
-            }`}
-          >
-            <History className="w-4 h-4" /> Past Sessions ({sessions.length})
-          </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content Body */}
-      <div>
+      <div className={isLiveSession ? "h-full" : ""}>
         {isInitializing && (
           <div className="bg-white rounded-3xl p-12 text-center max-w-md mx-auto border border-gray-200 shadow-sm animate-pulse space-y-3">
             <Sparkles className="w-8 h-8 text-indigo-600 mx-auto animate-spin" />

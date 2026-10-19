@@ -17,7 +17,12 @@ import {
   Clock,
   ArrowRight,
   ShieldAlert,
+  Mic,
+  MicOff,
+  HelpCircle,
 } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useBackHandler, BackPriority, hapticLight } from "@/shared/platform";
 import {
   BankQuestion,
   InterviewSetupConfig,
@@ -59,8 +64,39 @@ export default function InterviewThread({
   const [showOutlineForTurnId, setShowOutlineForTurnId] = useState<string | null>(null);
   const [hasUnreadFeedback, setHasUnreadFeedback] = useState(false);
   const [sensitiveWarning, setSensitiveWarning] = useState<string | null>(null);
+  const [showRationale, setShowRationale] = useState(false);
+  const [showEndModal, setShowEndModal] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+
+  // Reset rationale drawer on question change
+  useEffect(() => {
+    setShowRationale(false);
+  }, [currentIdx]);
+
+  // Clean up voice transcription on unmount
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
+
+  // Intercept back navigation during active session to confirm exit
+  useBackHandler(
+    BackPriority.OVERLAY,
+    () => {
+      if (showEndModal) {
+        setShowEndModal(false);
+        return true;
+      }
+      setShowEndModal(true);
+      return true;
+    },
+    [showEndModal]
+  );
 
   const currentQuestion = questions[currentIdx];
   const isLastQuestion = currentIdx >= questions.length - 1;
@@ -231,55 +267,160 @@ export default function InterviewThread({
     }
   };
 
+    const formatExperienceLevel = (level?: string) => {
+    if (!level) return "Junior";
+    return level.charAt(0).toUpperCase() + level.slice(1);
+  };
+
+  const handleToggleVoice = () => {
+    if (typeof window === "undefined") return;
+
+    interface SpeechResult {
+      [index: number]: { transcript: string };
+    }
+    interface SpeechEvent {
+      results: {
+        length: number;
+        [index: number]: SpeechResult;
+      };
+    }
+    interface SpeechRecInstance {
+      continuous: boolean;
+      interimResults: boolean;
+      lang: string;
+      onresult: (e: SpeechEvent) => void;
+      onerror: () => void;
+      onend: () => void;
+      start: () => void;
+      stop: () => void;
+    }
+
+    const windowWithSpeech = window as unknown as {
+      SpeechRecognition?: new () => SpeechRecInstance;
+      webkitSpeechRecognition?: new () => SpeechRecInstance;
+    };
+    const SpeechAPI = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
+
+    if (!SpeechAPI) {
+      toast("Voice transcription is not supported in this browser. Please type your answer.", { icon: "🎙️" });
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const rec = new SpeechAPI();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = "en-US";
+
+      rec.onresult = (e: SpeechEvent) => {
+        let transcript = "";
+        for (let i = 0; i < e.results.length; i++) {
+          const item = e.results[i];
+          if (item && item[0]) {
+            transcript += item[0].transcript + " ";
+          }
+        }
+        if (transcript.trim()) {
+          setUserText((prev) => {
+            const sep = prev.length > 0 && !prev.endsWith(" ") ? " " : "";
+            return prev + sep + transcript.trim();
+          });
+        }
+      };
+
+      rec.onerror = () => setIsListening(false);
+      rec.onend = () => setIsListening(false);
+
+      rec.start();
+      recognitionRef.current = rec;
+      setIsListening(true);
+      hapticLight();
+      toast.success("Listening... speak your response", { duration: 2500 });
+    } catch {
+      setIsListening(false);
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100dvh-130px)] sm:h-[calc(100dvh-140px)] bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-md sm:shadow-xl overflow-hidden">
-      {/* Top Header Bar */}
-      <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-            Q{currentIdx + 1}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-extrabold text-gray-900">
-                Question {currentIdx + 1} of {questions.length}
-              </span>
-              <span
-                className={`text-2xs font-bold px-2 py-0.5 rounded-full ${
-                  config.interviewMode === "full_ai"
-                    ? "bg-purple-100 text-purple-700"
-                    : "bg-emerald-100 text-emerald-700"
-                }`}
-              >
-                {config.interviewMode === "full_ai" ? "Smart AI" : "Quick Practice"}
-              </span>
-            </div>
-            <span className="text-2xs text-gray-500 font-medium">
-              Target: {config.targetJobTitle} • {config.experienceLevel}
+    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100dvh-64px)] sm:h-[calc(100dvh-76px)] bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-md sm:shadow-xl overflow-hidden relative">
+      {/* Top Header Bar - Structured 2-Row Layout to Eliminate Text Wrapping */}
+      <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-gray-50/95 backdrop-blur-xs border-b border-gray-200 shrink-0 space-y-2">
+        {/* Row 1: Question counter, Mode pill, Pause action & End button */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs sm:text-sm font-extrabold text-gray-900 whitespace-nowrap">
+              Question {currentIdx + 1} of {questions.length}
             </span>
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+                config.interviewMode === "full_ai"
+                  ? "bg-purple-100 text-purple-700 border border-purple-200"
+                  : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+              }`}
+            >
+              {config.interviewMode === "full_ai" ? "Smart AI" : "Quick Practice"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onPauseSession && (
+              <button
+                type="button"
+                onClick={() => onPauseSession(turns)}
+                className="w-10 h-10 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-200/70 transition-colors flex items-center justify-center active:scale-95"
+                title="Pause and resume later"
+                aria-label="Pause interview session"
+              >
+                <Pause className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowEndModal(true)}
+              className="px-3 py-1.5 min-h-[34px] rounded-lg border border-gray-300 text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 text-xs font-semibold transition-colors flex items-center gap-1 active:scale-95"
+              aria-label="End interview"
+            >
+              <StopCircle className="w-3.5 h-3.5" />
+              <span>End</span>
+            </button>
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          {onPauseSession && (
-            <button
-              type="button"
-              onClick={() => onPauseSession(turns)}
-              className="p-2 rounded-xl text-gray-500 hover:bg-gray-200 transition-colors"
-              title="Pause and resume later"
-            >
-              <Pause className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => onFinishSession(turns)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold transition-colors"
+        {/* Row 2: Thin Segmented Progress Bar & Capitalized Role Target */}
+        <div className="space-y-1.5">
+          {/* Segmented thin progress indicator */}
+          <div
+            className="grid gap-1"
+            style={{ gridTemplateColumns: `repeat(${Math.max(questions.length, 1)}, minmax(0, 1fr))` }}
           >
-            <StopCircle className="w-3.5 h-3.5" />
-            End Early
-          </button>
+            {questions.map((_, qIdx) => (
+              <div
+                key={qIdx}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  qIdx < currentIdx
+                    ? "bg-indigo-600"
+                    : qIdx === currentIdx
+                    ? "bg-indigo-500 shadow-xs"
+                    : "bg-gray-200"
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between text-2xs text-gray-600 font-medium">
+            <span className="truncate">
+              Target: <strong className="text-gray-800 font-semibold">{config.targetJobTitle}</strong> · {formatExperienceLevel(config.experienceLevel)}
+            </span>
+            <span className="text-gray-500 shrink-0 hidden sm:inline">
+              ~2 min suggested
+            </span>
+          </div>
         </div>
       </div>
 
@@ -426,26 +567,46 @@ export default function InterviewThread({
 
         {/* Current Active Question */}
         {!hasUnreadFeedback && !openCompareData && currentQuestion && (
-          <div className="flex items-start gap-3 animate-in fade-in">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-              <Bot className="w-4 h-4" />
+          <div className="flex items-start gap-2.5 sm:gap-3 animate-in fade-in">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+              <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
-            <div className="bg-indigo-50/80 rounded-2xl p-4 sm:p-5 max-w-[85%] text-gray-900 border border-indigo-200 shadow-2xs">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xs font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">
+            <div className="flex-1 bg-gradient-to-b from-indigo-50/90 to-indigo-50/50 rounded-2xl p-3.5 sm:p-5 text-gray-900 border border-indigo-150 shadow-xs max-w-[90%] sm:max-w-[85%] space-y-2">
+              {/* Stacked header: Chip on top, category caption below */}
+              <div className="space-y-0.5">
+                <span className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">
                   AI Interviewer
                 </span>
-                <span className="text-2xs text-gray-500 font-medium">
-                  {currentQuestion.skills[0] || "Core Competency"}
-                </span>
+                <div className="text-[11px] text-gray-600 font-medium truncate" title={currentQuestion.skills[0] || "Foundational Experience"}>
+                  {currentQuestion.skills[0] || "Foundational Experience"}
+                </div>
               </div>
-              <p className="text-sm sm:text-base font-bold text-gray-900 leading-relaxed">
+
+              {/* Balanced typography for question text (Item 8) */}
+              <p className="text-sm sm:text-base font-semibold text-gray-900 leading-relaxed">
                 {currentQuestion.questionText}
               </p>
+
+              {/* Collapsible Question Rationale / Scenario (Item 5) */}
               {currentQuestion.contextOrScenario && (
-                <p className="text-xs text-indigo-900/80 mt-2 italic bg-white/70 p-2 rounded-lg border border-indigo-100">
-                  {currentQuestion.contextOrScenario}
-                </p>
+                <div className="pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowRationale((prev) => !prev)}
+                    className="flex items-center gap-1.5 text-2xs text-gray-600 hover:text-indigo-600 font-medium transition-colors"
+                    aria-label="Toggle question rationale"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Why this question?</span>
+                    {showRationale ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+
+                  {showRationale && (
+                    <div className="mt-1.5 p-2.5 bg-white/90 rounded-xl border border-indigo-100 text-xs text-gray-700 italic leading-relaxed animate-in fade-in">
+                      {currentQuestion.contextOrScenario}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -499,13 +660,13 @@ export default function InterviewThread({
         </div>
       )}
 
-      {/* Bottom Sticky Interactive Answer Box (UX-05 Safe Area) */}
+      {/* Bottom Sticky Interactive Answer Box (Docked with Safe Area UX-05 & dynamic expansion) */}
       {!hasUnreadFeedback && !openCompareData && currentQuestion && (
-        <div className="p-3 sm:p-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-gray-50 border-t border-gray-200 shrink-0">
+        <div className="p-2.5 sm:p-4 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] bg-white border-t border-gray-200 shrink-0 shadow-lg space-y-2">
           {/* Multiple Choice / Situational Selection Options */}
           {(currentQuestion.type === "multiple_choice_single" ||
             currentQuestion.type === "situational_judgement") && (
-            <div className="space-y-2 mb-3">
+            <div className="space-y-2 mb-1 max-h-48 overflow-y-auto pr-1">
               <span className="text-xs font-bold text-gray-700 block">Select the best option:</span>
               {currentQuestion.options?.map((opt) => {
                 const isSelected = selectedOptions.includes(opt.id);
@@ -534,45 +695,121 @@ export default function InterviewThread({
             </div>
           )}
 
-          {/* Open Answer / Short Answer Textarea */}
+          {/* Open Answer / Short Answer Textarea with Auto-Expansion & Voice Mic */}
           {currentQuestion.type !== "multiple_choice_single" &&
             currentQuestion.type !== "situational_judgement" && (
-              <div className="relative mb-2">
+              <div className="relative">
                 <textarea
+                  ref={textareaRef}
                   value={userText}
-                  onChange={(e) => setUserText(e.target.value)}
+                  onChange={(e) => {
+                    setUserText(e.target.value);
+                    if (textareaRef.current) {
+                      textareaRef.current.style.height = "auto";
+                      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
+                    }
+                  }}
                   placeholder="Type your response here..."
-                  rows={3}
+                  rows={2}
                   maxLength={3000}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base text-gray-900 bg-white shadow-2xs resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-gray-900 bg-gray-50/50 shadow-2xs resize-none min-h-[44px] max-h-32 transition-all leading-relaxed"
                 />
               </div>
             )}
 
-          {/* Action Row: Skip, Character Count & Submit */}
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleSkipQuestion}
-              className="text-xs font-bold text-gray-500 hover:text-gray-700 flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-gray-200/60 transition-colors min-h-[48px]"
-            >
-              <SkipForward className="w-3.5 h-3.5" />
-              Skip Question
-            </button>
+          {/* Action Row: Skip, Mic, Character Count & Submit */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleSkipQuestion}
+                className="text-xs font-semibold text-gray-600 hover:text-gray-900 flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors min-h-[38px] active:scale-95"
+              >
+                <SkipForward className="w-3.5 h-3.5" />
+                <span>Skip</span>
+              </button>
+
+              {currentQuestion.type !== "multiple_choice_single" &&
+                currentQuestion.type !== "situational_judgement" && (
+                  <button
+                    type="button"
+                    onClick={handleToggleVoice}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95 border ${
+                      isListening
+                        ? "bg-red-500 text-white border-red-600 animate-pulse shadow-xs"
+                        : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200 hover:text-gray-900"
+                    }`}
+                    title={isListening ? "Stop voice listening" : "Click to speak response"}
+                    aria-label="Toggle voice response"
+                  >
+                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </button>
+                )}
+            </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <span className="text-2xs text-gray-400 hidden sm:inline">
-                {userText.length > 0 ? `${userText.length}/3000 chars` : ""}
+              <span className="text-2xs text-gray-500">
+                {userText.length > 0 ? `${userText.length}/3000` : "~2 min suggested"}
               </span>
 
               <button
                 type="button"
                 onClick={handleSubmitAnswer}
-                disabled={isEvaluating}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-2 transition-all active:scale-[0.98] min-h-[48px]"
+                disabled={
+                  isEvaluating ||
+                  (currentQuestion.type !== "multiple_choice_single" &&
+                    currentQuestion.type !== "situational_judgement" &&
+                    userText.trim().length === 0) ||
+                  ((currentQuestion.type === "multiple_choice_single" ||
+                    currentQuestion.type === "situational_judgement") &&
+                    selectedOptions.length === 0)
+                }
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95 min-h-[38px]"
+                aria-label="Submit answer"
               >
                 <span>Submit</span>
-                <Send className="w-4 h-4" />
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal on End Early or Back Navigation */}
+      {showEndModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-gray-150 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <StopCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">End Interview Session?</h3>
+                <p className="text-xs text-gray-500">Your progress will be saved.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Are you sure you want to end this interview? All answered questions and interim scoring will be saved to your History.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowEndModal(false)}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Resume
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEndModal(false);
+                  onFinishSession(turns);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 shadow-xs transition-colors"
+              >
+                End & Save
               </button>
             </div>
           </div>

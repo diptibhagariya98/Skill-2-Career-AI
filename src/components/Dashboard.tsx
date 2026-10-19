@@ -302,6 +302,10 @@ export default function Dashboard() {
   const displayName = userData?.name || "Student";
   const initials = getInitials(displayName);
 
+  const isLiveInterviewSession =
+    (activePage === DashboardSection.INTERVIEW || activePage === "interview") &&
+    interviewTab === "session";
+
   return (
     <div className="flex min-h-dvh bg-gray-50 text-gray-800 flex-col md:flex-row antialiased selection:bg-indigo-500 selection:text-white overflow-x-hidden">
       {/* Desktop Sidebar (Compact 240px, hidden on mobile) */}
@@ -445,7 +449,7 @@ export default function Dashboard() {
         </header>
 
         {/* Scrollable Page Body with Compact Mobile Edge-to-Edge Margins & Safe Bottom Offset */}
-        <div className="flex-1 p-1 sm:p-4 md:p-6 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 overflow-y-auto overflow-x-hidden min-w-0">
+        <div className={`flex-1 min-w-0 ${isLiveInterviewSession ? "p-0 sm:p-4 pb-0 overflow-hidden" : "p-1 sm:p-4 md:p-6 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 overflow-y-auto overflow-x-hidden"}`}>
           <div className="animate-fade-in">
             {activePage === "dashboard" && (
               <div className="space-y-4 sm:space-y-6">
@@ -658,11 +662,12 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* True Native Mobile Bottom Navigation Bar (Fixed with Safe Area Inset UX-05, UX-20, UX-35) */}
-      <nav
-        data-hide-on-keyboard="true"
-        className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] flex items-center justify-around shadow-2xl transition-all duration-200"
-      >
+      {/* True Native Mobile Bottom Navigation Bar (Hidden during active live interview session) */}
+      {!isLiveInterviewSession && (
+        <nav
+          data-hide-on-keyboard="true"
+          className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] flex items-center justify-around shadow-2xl transition-all duration-200"
+        >
         {mobileNavItems.map((item) => {
           const IconComponent = item.icon;
           const isMore = item.id === "more";
@@ -700,6 +705,7 @@ export default function Dashboard() {
           );
         })}
       </nav>
+      )}
     </div>
   );
 }

@@ -405,3 +405,41 @@ This document serves as an immutable, timestamped record of every technical, bui
   4. `npx tsc --noEmit` &rarr; 0 TypeScript errors.
   5. `npm run build` &rarr; Next.js production build succeeded with exit code 0.
   6. `npm run build:mobile` &rarr; Static export of 15 pages and Capacitor Android sync succeeded with exit code 0.
+
+---
+
+### [ISSUE-017] Live Interview Screen Mobile Viewport & Ergonomics Overhaul
+
+- **Date:** October 19, 2026
+- **Timestamp:** 11:10:00 IST
+- **Component / Subsystem:** `src/components/Dashboard.tsx`, `src/components/AIInterview.tsx`, `src/components/interview/InterviewThread.tsx`
+- **Severity:** High (Usability / Accessibility)
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  1. The response input box was cut off / hidden behind the fixed mobile bottom navigation bar (`<nav class="mobile-bottom-nav">`), with no send button, mic, or character counter visible.
+  2. The mobile bottom navigation bar (~150px) and sub-tab bar (`Setup | Session | Scorecard | History`) remained visible during active live sessions, leaving little usable vertical height.
+  3. Header card text wrapped onto 4+ lines on smaller screens (`Question 1 of 8`, `Smart AI`, `End Early`).
+  4. Active question card crammed `AI INTERVIEWER` and long category titles side-by-side, causing extreme wrapping.
+  5. "Why this question?" rationale was clipped mid-sentence and spoiled interview evaluation criteria.
+  6. Question text had harsh 800-weight typography while metadata had low contrast, and seniority was displayed in lowercase (`junior`).
+- **Root Cause:**
+  1. No session-aware layout state existed in `Dashboard.tsx` to hide the fixed mobile navigation bar and remove bottom padding during active interview sessions.
+  2. `AIInterview.tsx` rendered the sub-tab bar unconditionally across all interview states.
+  3. Input box in `InterviewThread.tsx` was placed statically without viewport anchoring, auto-expansion, or safe-area inset protection.
+- **Resolution:**
+  1. In `Dashboard.tsx`: Added `isLiveInterviewSession` check (`activePage === DashboardSection.INTERVIEW && interviewTab === "session"`). Dynamically hid `<nav className="mobile-bottom-nav">` and removed bottom padding (`pb-0 overflow-hidden`) during active sessions to reclaim ~150px-200px of vertical space.
+  2. In `AIInterview.tsx`: Hid the sub-tab bar completely during active interview sessions, cleaned tab buttons, and removed sticky borders.
+  3. In `InterviewThread.tsx`:
+     - Built a clean 2-row structured session header with 8-segment progress indicator, `Smart AI` / `Quick Practice` pill, 44px pause button target, and quiet `End` button.
+     - Restacked active question card header (`AI INTERVIEWER` chip on top, category below with `truncate`).
+     - Balanced question typography (`text-sm sm:text-base font-semibold text-gray-900`) and WCAG 4.5:1 contrast text.
+     - Capitalized seniority levels (`Target: Frontend Developer · Junior`).
+     - Replaced clipped rationale with an opt-in collapsible drawer to prevent evaluation spoilers.
+     - Docked auto-expanding input bar (1–4 lines, `min-h-[44px] max-h-32`) above the screen bottom with `safe-area-inset-bottom` padding.
+     - Added voice mic transcription (Web Speech API with strict types), character counter (`{len}/3000`), `~2 min suggested` hint, and visible `Send` button disabled when empty.
+     - Added exit confirmation dialog on `End` and registered `useBackHandler(BackPriority.OVERLAY)` to catch Android system back navigation.
+- **Verification:**
+  1. `npx tsc --noEmit` &rarr; 0 TypeScript errors (Strict Typing Policy: Zero `any`).
+  2. `node scripts/test-back-navigation.mjs` &rarr; 17/17 PASSED, 0 FAILED.
+  3. `npm test` &rarr; 49/49 PASSED, 0 FAILED.
+  4. `npm run build:mobile` &rarr; Static export of 15 pages and Capacitor Android sync succeeded with exit code 0.
