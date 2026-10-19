@@ -16,17 +16,20 @@ import { toast } from "react-hot-toast";
  * 7. If tab root & current tab is not first tab: switch to first tab (Home)
  * 8. If first tab's root: exit app (Android double-press prompt within 2 seconds)
  */
-export type BackPriority =
-  | "overlay"       // 2. Modals, bottom sheets, dropdowns, menus
-  | "special_mode"  // 3. Inline edit, multi-select, reorder
-  | "save_draft"    // 4. Force save / draft sync
-  | "in_screen"     // 5. In-screen section/step history
-  | "screen_pop"    // 6. Pushed screen pop
-  | "tab_root";     // 7. Tab root / Home return / App exit
+export enum BackPriority {
+  OVERLAY = "overlay",       // 2. Modals, bottom sheets, dropdowns, menus
+  SPECIAL_MODE = "special_mode", // 3. Inline edit, multi-select, reorder
+  SAVE_DRAFT = "save_draft",   // 4. Force save / draft sync
+  IN_SCREEN = "in_screen",    // 5. In-screen section/step history
+  SCREEN_POP = "screen_pop",   // 6. Pushed screen pop
+  TAB_ROOT = "tab_root",     // 7. Tab root / Home return / App exit
+}
+
+export type BackPriorityType = BackPriority | "overlay" | "special_mode" | "save_draft" | "in_screen" | "screen_pop" | "tab_root";
 
 export interface BackHandler {
   id: string;
-  priority: BackPriority;
+  priority: BackPriorityType;
   order?: number; // Higher number executed first within same priority
   handle: () => boolean | Promise<boolean>;
 }
@@ -37,13 +40,13 @@ let isInitialized = false;
 let lastBackPressTime = 0;
 const DOUBLE_PRESS_WINDOW_MS = 2000;
 
-const PRIORITY_ORDER: Record<BackPriority, number> = {
-  overlay: 50,
-  special_mode: 40,
-  save_draft: 30,
-  in_screen: 20,
-  screen_pop: 10,
-  tab_root: 0,
+const PRIORITY_ORDER: Record<string, number> = {
+  [BackPriority.OVERLAY]: 50,
+  [BackPriority.SPECIAL_MODE]: 40,
+  [BackPriority.SAVE_DRAFT]: 30,
+  [BackPriority.IN_SCREEN]: 20,
+  [BackPriority.SCREEN_POP]: 10,
+  [BackPriority.TAB_ROOT]: 0,
 };
 
 /**
@@ -128,6 +131,7 @@ export async function dispatchBack(): Promise<boolean> {
   if (now - lastBackPressTime < DOUBLE_PRESS_WINDOW_MS) {
     if (isNative()) {
       App.exitApp();
+      return true;
     }
     return false;
   } else {
@@ -152,23 +156,22 @@ export async function dispatchBack(): Promise<boolean> {
  * Ensure both Native (Capacitor App) and Web (window popstate) are listening
  * to the single unified back handler.
  */
-function ensurePlatformListeners() {
+export function ensurePlatformListeners(): void {
   if (isInitialized || typeof window === "undefined") return;
   isInitialized = true;
 
   // 1. Native Capacitor Android Hardware / Gesture Back Button
+  // Intercept system back completely; dispatchBack handles in-app hierarchy and double-press app exit.
+  // Never fallback to window.history.back() which bounces users back into login / auth / splash screens!
   if (isNative()) {
-    App.addListener("backButton", async ({ canGoBack }) => {
-      const handled = await dispatchBack();
-      if (!handled && canGoBack) {
-        window.history.back();
-      }
+    App.addListener("backButton", async () => {
+      await dispatchBack();
     });
   }
 
   // 2. Web Browser popstate & Mobile Browser Edge Swipes
-  window.addEventListener("popstate", async (e) => {
-    // Prevent the default browser pop until handled
+  window.addEventListener("popstate", async () => {
+    // Intercept back actions on web
     const handled = await dispatchBack();
     if (handled) {
       // Re-push state so subsequent back presses still get caught
@@ -180,11 +183,13 @@ function ensurePlatformListeners() {
     }
   });
 
-  // Seed initial history state for web
-  try {
-    window.history.pushState({ resumentorRoot: true }, "");
-  } catch {
-    // safe fallback
+  // Seed initial history state for web only (avoid polluting native webview)
+  if (!isNative()) {
+    try {
+      window.history.pushState({ resumentorRoot: true }, "");
+    } catch {
+      // safe fallback
+    }
   }
 }
 
@@ -194,7 +199,7 @@ function ensurePlatformListeners() {
 import { useEffect, useRef } from "react";
 
 export function useBackHandler(
-  priority: BackPriority,
+  priority: BackPriorityType,
   handle: () => boolean | Promise<boolean>,
   deps: readonly unknown[] = []
 ) {

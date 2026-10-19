@@ -375,3 +375,33 @@ This document serves as an immutable, timestamped record of every technical, bui
   2. `npm run test:blackbox` &rarr; All 10 hardcore black-box controller lifecycle tests PASSED.
   3. `npx tsc --noEmit` &rarr; 0 TypeScript errors.
   4. `npm run build` &rarr; Next.js production build compiled cleanly with exit code 0.
+
+---
+
+### [ISSUE-016] Mobile System Back Navigation Redirection to Login/Auth Screen
+
+- **Date:** October 19, 2026
+- **Timestamp:** 10:55:00 IST
+- **Component / Subsystem:** `src/shared/platform/backNavigation.ts`, `src/shared/platform/backButton.ts`, `src/shared/platform/NativeAppProvider.tsx`, `src/components/Dashboard.tsx`, `src/components/mobile/IntroScreens.tsx`
+- **Severity:** High
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  1. When using Android system navigation (physical back button or system edge-swipe gesture), the user was redirected back to the login, intro, or authentication screens instead of returning to the previous in-app screen or tab.
+- **Root Cause:**
+  1. `NativeAppProvider.tsx` mounted `useAndroidBackButton()` from `backButton.ts` without arguments. `backButton.ts` registered a competing low-level `@capacitor/app` listener that unconditionally invoked `window.history.back()`.
+  2. In Next.js/WebView, `window.history.back()` popped the browser session history stack back to `/auth` or `/login` or `/` instead of interacting with the in-app React state navigation stack (`tabHistoryRef`, `activePage`).
+  3. `backNavigation.ts` also contained a fallback `if (!handled && canGoBack) window.history.back()`.
+  4. `IntroScreens.tsx` used `router.push()` instead of `router.replace()`, polluting the browser history stack.
+- **Resolution:**
+  1. Harmonized `backButton.ts` with `backNavigation.ts`: removed rogue `window.history.back()` invocation and delegated legacy handlers into the unified prioritized back navigation registry.
+  2. Updated `backNavigation.ts`: eliminated fallback `window.history.back()` in native mode; back presses route through `dispatchBack()` (Priority 1: close keyboard -> Priority 2: overlays -> Priority 3: special mode -> Priority 4: save draft -> Priority 5: in-screen steps -> Priority 6: screen pop -> Priority 8: exit app confirmation).
+  3. Converted `BackPriority` into TypeScript `enum` adhering to the project's strict typing and enum guidelines.
+  4. Hardened `Dashboard.tsx` `useBackHandler("screen_pop")` to safely pop through duplicate history entries back to `DashboardSection.DASHBOARD`.
+  5. Updated `IntroScreens.tsx` with in-screen step back support and replaced `router.push` with `router.replace`.
+- **Verification:**
+  1. `node scripts/test-back-navigation.mjs` &rarr; 17/17 PASSED, 0 FAILED.
+  2. `npm test` &rarr; 49/49 PASSED, 0 FAILED.
+  3. `npm run test:blackbox` &rarr; 10/10 PASSED, 0 FAILED.
+  4. `npx tsc --noEmit` &rarr; 0 TypeScript errors.
+  5. `npm run build` &rarr; Next.js production build succeeded with exit code 0.
+  6. `npm run build:mobile` &rarr; Static export of 15 pages and Capacitor Android sync succeeded with exit code 0.

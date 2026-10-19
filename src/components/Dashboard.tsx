@@ -99,13 +99,15 @@ export default function Dashboard() {
 
   // Priority 7: Screen pop to previous tab or Home Dashboard
   useBackHandler("screen_pop", () => {
-    if (activePage !== "dashboard") {
-      if (tabHistoryRef.current.length > 0) {
-        const prev = tabHistoryRef.current.pop()!;
-        setActivePage(prev);
-      } else {
-        setActivePage("dashboard");
+    if (activePage !== DashboardSection.DASHBOARD && activePage !== "dashboard") {
+      while (tabHistoryRef.current.length > 0) {
+        const prev = tabHistoryRef.current.pop();
+        if (prev && prev !== activePage) {
+          setActivePage(prev);
+          return true;
+        }
       }
+      setActivePage(DashboardSection.DASHBOARD);
       return true;
     }
     return false;

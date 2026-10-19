@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { App } from "@capacitor/app";
-import type { PluginListenerHandle } from "@capacitor/core";
-import { isNative } from "./device";
+import { ensurePlatformListeners, registerBackHandler, BackPriority } from "./backNavigation";
 
 export interface BackButtonOptions {
   /**
@@ -16,34 +14,23 @@ export interface BackButtonOptions {
 
 /**
  * Register a listener for the native Android physical/gesture back button.
+ * Harmonized with the unified prioritized back navigation registry.
  */
 export function useAndroidBackButton({ onBack }: BackButtonOptions = {}) {
   useEffect(() => {
-    if (!isNative()) return;
+    // Ensure the unified platform listeners are active
+    ensurePlatformListeners();
 
-    let listenerHandle: PluginListenerHandle | null = null;
+    if (!onBack) return;
 
-    App.addListener("backButton", ({ canGoBack }) => {
-      if (onBack) {
+    return registerBackHandler({
+      id: `legacy_back_${Math.random().toString(36).slice(2, 9)}`,
+      priority: BackPriority.SCREEN_POP,
+      order: Date.now(),
+      handle: () => {
         const handled = onBack();
-        if (handled === true) {
-          return;
-        }
-      }
-
-      if (canGoBack && typeof window !== "undefined") {
-        window.history.back();
-      } else {
-        App.exitApp();
-      }
-    }).then((handle) => {
-      listenerHandle = handle;
+        return handled === true;
+      },
     });
-
-    return () => {
-      if (listenerHandle) {
-        listenerHandle.remove();
-      }
-    };
   }, [onBack]);
 }

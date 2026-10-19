@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
-import { hapticLight } from "@/shared/platform";
+import { hapticLight, useBackHandler, BackPriority } from "@/shared/platform";
 import { APP_ROUTES } from "@/constants/endpoints";
 
 export interface IntroScreensProps {
@@ -48,6 +48,19 @@ export default function IntroScreens({
   const [currentStep, setCurrentStep] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
   const touchEndXRef = useRef<number | null>(null);
+
+  // In-screen back navigation for Intro slide tour
+  useBackHandler(BackPriority.IN_SCREEN, () => {
+    if (isReplayModal && onCloseModal) {
+      onCloseModal();
+      return true;
+    }
+    if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1);
+      return true;
+    }
+    return false;
+  }, [currentStep, isReplayModal, onCloseModal]);
 
   const screens = [
     {
@@ -279,7 +292,7 @@ export default function IntroScreens({
     } else if (onCloseModal) {
       onCloseModal();
     } else {
-      router.push(APP_ROUTES.AUTH);
+      router.replace(APP_ROUTES.AUTH);
     }
   };
 
@@ -292,11 +305,11 @@ export default function IntroScreens({
       onCloseModal();
     } else {
       if (action === "login") {
-        router.push(`${APP_ROUTES.AUTH}?mode=login`);
+        router.replace(`${APP_ROUTES.AUTH}?mode=login`);
       } else if (action === "guest") {
-        router.push(`${APP_ROUTES.DASHBOARD}?guest=true`);
+        router.replace(`${APP_ROUTES.DASHBOARD}?guest=true`);
       } else {
-        router.push(APP_ROUTES.AUTH);
+        router.replace(APP_ROUTES.AUTH);
       }
     }
   };
