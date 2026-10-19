@@ -6,15 +6,20 @@ import { DEFAULT_SECTION_ORDER, DEFAULT_SECTION_VISIBILITY } from "./registry";
 
 export function createEmptyResume(initialUser?: { name?: string; email?: string }): ResumeData {
   const now = new Date().toISOString();
-  const userName = initialUser?.name?.trim() || "";
-  const userEmail = initialUser?.email?.trim() || "";
+  const rawName = initialUser?.name?.trim() || "";
+  const rawEmail = initialUser?.email?.trim() || "";
+  const isGuestPlaceholder =
+    rawName.toLowerCase() === "guest explorer" ||
+    rawEmail.toLowerCase() === "guest@resumentor.app";
+  const userName = isGuestPlaceholder ? "" : rawName;
+  const userEmail = isGuestPlaceholder ? "" : rawEmail;
   return {
     meta: {
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `resume_${Date.now()}`,
       schemaVersion: RESUME_SCHEMA_VERSION,
       createdAt: now,
       updatedAt: now,
-      title: userName ? `${userName}'s Resume` : "Untitled Resume",
+      title: userName ? `${userName}'s Resume` : "My Resume",
       selectedTemplate: "classic",
       pageSize: "A4",
       fontScale: "medium",

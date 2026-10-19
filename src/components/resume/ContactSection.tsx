@@ -3,7 +3,7 @@
 import React from "react";
 import { ContactInfo } from "@/types/resume";
 import { normalizeUrl } from "@/lib/resume/validation";
-import { Mail, Phone, MapPin, Globe, Link2, User, Briefcase, Plus, Trash2 } from "lucide-react";
+import { Mail, Phone, MapPin, Globe, Link2, User, Briefcase, Plus, Trash2, Building } from "lucide-react";
  
 
 interface ContactSectionProps {
@@ -42,7 +42,8 @@ export default function ContactSection({ data, onChange }: ContactSectionProps) 
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
+      {/* Desktop Heading (hidden on mobile where step indicator and top bar define context) */}
+      <div className="hidden sm:block">
         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Contact Information</h2>
         <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
           ATS parsers look for your full name, email, and location right at the top of page 1.
@@ -60,10 +61,12 @@ export default function ContactSection({ data, onChange }: ContactSectionProps) 
             <input
               type="text"
               id="fullName"
+              autoComplete="name"
+              autoCapitalize="words"
               placeholder="e.g., Alex Morgan"
               value={data.fullName}
               onChange={(e) => updateField("fullName", e.target.value)}
-              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
+              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] placeholder:text-gray-400/80"
             />
           </div>
         </div>
@@ -71,17 +74,18 @@ export default function ContactSection({ data, onChange }: ContactSectionProps) 
         {/* Headline */}
         <div>
           <label htmlFor="headline" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-            Target Job Title / Headline
+            Target Job Title / Headline <span className="text-[11px] font-normal text-gray-400 ml-1">(optional)</span>
           </label>
           <div className="relative">
             <Briefcase className="absolute left-3 top-3 sm:left-3.5 sm:top-3.5 h-4 w-4 text-gray-400" />
             <input
               type="text"
               id="headline"
+              autoCapitalize="words"
               placeholder="e.g., Senior Full Stack Engineer"
               value={data.headline || ""}
               onChange={(e) => updateField("headline", e.target.value)}
-              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
+              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] placeholder:text-gray-400/80"
             />
           </div>
         </div>
@@ -97,76 +101,96 @@ export default function ContactSection({ data, onChange }: ContactSectionProps) 
               <input
                 type="email"
                 id="email"
+                inputMode="email"
+                autoComplete="email"
                 autoCapitalize="none"
                 placeholder="name@example.com"
                 value={data.email}
                 onChange={(e) => updateField("email", e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
+                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] placeholder:text-gray-400/80"
               />
             </div>
           </div>
 
           <div>
             <label htmlFor="phone" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-              Phone Number
+              Phone Number <span className="text-[11px] font-normal text-gray-400 ml-1">(optional)</span>
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-3 sm:left-3.5 sm:top-3.5 h-4 w-4 text-gray-400" />
               <input
                 type="tel"
                 id="phone"
+                inputMode="tel"
+                autoComplete="tel"
                 placeholder="+91 98765 43210"
                 value={data.phone || ""}
                 onChange={(e) => updateField("phone", e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
+                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] placeholder:text-gray-400/80"
               />
             </div>
           </div>
         </div>
 
-        {/* Location: City, State, Country */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
-          <div>
-            <label htmlFor="city" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-              City
-            </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 sm:left-3.5 sm:top-3.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                id="city"
-                placeholder="e.g., Bengaluru"
-                value={data.city || ""}
-                onChange={(e) => updateField("city", e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
-              />
+        {/* Grouped Location Subsection: City, State, Country */}
+        <div className="pt-2 border-t border-gray-150">
+          <div className="mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Location
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
+            <div>
+              <label htmlFor="city" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
+                City <span className="text-[11px] font-normal text-gray-400 ml-1">(optional)</span>
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 sm:left-3.5 sm:top-3.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  id="city"
+                  autoComplete="address-level2"
+                  placeholder="e.g., Bengaluru"
+                  value={data.city || ""}
+                  onChange={(e) => updateField("city", e.target.value)}
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] placeholder:text-gray-400/80"
+                />
+              </div>
             </div>
-          </div>
-          <div>
-            <label htmlFor="state" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-              State / Region
-            </label>
-            <input
-              type="text"
-              id="state"
-              placeholder="e.g., Karnataka"
-              value={data.state || ""}
-              onChange={(e) => updateField("state", e.target.value)}
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
-            />
-          </div>
-          <div>
-            <label htmlFor="country" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
-              Country
-            </label>
-            <input
-              type="text"
-              id="country"
-              placeholder="e.g., India"
-              value={data.country || ""}
-              onChange={(e) => updateField("country", e.target.value)}
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px]"
-            />
+            <div>
+              <label htmlFor="state" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
+                State / Region <span className="text-[11px] font-normal text-gray-400 ml-1">(optional)</span>
+              </label>
+              <div className="relative">
+                <Building className="absolute left-3 top-3 sm:left-3.5 sm:top-3.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  id="state"
+                  autoComplete="address-level1"
+                  placeholder="e.g., Karnataka"
+                  value={data.state || ""}
+                  onChange={(e) => updateField("state", e.target.value)}
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] placeholder:text-gray-400/80"
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="country" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
+                Country <span className="text-[11px] font-normal text-gray-400 ml-1">(optional)</span>
+              </label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-3 sm:left-3.5 sm:top-3.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  id="country"
+                  autoComplete="country-name"
+                  placeholder="e.g., India"
+                  value={data.country || ""}
+                  onChange={(e) => updateField("country", e.target.value)}
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-xl text-sm sm:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[40px] sm:min-h-[44px] placeholder:text-gray-400/80"
+                />
+              </div>
+            </div>
           </div>
         </div>
 

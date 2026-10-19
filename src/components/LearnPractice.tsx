@@ -21,7 +21,35 @@ import {
   Cpu,
   Server,
   Layout,
+  Eye,
+  X,
+  Check,
+  ChevronRight,
+  Maximize2,
 } from "lucide-react";
+import { useBackHandler, BackPriority, shareContent, isNative } from "@/shared/platform";
+
+export interface RoadmapMilestone {
+  phase: string;
+  duration: string;
+  summary: string;
+  topics: string[];
+}
+
+export interface RoadmapItem {
+  id: string;
+  title: string;
+  badge: string;
+  badgeColor: string;
+  icon: React.ComponentType<{ className?: string }>;
+  duration: string;
+  level: string;
+  description: string;
+  skills: string[];
+  pdfUrl: string;
+  fileName: string;
+  milestones: RoadmapMilestone[];
+}
 
 interface LearnPracticeProps {
   subPage?: string;
@@ -41,6 +69,84 @@ export default function LearnPractice({
     } else {
       setInternalSubPage(page);
     }
+  };
+
+  // Roadmap Detail View State
+  const [selectedRoadmapDetail, setSelectedRoadmapDetail] = useState<RoadmapItem | null>(null);
+  const [completedMilestones, setCompletedMilestones] = useState<Record<string, boolean>>({});
+
+  // In-App PDF Viewer Modal State
+  const [activePdfViewer, setActivePdfViewer] = useState<{
+    title: string;
+    url: string;
+    fileName: string;
+    size?: string;
+  } | null>(null);
+
+  // Register Back Handler for PDF Viewer, Detail Modal & Subpages
+  useBackHandler(BackPriority.OVERLAY, () => {
+    if (activePdfViewer) {
+      setActivePdfViewer(null);
+      return true;
+    }
+    if (selectedRoadmapDetail) {
+      setSelectedRoadmapDetail(null);
+      return true;
+    }
+    if (subPage !== "hub") {
+      setSubPage("hub");
+      return true;
+    }
+    return false;
+  });
+
+  // Robust PDF Download & Native Share Helper
+  const handleDownloadPdf = async (url: string, fileName: string) => {
+    const toastId = toast.loading(`Preparing ${fileName}...`);
+    try {
+      if (isNative()) {
+        const fullUrl = url.startsWith("http")
+          ? url
+          : `${typeof window !== "undefined" ? window.location.origin : ""}${url}`;
+        const shared = await shareContent({
+          title: fileName,
+          text: `Download or open ${fileName}`,
+          url: fullUrl,
+          dialogTitle: `Save or Open ${fileName}`,
+        });
+        if (shared) {
+          toast.success("Ready to save or open", { id: toastId });
+          return;
+        }
+      }
+
+      // Web Browser: fetch as blob and trigger download
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to fetch PDF`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      toast.success(`Downloaded ${fileName}`, { id: toastId });
+    } catch {
+      window.open(url, "_blank");
+      toast.success(`Opened ${fileName}`, { id: toastId });
+    }
+  };
+
+  const toggleMilestone = (roadmapId: string, milestoneIdx: number) => {
+    const key = `${roadmapId}_${milestoneIdx}`;
+    setCompletedMilestones((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
 
   // Quiz state
@@ -124,7 +230,7 @@ export default function LearnPractice({
   };
 
   // Career Roadmaps Curated Catalog
-  const roadmaps = [
+  const roadmaps: RoadmapItem[] = [
     {
       id: "full-stack",
       title: "Full Stack Web Developer",
@@ -137,6 +243,52 @@ export default function LearnPractice({
       skills: ["React", "Next.js", "Node.js", "TypeScript", "SQL", "Cloud"],
       pdfUrl: "/ROADMAPS/full-stack.pdf",
       fileName: "full-stack-roadmap.pdf",
+      milestones: [
+        {
+          phase: "Phase 1: Web Foundations & DOM",
+          duration: "Weeks 1–4",
+          summary: "Master the building blocks of the modern web and clean semantic code.",
+          topics: [
+            "HTML5 Semantic Structure & Accessibility",
+            "CSS3 Flexbox, Grid & Responsive Layouts",
+            "JavaScript ES6+, Promises, and Async/Await",
+            "DOM Manipulation & Event-Driven Architecture",
+          ],
+        },
+        {
+          phase: "Phase 2: Frontend Engineering & State",
+          duration: "Weeks 5–12",
+          summary: "Build scalable reactive client applications with TypeScript and modern frameworks.",
+          topics: [
+            "React 18 Component Lifecycle & Hooks",
+            "Next.js App Router & Server Components",
+            "TypeScript Strict Typing & Interfaces",
+            "TailwindCSS Production Design Systems",
+          ],
+        },
+        {
+          phase: "Phase 3: Backend Systems & APIs",
+          duration: "Weeks 13–20",
+          summary: "Engineer secure, high-throughput server APIs and relational databases.",
+          topics: [
+            "Node.js & Express RESTful API Patterns",
+            "PostgreSQL Schema Design & Prisma ORM",
+            "Authentication (JWT, OAuth & Supabase Auth)",
+            "Input Validation, Security Headers & Rate Limiting",
+          ],
+        },
+        {
+          phase: "Phase 4: Cloud, DevOps & Production",
+          duration: "Weeks 21–28",
+          summary: "Containerize, deploy, and monitor full-stack applications in the cloud.",
+          topics: [
+            "Docker Containerization & Multi-stage Builds",
+            "CI/CD Workflows via GitHub Actions",
+            "Cloud Deployment on AWS & Vercel",
+            "Performance Monitoring & Caching with Redis",
+          ],
+        },
+      ],
     },
     {
       id: "ai-engineer",
@@ -150,6 +302,52 @@ export default function LearnPractice({
       skills: ["Python", "TensorFlow", "PyTorch", "Transformers", "MLOps"],
       pdfUrl: "/ROADMAPS/ai-engineer.pdf",
       fileName: "ai-engineer-roadmap.pdf",
+      milestones: [
+        {
+          phase: "Phase 1: Mathematical Foundations & Python",
+          duration: "Weeks 1–6",
+          summary: "Solidify vector calculus, linear algebra, and data pipelines.",
+          topics: [
+            "Linear Algebra & Matrix Operations",
+            "Probability, Statistics & Hypothesis Testing",
+            "NumPy & Pandas High-Performance Vectorization",
+            "Exploratory Data Analysis with Matplotlib/Seaborn",
+          ],
+        },
+        {
+          phase: "Phase 2: Classical Machine Learning",
+          duration: "Weeks 7–12",
+          summary: "Master core predictive models and validation techniques.",
+          topics: [
+            "Supervised Learning (Regression & Classification)",
+            "Tree-based Models (Random Forests & XGBoost)",
+            "Unsupervised Clustering & Dimensionality Reduction",
+            "Feature Engineering, Cross-Validation & Metric Evaluation",
+          ],
+        },
+        {
+          phase: "Phase 3: Deep Learning & Neural Networks",
+          duration: "Weeks 13–20",
+          summary: "Train deep architectures for vision, language, and pattern recognition.",
+          topics: [
+            "PyTorch Tensor Computation & Autograd",
+            "Convolutional Neural Networks (CNNs) for Vision",
+            "Recurrent Networks & Attention Mechanisms",
+            "HuggingFace Transformers Architecture",
+          ],
+        },
+        {
+          phase: "Phase 4: Generative AI, LLMs & MLOps",
+          duration: "Weeks 21–28",
+          summary: "Deploy modern generative models and production AI pipelines.",
+          topics: [
+            "Retrieval-Augmented Generation (RAG) Architecture",
+            "Vector Databases (Pinecone / pgvector)",
+            "LLM Fine-Tuning & Quantization",
+            "Model Deployment, MLflow & CI/CD for AI",
+          ],
+        },
+      ],
     },
     {
       id: "frontend",
@@ -163,6 +361,52 @@ export default function LearnPractice({
       skills: ["HTML5/CSS3", "JavaScript ES6+", "React 18", "TailwindCSS"],
       pdfUrl: "/ROADMAPS/frontend.pdf",
       fileName: "frontend-developer-roadmap.pdf",
+      milestones: [
+        {
+          phase: "Phase 1: Advanced Layout & Design Systems",
+          duration: "Weeks 1–4",
+          summary: "Create pixel-perfect, accessible, and responsive user interfaces.",
+          topics: [
+            "CSS Grid, Subgrid & Container Queries",
+            "TailwindCSS Token Architecture",
+            "WCAG 2.1 AA Accessibility Standards",
+            "Typography, Contrast & Micro-interactions",
+          ],
+        },
+        {
+          phase: "Phase 2: Component Architecture & State",
+          duration: "Weeks 5–10",
+          summary: "Develop modular, reusable components with predictable state flow.",
+          topics: [
+            "React 18 Custom Hooks & Context Patterns",
+            "Server Components & Suspense Boundaries",
+            "Client State with Zustand / Redux Toolkit",
+            "Form Handling with React Hook Form & Zod",
+          ],
+        },
+        {
+          phase: "Phase 3: Performance, Animation & Quality",
+          duration: "Weeks 11–16",
+          summary: "Optimize Core Web Vitals and test critical interaction flows.",
+          topics: [
+            "Framer Motion Smooth UI Transitions",
+            "Lighthouse & Core Web Vitals Optimization",
+            "Unit & Integration Testing with Vitest",
+            "End-to-End Testing with Playwright",
+          ],
+        },
+        {
+          phase: "Phase 4: Production Web Apps",
+          duration: "Weeks 17–20",
+          summary: "Build offline-ready, lightning-fast progressive web applications.",
+          topics: [
+            "Progressive Web Apps (PWA) & Service Workers",
+            "Internationalization (i18n)",
+            "Edge Rendering & Asset Optimization",
+            "Cross-browser & Mobile Device Testing",
+          ],
+        },
+      ],
     },
     {
       id: "backend",
@@ -176,6 +420,52 @@ export default function LearnPractice({
       skills: ["Node.js", "Express", "System Design", "PostgreSQL", "Docker"],
       pdfUrl: "/ROADMAPS/backend.pdf",
       fileName: "backend-architect-roadmap.pdf",
+      milestones: [
+        {
+          phase: "Phase 1: Systems & Concurrency",
+          duration: "Weeks 1–4",
+          summary: "Understand server runtime internals and asynchronous concurrency.",
+          topics: [
+            "Node.js Event Loop & Worker Threads",
+            "Go / Rust Concurrency Fundamentals",
+            "Linux Systems Administration & Bash Scripting",
+            "TCP/IP, HTTP/2, HTTP/3 Protocols",
+          ],
+        },
+        {
+          phase: "Phase 2: Storage & Query Optimization",
+          duration: "Weeks 5–10",
+          summary: "Design resilient relational schemas and caching strategies.",
+          topics: [
+            "PostgreSQL Schema Design & B-Tree Indexing",
+            "Connection Pooling & Transaction Isolation Levels",
+            "Redis In-Memory Caching & Rate Limiting",
+            "Database Migrations & Backup Strategies",
+          ],
+        },
+        {
+          phase: "Phase 3: Distributed Systems & Microservices",
+          duration: "Weeks 11–16",
+          summary: "Architect decoupled, message-driven backend systems.",
+          topics: [
+            "gRPC & Protocol Buffers Communication",
+            "Message Brokers (Kafka / RabbitMQ)",
+            "Event-Driven & CQRS Architecture",
+            "Distributed Tracing & OpenTelemetry",
+          ],
+        },
+        {
+          phase: "Phase 4: High Availability & Security",
+          duration: "Weeks 17–24",
+          summary: "Harden APIs against vulnerabilities and manage cloud scale.",
+          topics: [
+            "Docker & Kubernetes Orchestration",
+            "OAuth2, OpenID Connect & Zero-Trust Security",
+            "Load Balancing, API Gateways & Reverse Proxies",
+            "Chaos Engineering & Disaster Recovery",
+          ],
+        },
+      ],
     },
   ];
 
@@ -336,67 +626,274 @@ export default function LearnPractice({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Roadmaps Grid with bottom navigation clearance */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-28 sm:pb-12">
             {roadmaps.map((r) => {
               const IconComp = r.icon;
               return (
                 <div
                   key={r.id}
-                  className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                  className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                          <IconComp className="w-4 h-4" />
-                        </div>
-                        <h3 className="font-bold text-base text-gray-900">{r.title}</h3>
-                      </div>
-                      <span className={`text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full border ${r.badgeColor}`}>
+                    {/* Top Row: Single-line badge pill & duration */}
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <span
+                        className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border whitespace-nowrap ${r.badgeColor}`}
+                      >
                         {r.badge}
                       </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-gray-500" />
                         {r.duration}
                       </span>
-                      <span>•</span>
-                      <span className="inline-flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-gray-400" />
-                        {r.level}
-                      </span>
                     </div>
 
-                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                    {/* Title & Fixed Square Icon */}
+                    <div className="flex items-start gap-3 mb-2.5">
+                      <div className="w-10 h-10 min-w-[40px] rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <IconComp className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-base sm:text-lg text-gray-900 leading-snug">
+                          {r.title}
+                        </h3>
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 mt-0.5">
+                          <Layers className="w-3.5 h-3.5 text-gray-500" />
+                          {r.level}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* High-contrast description */}
+                    <p className="text-xs sm:text-sm text-gray-700 leading-relaxed mb-3.5">
                       {r.description}
                     </p>
 
+                    {/* Skill chips: max 4 + counter to avoid orphans */}
                     <div className="flex flex-wrap gap-1.5 mb-4">
-                      {r.skills.map((skill, i) => (
+                      {r.skills.slice(0, 4).map((skill, i) => (
                         <span
                           key={i}
-                          className="text-[11px] font-medium bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md"
+                          className="text-[11px] font-medium bg-gray-100 text-gray-800 px-2 py-0.5 rounded-md"
                         >
                           {skill}
                         </span>
                       ))}
+                      {r.skills.length > 4 && (
+                        <span className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">
+                          +{r.skills.length - 4} more
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <a
-                    href={r.pdfUrl}
-                    download={r.fileName}
-                    className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download PDF Roadmap</span>
-                  </a>
+                  {/* Actions: Milestones + View PDF + Download */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRoadmapDetail(r)}
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 min-h-[42px]"
+                    >
+                      <Layers className="w-4 h-4" />
+                      <span>Milestones</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActivePdfViewer({
+                          title: r.title,
+                          url: r.pdfUrl,
+                          fileName: r.fileName,
+                          size: "Official Roadmap",
+                        })
+                      }
+                      className="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-[0.99] text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[42px]"
+                      title="View PDF Document"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View PDF</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPdf(r.pdfUrl, r.fileName)}
+                      className="p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 active:scale-[0.99] text-gray-700 border border-gray-200 font-bold text-xs transition flex items-center justify-center min-h-[42px] min-w-[42px]"
+                      title="Download PDF File"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Interactive In-App Roadmap Detail Modal */}
+          {selectedRoadmapDetail && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-fade-in">
+              <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-scale-up">
+                {/* Modal Header */}
+                <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 bg-gradient-to-r from-gray-50 to-indigo-50/30">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                      {selectedRoadmapDetail.icon && (
+                        <selectedRoadmapDetail.icon className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span
+                          className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border whitespace-nowrap ${selectedRoadmapDetail.badgeColor}`}
+                        >
+                          {selectedRoadmapDetail.badge}
+                        </span>
+                        <span className="text-[11px] font-semibold text-gray-600">
+                          {selectedRoadmapDetail.duration} • {selectedRoadmapDetail.level}
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-base sm:text-lg text-gray-900 leading-tight truncate">
+                        {selectedRoadmapDetail.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRoadmapDetail(null)}
+                    aria-label="Close Roadmap Details"
+                    className="p-2 -mr-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition min-w-[40px] min-h-[40px] flex items-center justify-center"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Scrollable Body */}
+                <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed bg-gray-50 p-3.5 rounded-xl border border-gray-150">
+                    {selectedRoadmapDetail.description}
+                  </p>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                        Curriculum Phases & Milestones
+                      </h4>
+                      <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                        {
+                          selectedRoadmapDetail.milestones.filter(
+                            (_, idx) => completedMilestones[`${selectedRoadmapDetail.id}_${idx}`]
+                          ).length
+                        }{" "}
+                        of {selectedRoadmapDetail.milestones.length} completed
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {selectedRoadmapDetail.milestones.map((m, idx) => {
+                        const isDone = Boolean(
+                          completedMilestones[`${selectedRoadmapDetail.id}_${idx}`]
+                        );
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => toggleMilestone(selectedRoadmapDetail.id, idx)}
+                            className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                              isDone
+                                ? "bg-indigo-50/50 border-indigo-200"
+                                : "bg-white border-gray-200 hover:border-gray-300 shadow-2xs"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 border transition ${
+                                  isDone
+                                    ? "bg-indigo-600 border-indigo-600 text-white"
+                                    : "border-gray-300 bg-white"
+                                }`}
+                              >
+                                {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <h5
+                                    className={`text-xs sm:text-sm font-bold ${
+                                      isDone ? "text-indigo-950 line-through" : "text-gray-900"
+                                    }`}
+                                  >
+                                    {m.phase}
+                                  </h5>
+                                  <span className="text-[11px] font-semibold text-gray-500">
+                                    {m.duration}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                  {m.summary}
+                                </p>
+                                <div className="flex flex-wrap gap-1 mt-2.5">
+                                  {m.topics.map((t, ti) => (
+                                    <span
+                                      key={ti}
+                                      className="text-[10px] font-medium bg-gray-100 text-gray-700 px-2 py-0.5 rounded"
+                                    >
+                                      {t}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = selectedRoadmapDetail;
+                        setSelectedRoadmapDetail(null);
+                        setActivePdfViewer({
+                          title: target.title,
+                          url: target.pdfUrl,
+                          fileName: target.fileName,
+                          size: "Official Roadmap",
+                        });
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View Official PDF</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDownloadPdf(
+                          selectedRoadmapDetail.pdfUrl,
+                          selectedRoadmapDetail.fileName
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 border border-gray-200 transition"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRoadmapDetail(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-200 transition"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -454,14 +951,33 @@ export default function LearnPractice({
                     </div>
                   </div>
 
-                  <a
-                    href={n.pdfUrl}
-                    download={n.fileName}
-                    className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Notes ({n.size})</span>
-                  </a>
+                  {/* Actions: View Notes + Download */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100 mt-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActivePdfViewer({
+                          title: n.title,
+                          url: n.pdfUrl,
+                          fileName: n.fileName,
+                          size: n.size,
+                        })
+                      }
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 active:scale-[0.99] text-amber-900 border border-amber-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[42px]"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View Notes</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPdf(n.pdfUrl, n.fileName)}
+                      className="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 min-h-[42px]"
+                      title="Download PDF Notes"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download</span>
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -751,6 +1267,89 @@ export default function LearnPractice({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Interactive In-App PDF Viewer Modal */}
+      {activePdfViewer && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-5 animate-fade-in">
+          <div className="bg-white w-full max-w-4xl h-[92vh] sm:h-[88vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-scale-up">
+            {/* Viewer Header */}
+            <div className="px-4 sm:px-6 py-3.5 border-b border-gray-200 flex items-center justify-between gap-3 bg-gray-50/90">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-xs sm:text-sm text-gray-900 truncate">
+                    {activePdfViewer.title}
+                  </h3>
+                  {activePdfViewer.size && (
+                    <span className="text-[10px] font-semibold text-gray-500">
+                      {activePdfViewer.size}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => window.open(activePdfViewer.url, "_blank")}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 hover:text-indigo-600 hover:bg-gray-100 transition"
+                  title="Open in new window"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Fullscreen</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPdf(activePdfViewer.url, activePdfViewer.fileName)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-2xs"
+                  title="Download / Save PDF"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePdfViewer(null)}
+                  aria-label="Close PDF Viewer"
+                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition min-w-[36px] min-h-[36px] flex items-center justify-center"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Viewer Iframe Content */}
+            <div className="flex-1 bg-gray-100 relative overflow-hidden flex flex-col">
+              <iframe
+                src={`${activePdfViewer.url}#view=FitH&toolbar=1`}
+                className="w-full flex-1 border-0"
+                title={activePdfViewer.title}
+              />
+              <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-center text-[11px] text-gray-500">
+                Previewing official document. If inline preview is unsupported on your device, tap{" "}
+                <button
+                  type="button"
+                  onClick={() => window.open(activePdfViewer.url, "_blank")}
+                  className="font-bold text-indigo-600 hover:underline"
+                >
+                  Fullscreen
+                </button>{" "}
+                or{" "}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPdf(activePdfViewer.url, activePdfViewer.fileName)}
+                  className="font-bold text-indigo-600 hover:underline"
+                >
+                  Download
+                </button>
+                .
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -373,7 +373,7 @@ export default function Dashboard() {
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-7xl mx-auto flex flex-col min-w-0 overflow-x-hidden">
         {/* Compact Sticky Top App Header with Safe Area Notch padding */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[56px] pt-[max(env(safe-area-inset-top,0px),0.5rem)] pb-2 flex items-center justify-between shadow-xs">
+        <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[56px] pt-[max(env(safe-area-inset-top,0px),0.5rem)] pb-2 ${activePage === "resume" ? "hidden md:flex" : "flex"} items-center justify-between shadow-xs`}>
           <div className="flex items-center gap-2 min-w-0">
             {activePage !== "dashboard" ? (
               <button
@@ -449,7 +449,7 @@ export default function Dashboard() {
         </header>
 
         {/* Scrollable Page Body with Compact Mobile Edge-to-Edge Margins & Safe Bottom Offset */}
-        <div className={`flex-1 min-w-0 ${isLiveInterviewSession ? "p-0 sm:p-4 pb-0 overflow-hidden" : "p-1 sm:p-4 md:p-6 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 overflow-y-auto overflow-x-hidden"}`}>
+        <div className={`flex-1 min-w-0 ${isLiveInterviewSession ? "p-0 sm:p-4 pb-0 overflow-hidden" : activePage === "resume" ? "p-0 sm:p-4 md:p-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-8 overflow-y-auto overflow-x-hidden" : "p-1 sm:p-4 md:p-6 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 overflow-y-auto overflow-x-hidden"}`}>
           <div className="animate-fade-in">
             {activePage === "dashboard" && (
               <div className="space-y-4 sm:space-y-6">

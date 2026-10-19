@@ -42,11 +42,18 @@ export function loadLocalResume(
     const migrated = migrateResumeSchema(parsed);
 
     // If the saved resume was empty of contact details but we know the user's name/email, backfill them
-    if (!migrated.contact.fullName && defaultUser?.name) {
-      migrated.contact.fullName = defaultUser.name;
-    }
-    if (!migrated.contact.email && defaultUser?.email) {
-      migrated.contact.email = defaultUser.email;
+    // (Ensure guest placeholders like 'Guest Explorer' are not backfilled into actual candidate fields)
+    const isGuestPlaceholder =
+      defaultUser?.name?.toLowerCase() === "guest explorer" ||
+      defaultUser?.email?.toLowerCase() === "guest@resumentor.app";
+
+    if (!isGuestPlaceholder) {
+      if (!migrated.contact.fullName && defaultUser?.name) {
+        migrated.contact.fullName = defaultUser.name;
+      }
+      if (!migrated.contact.email && defaultUser?.email) {
+        migrated.contact.email = defaultUser.email;
+      }
     }
 
     return migrated;

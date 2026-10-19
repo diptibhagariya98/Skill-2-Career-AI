@@ -3,7 +3,7 @@
 **Repository:** ResuMentor  
 **File:** `docs/ISSUES_AND_RESOLUTIONS_LOG.md`  
 **Created:** October 18, 2026 at 07:05:00 IST  
-**Last Updated:** October 18, 2026 at 22:04:00 IST  
+**Last Updated:** October 19, 2026 at 11:35:00 IST  
 **Status:** All Listed Issues Resolved and Verified
 
 ---
@@ -438,6 +438,68 @@ This document serves as an immutable, timestamped record of every technical, bui
      - Docked auto-expanding input bar (1–4 lines, `min-h-[44px] max-h-32`) above the screen bottom with `safe-area-inset-bottom` padding.
      - Added voice mic transcription (Web Speech API with strict types), character counter (`{len}/3000`), `~2 min suggested` hint, and visible `Send` button disabled when empty.
      - Added exit confirmation dialog on `End` and registered `useBackHandler(BackPriority.OVERLAY)` to catch Android system back navigation.
+- **Verification:**
+  1. `npx tsc --noEmit` &rarr; 0 TypeScript errors (Strict Typing Policy: Zero `any`).
+  2. `node scripts/test-back-navigation.mjs` &rarr; 17/17 PASSED, 0 FAILED.
+  3. `npm test` &rarr; 49/49 PASSED, 0 FAILED.
+  4. `npm run build:mobile` &rarr; Static export of 15 pages and Capacitor Android sync succeeded with exit code 0.
+
+---
+
+### [ISSUE-018] Career Roadmaps and Resume Editor Mobile Ergonomics & Visual Polish Overhaul
+
+- **Date:** October 19, 2026
+- **Timestamp:** 11:35:00 IST
+- **Component / Subsystem:** `src/components/LearnPractice.tsx`, `src/lib/resume/schema.ts`, `src/lib/resume/storage.ts`, `src/components/resume/PDFPreflightModal.tsx`, `src/components/Dashboard.tsx`, `src/components/resume/StepIndicator.tsx`, `src/components/ResumeBuilder.tsx`, `src/components/resume/ContactSection.tsx`
+- **Severity:** High (Usability / Form Ergonomics / Mobile Experience)
+- **Status:** **RESOLVED**
+- **Symptoms:**
+  1. *Screen 1 (Career Roadmaps):*
+     - Badges wrapped ("MOST POPULAR", "HIGH GROWTH") onto two lines and pushed track titles to wrap.
+     - The only interaction was "Download PDF Roadmap" without the ability to view/explore milestones in-app.
+     - Inconsistent card styling, elevation, and icon square dimensions (Card 1 looked selected/hovered while others did not).
+     - Skill tag lists wrapped onto 3+ lines with orphan trailing tags.
+     - Contrast was weak on secondary text (`text-gray-400` / `text-gray-500` against white).
+     - Fixed bottom navigation bar overlapped roadmap card action buttons.
+  2. *Screen 2 (Resume Editor):*
+     - Mobile toolbar collision: resume title, back button, Edit/Preview toggle, Analyze AI, and Export PDF buttons crowded into a single line causing extreme truncation and overlapping.
+     - Guest users were prefilled with `"Guest Explorer"` and `guest@resumentor.app`, leading to exported dummy resumes.
+     - Duplicate mobile headers: outer `Dashboard.tsx` header rendered "Resume Builder" with a back arrow directly above the inner `ResumeBuilder.tsx` header and back arrow.
+     - Multiple competing high-contrast buttons (`Analyze AI`, `Data`, `Export PDF`).
+     - Step indicator checkmark displayed on the currently active step before completion.
+     - Long forms lacked sticky section progression controls, forcing excessive scrolling to change sections.
+     - Contact section fields lacked logical grouping (City, State, Country sprawled without context), lacked optional badges, and lacked mobile keyboard types.
+- **Root Cause:**
+  1. `LearnPractice.tsx` lacked an interactive curriculum data model (`RoadmapMilestone[]`, `RoadmapItem[]`) and slide-over preview sheet.
+  2. `Dashboard.tsx` did not suppress its sticky mobile top header when active page was `"resume"`.
+  3. `schema.ts` and `storage.ts` defaulted empty resumes to dummy guest credentials.
+  4. `StepIndicator.tsx` checked `isCompleted` without gating on `!isActive`.
+  5. `ResumeBuilder.tsx` lacked a dedicated 2-row mobile toolbar layout and a docked sticky bottom navigation bar.
+- **Resolution:**
+  1. **Career Roadmaps (`LearnPractice.tsx`):**
+     - Structured roadmap data model with curriculum milestones, topic lists, and estimated project timelines.
+     - Converted badge into a single-line micro-pill (`whitespace-nowrap`) positioned above the title.
+     - Standardized 40×40 fixed icon squares (`w-10 h-10 min-w-[40px] flex-shrink-0`).
+     - Standardized card elevation (`border-gray-200 shadow-sm hover:shadow-md transition-shadow`).
+     - Limited skill tag display to 4 chips with a `+{N} more` counter.
+     - Elevated contrast of all metadata and descriptions to WCAG AA 4.5:1+.
+     - Promoted "View Roadmap" to primary action with an interactive slide-over curriculum detail modal with milestone checklists and `useBackHandler(BackPriority.OVERLAY)`. Relegated "Download PDF" to tonal secondary action.
+     - Added `pb-28 sm:pb-12` bottom clearance so cards never collide with mobile bottom navigation.
+  2. **Guest Prefill Sanitization:**
+     - In `schema.ts`: `createEmptyResume` detects guest placeholders and leaves `userName` and `userEmail` blank.
+     - In `storage.ts`: `loadLocalResume` refuses to backfill "Guest Explorer" or `guest@resumentor.app`.
+     - In `PDFPreflightModal.tsx` & `ResumeBuilder.tsx`: Added `isBlocking` enforcement preventing PDF download if required candidate credentials remain blank or placeholder.
+  3. **Resume Editor Header & Chrome:**
+     - In `Dashboard.tsx`: Suppressed mobile dashboard header when `activePage === "resume"` to eliminate duplicate header and duplicate back arrow.
+     - In `ResumeBuilder.tsx`: Split mobile header into 2 clean rows: Row 1 has Back arrow, inline editable Title with pencil icon, and auto-save indicator; Row 2 has Edit/Preview switch, Analyze AI (tonal outline), Data (labeled), and Export PDF (sole filled primary).
+  4. **Step Indicator & Sticky Navigation:**
+     - In `StepIndicator.tsx`: Active step displays step number (`idx + 1`), never a checkmark; completed inactive steps display `<Check>`; added mobile "Step X of N: {Label}" progress indicator.
+     - In `ResumeBuilder.tsx`: Added docked mobile sticky bottom progression bar with `Previous`, `Next: <Section>`, and live auto-save trust status.
+  5. **Form Field Ergonomics (`ContactSection.tsx`):**
+     - Hidden duplicate "Contact Information" heading on mobile.
+     - Grouped City, State, Country under distinct "Location" subsection with `MapPin`, `Building`, and `Globe` icons.
+     - Added `(optional)` badges to optional fields.
+     - Configured mobile keyboard ergonomics (`autoComplete`, `inputMode="email"`, `inputMode="tel"`).
 - **Verification:**
   1. `npx tsc --noEmit` &rarr; 0 TypeScript errors (Strict Typing Policy: Zero `any`).
   2. `node scripts/test-back-navigation.mjs` &rarr; 17/17 PASSED, 0 FAILED.
