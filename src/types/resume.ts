@@ -8,7 +8,38 @@ export const RESUME_SCHEMA_VERSION = 1;
 export type PageSize = "A4" | "Letter";
 export type FontScale = "small" | "medium" | "large";
 export type DateFormat = "MMM YYYY" | "MM/YYYY" | "YYYY-MM";
-export type TemplateId = "classic" | "modern" | "compact" | "academic";
+export enum ResumeTemplateId {
+  CLASSIC = "classic",
+  MODERN = "modern",
+  COMPACT = "compact",
+  ACADEMIC = "academic",
+  MINIMALIST = "minimalist",
+  CREATIVE = "creative",
+}
+
+export type TemplateId =
+  | "classic"
+  | "modern"
+  | "compact"
+  | "academic"
+  | "minimalist"
+  | "creative";
+
+export enum ExportStatus {
+  IDLE = "idle",
+  PREPARING = "preparing",
+  GENERATING = "generating",
+  READY = "ready",
+  FAILED = "failed",
+}
+
+export enum ExportErrorCode {
+  UNAUTHENTICATED = "UNAUTHENTICATED",
+  INVALID_PAYLOAD = "INVALID_PAYLOAD",
+  RENDER_FAILED = "RENDER_FAILED",
+  RATE_LIMITED = "RATE_LIMITED",
+  BROWSER_UNAVAILABLE = "BROWSER_UNAVAILABLE",
+}
 
 export type SectionKey =
   | "contact"

@@ -1,6 +1,7 @@
 import {
   ResumeData,
   RESUME_SCHEMA_VERSION,
+  TemplateId,
 } from "@/types/resume";
 import { DEFAULT_SECTION_ORDER, DEFAULT_SECTION_VISIBILITY } from "./registry";
 
@@ -66,8 +67,18 @@ export function createEmptyResume(initialUser?: { name?: string; email?: string 
   };
 }
 
-export function createSampleResume(): ResumeData {
+const TEMPLATE_ACCENT_MAP: Record<string, string> = {
+  classic: "#1e3a8a",   // Accessible Navy
+  modern: "#0f766e",    // Accessible Teal
+  compact: "#334155",   // Slate
+  academic: "#18181b",  // Charcoal / Black
+  minimalist: "#475569",// Cool Neutral
+  creative: "#7c3aed",  // Modern Indigo / Violet
+};
+
+export function createSampleResume(templateId: TemplateId = "modern"): ResumeData {
   const now = new Date().toISOString();
+  const accent = TEMPLATE_ACCENT_MAP[templateId] || "#0f766e";
   return {
     meta: {
       id: "sample_resume_001",
@@ -75,10 +86,10 @@ export function createSampleResume(): ResumeData {
       createdAt: now,
       updatedAt: now,
       title: "Alex Morgan - Senior Full Stack Engineer",
-      selectedTemplate: "modern",
+      selectedTemplate: templateId,
       pageSize: "A4",
       fontScale: "medium",
-      accentColor: "#0f766e", // Accessible Teal
+      accentColor: accent,
       dateFormat: "MMM YYYY",
       language: "en",
       sectionOrder: [...DEFAULT_SECTION_ORDER],

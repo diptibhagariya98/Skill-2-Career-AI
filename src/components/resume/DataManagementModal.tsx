@@ -11,6 +11,7 @@ import {
 } from "@/lib/resume/storage";
 import { createSampleResume, createEmptyResume } from "@/lib/resume/schema";
 import { toast } from "react-hot-toast";
+import { showConfirmDialog } from "@/shared/platform";
 import {
   X,
   Download,
@@ -88,14 +89,30 @@ export default function DataManagementModal({
     onClose();
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    const confirmed = await showConfirmDialog({
+      title: "Clear Resume Fields?",
+      message: "Are you sure you want to reset all active resume fields? Unsaved work will be cleared.",
+      okButtonTitle: "Clear Fields",
+      cancelButtonTitle: "Keep Editing",
+    });
+    if (!confirmed) return;
+
     const empty = createEmptyResume({ name: user?.name, email: user?.email });
     onUpdateResume(empty);
     toast.success("Resume fields cleared.");
     onClose();
   };
 
-  const handleDeleteAll = () => {
+  const handleDeleteAll = async () => {
+    const confirmed = await showConfirmDialog({
+      title: "Delete All Saved Data?",
+      message: "This will permanently delete your active resume and all saved revisions from your device. This action cannot be undone.",
+      okButtonTitle: "Yes, Delete Everything",
+      cancelButtonTitle: "Cancel",
+    });
+    if (!confirmed) return;
+
     deleteAllLocalResumeData(userId);
     const empty = createEmptyResume({ name: user?.name, email: user?.email });
     onUpdateResume(empty);
