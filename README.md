@@ -1,4 +1,4 @@
-# 🎓 ResuMentor (Skill-2-Career-AI)
+# 🎓 ResuMentor
 
 ## Next-Generation AI Career Companion, Scholarship Engine & Native Mobile App
 
@@ -292,7 +292,7 @@ Admin Control Center (only visible after admin login)
 ## Project Directory Structure
 
 ```text
-Skill-2-Career-AI-1/
+ResuMentor/
 │
 ├── .agents/                    # Internal coding rules and M3 design guidelines
 │   └── rules/                  # 00-native-core, 01-design-tokens, 05-self-audit, etc.
