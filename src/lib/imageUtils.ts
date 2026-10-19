@@ -53,7 +53,7 @@ export async function processAvatarImage(file: File, maxSize = 256, quality = 0.
 }
 
 /**
- * Returns initials from a full name (e.g., "John Doe" -> "JD", "Saikiran" -> "S").
+ * Returns initials from a full name (e.g., "John Doe" -> "JD", "Alex" -> "A").
  */
 export function getInitials(name?: string | null): string {
   if (!name || !name.trim()) return "U";
