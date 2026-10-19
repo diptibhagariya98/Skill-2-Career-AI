@@ -149,7 +149,7 @@ export default function InterviewThread({
   // Submit Answer handler
   const handleSubmitAnswer = async () => {
     if (sensitiveWarning) {
-      alert(sensitiveWarning);
+      toast.error(sensitiveWarning);
       return;
     }
 
@@ -158,12 +158,12 @@ export default function InterviewThread({
       currentQuestion.type === "situational_judgement";
 
     if (isChoice && selectedOptions.length === 0) {
-      alert("Please select an option to submit your answer.");
+      toast.error("Please select an option to submit your answer.");
       return;
     }
 
     if (!isChoice && userText.trim().length < 3) {
-      alert("Please enter your answer before submitting.");
+      toast.error("Please enter your answer before submitting.");
       return;
     }
 

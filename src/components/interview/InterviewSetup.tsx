@@ -23,6 +23,7 @@ import {
 import { extractJobDescriptionSkills } from "../../lib/interview/engine";
 import { ROLE_PROFILES } from "../../constants/interviewData";
 import { PickerSelect, PickerOption, BottomSheet } from "@/shared/ui";
+import { toast } from "react-hot-toast";
 
 const EXPERIENCE_OPTIONS: readonly PickerOption<ExperienceLevel>[] = [
   { value: "fresher", label: "Student / Fresher (0 years)", description: "Core concepts, academic projects & fundamentals" },
@@ -94,7 +95,7 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
 
   const handleStartClick = () => {
     if (!targetJobTitle.trim()) {
-      alert("Please enter a target job title.");
+      toast.error("Please enter a target job title.");
       return;
     }
 

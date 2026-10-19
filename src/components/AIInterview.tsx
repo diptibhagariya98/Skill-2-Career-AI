@@ -194,10 +194,16 @@ export default function AIInterview({
     }
   };
 
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
   const handleClearAllHistory = () => {
-    if (confirm("Are you sure you want to clear all past interview history?")) {
-      saveSessions([]);
-    }
+    setShowClearConfirm(true);
+  };
+
+  const confirmClearAll = () => {
+    saveSessions([]);
+    setShowClearConfirm(false);
+    toast.success("Interview history cleared.");
   };
 
   const isLiveSession = activeTab === "session";
@@ -311,6 +317,34 @@ export default function AIInterview({
           />
         )}
       </div>
+
+      {/* Confirmation Modal to Clear History */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-gray-150 space-y-4">
+            <h3 className="text-sm font-bold text-gray-900">Clear All Interview History?</h3>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Are you sure you want to delete all past interview sessions? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmClearAll}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 shadow-xs transition-colors"
+              >
+                Clear History
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
