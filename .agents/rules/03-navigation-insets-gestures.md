@@ -1,15 +1,15 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Navigation, edge-to-edge insets, predictive back, transitions, scrolling, keyboard, haptics and native bridge rules for the Next.js + Capacitor app
 ---
 
 # Navigation, Insets, Gestures, Native Bridge
 
-Do not install or set up anything. Do not edit native project files unless the task names them. Report native changes as recommendations.
+Device features follow files 08 and 09. Install plugins only with the protocol in file 08. Edit native project files only as file 08 allows, and report every native edit.
 
 ## 1. Edge-to-edge and insets (Android 15 enforced, Android 16)
 - The app draws behind the status bar and the navigation or gesture bar. Bars are transparent. Content must never sit under them unintentionally.
-- Read insets in one place (an `insets` helper) and expose CSS variables: `--sat`, `--sar`, `--sab`, `--sal`. Source order: variable injected by the existing native bridge, then `env(safe-area-inset-*)`, then `0px`. Use only these variables in layout.
+- Read insets in one place (an `insets` helper) and expose CSS variables: `--sat`, `--sar`, `--sab`, `--sal`. Source order: variable injected by the native bridge (system bars or insets support in the installed Capacitor version, or a plugin, file 08), then `env(safe-area-inset-*)`, then `0px`. Use only these variables in layout.
 - Top app bar pads by `--sat`. Bottom navigation bar and bottom action bars pad by `--sab`. Full-bleed media may extend under bars, interactive controls may not.
 - Display cutouts and rotation: respect left and right insets in landscape.
 - System bar icon color follows the content under it: dark icons on light surfaces, light icons on dark. Update through the platform wrapper when the theme changes or a dark hero is shown.
@@ -78,10 +78,10 @@ Do not install or set up anything. Do not edit native project files unless the t
 ## 9. Native bridge usage (through the platform wrapper only)
 - Dialogs and action sheets for simple confirm or choose. Toast only for very short confirmations. Share sheet for sharing and PDF export results. In-app custom tab for external links. File picker or share for export download. Clipboard for copy with a snackbar confirmation.
 - Date and time inputs may rely on the system picker.
-- Preferences or secure storage plugins already in the project for tokens and settings. Auth tokens do not go in plain web storage if a secure option exists.
+- Tokens go to secure storage, and settings and small caches to the preferences plugin or the app database (file 09). Install the plugin if it is missing (file 08). Secrets never go in plain web storage on native.
 - Network status plugin drives the offline snackbar and retry logic.
 - App lifecycle events refresh stale data on resume (revalidate in the background) and lock sensitive screens if required.
-- Every plugin call is wrapped in try and catch with a web fallback. Never crash the screen on a missing plugin.
+- Every plugin call goes through the platform wrapper, which checks capability, uses try and catch, applies a timeout where the user is not interacting, and provides a web fallback (file 08). A missing plugin never crashes a screen.
 
 ## 10. Startup and splash
 - Use the system splash. Keep it until the first screen can render, then fade out in 150 ms. No second web splash and no spinner on a blank page.

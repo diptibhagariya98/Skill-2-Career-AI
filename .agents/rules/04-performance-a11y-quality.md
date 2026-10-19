@@ -5,7 +5,7 @@ description: Performance budgets, accessibility, anti-patterns and the quality g
 
 # Performance, Accessibility, Anti-patterns, Quality Gate
 
-Do not install or set up anything to meet these rules. Use what the project already has and report gaps.
+Meet these rules with the project's existing code first. If a rule needs a native or web capability that is missing, add it with the protocol in file 08 and report it.
 
 ## 1. Performance budgets
 - Target 60 fps on a mid-range Android phone, 120 fps on high refresh screens. Interaction response within 100 ms.
@@ -88,12 +88,13 @@ A change is not done until every item passes. Record failures in the final repor
 - No console errors, no hydration mismatch, no layout shift after load.
 - Scroll and transitions stay smooth. No animation of layout properties.
 - TalkBack names and order verified. Reduced motion verified.
-- No new dependency, no config or native file change unless requested.
+- Every new dependency or native edit follows file 08 and is listed in the report. No unrelated changes.
+- The native gap audit (file 10) shows no Critical or High gaps, and every device-dependent feature has a matrix row.
 
 ## 7. Test matrix
 - Devices: a small phone (360 wide), a large phone (412), a tablet or foldable width (600+), plus Android 15 and 16 images.
 - Modes: gesture nav, 3-button nav, dark mode, system font scale 1.3 and 2.0, display size large, TalkBack on, reduced motion, airplane mode, slow network, low memory.
-- Flows to run: cold start, resume from background, deep link, rotation, back from each depth, keyboard on each form, offline then online, session expiry.
+- Flows to run: cold start, resume from background, deep link, rotation, back from each depth, keyboard on each form, offline then online, session expiry, export and share a file, permission denied then granted, plugin missing in the browser.
 - Compare screenshots against the Material 3 reference spacing, type and color. Fix any visible difference above 4 px in spacing or any wrong token.
 
 ## 8. Maintenance rules

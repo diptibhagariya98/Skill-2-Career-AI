@@ -5,7 +5,7 @@ description: Rules for running the mobile-first app correctly in normal browsers
 
 # Browser Compatibility, Adaptive Layout and Styling
 
-The product is a mobile app first. The same screens also run in ordinary browsers (phone and desktop). The browser gets the same app, adapted, not a separate website design. Do not install or set up anything to follow these rules.
+The product is a mobile app first. The same screens also run in ordinary browsers (phone and desktop). The browser gets the same app, adapted, not a separate website design. Device capabilities and their browser fallbacks follow files 08 and 09.
 
 ## 1. Strategy
 - One codebase, one set of screens. The 360 px phone layout is the design. Everything else is an adaptation.
@@ -28,6 +28,7 @@ The product is a mobile app first. The same screens also run in ordinary browser
 ## 3. Native wrapper vs browser runtime
 - The platform wrapper reports the runtime (native or browser) and provides fallbacks. Screens never check the runtime themselves and never call native plugins directly.
 - Fallbacks: haptics do nothing. Share uses the browser share feature if present, otherwise copy link with a snackbar. File export uses a download. Back uses browser history. Dialogs use the app dialog component. Status bar color uses the theme color meta. Splash does not exist. Permissions use the browser prompts and denial states are handled.
+- The capability table in file 08 is the source of truth for each fallback.
 - Missing capability never throws. Wrap every call, return a safe result, and show a clear message when a feature is unavailable.
 - Safe area uses `env(safe-area-inset-*)` with `0px` fallback. Keyboard uses the visual viewport.
 - Zoom: in the browser, never disable zoom. Only the native wrapper may. Content must reflow at 400 percent zoom with no horizontal scroll at 320 CSS px.

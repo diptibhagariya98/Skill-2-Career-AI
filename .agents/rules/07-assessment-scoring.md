@@ -1,47 +1,62 @@
-# Assessment & Score Card Rules (Material 3 Expressive, Android 15/16)
+---
+trigger: always_on
+description: Rules for assessment, score and feedback cards (interview answers, scorecards, resume ATS checks, quizzes): scoring math, layout, semantic colors, docked actions, announcements
+---
 
-Applies to: Live Interview feedback, Interview Scorecard, Resume Preflight ATS scores, Quizzes, and any evaluation card displaying metrics.
+# Assessment and Score Card Rules (Material 3 Expressive, Android 15/16)
 
-## 1. Score Calculation & Rounding (Zero Mathematical Mismatch)
-- **Single Source of Truth:** The overall score must always be computed from the exact component weights displayed on screen in one central function (`calculateAnswerScore`).
-- **Standard Weights:**
-  - Accuracy: **40%**
-  - Context: **35%**
-  - Confidence: **25%**
-- **Formula:** `Math.round((accuracy * 0.4 + context * 0.35 + confidence * 0.25) * 10)`.
-- **No Hardcoded Overrides:** Never hardcode `100/100` if the weighted sum yields `97.5` or `98`. If an answer is fully correct (e.g. multiple choice), all contributing dimensions must evaluate to 10/10 so the math is transparent and consistent.
-- **Brevity & Depth Penalties:** Single-word or brief answers (e.g., "useMemo") cannot earn maximum context or confidence scores. Cap confidence at 4/10 and context at 3/10 when the answer lacks architectural reasoning and constraints.
+Applies to Live Interview feedback, the interview scorecard, the resume ATS check, quizzes and any card that shows scores or metrics. Works in the native app and in the browser. Uses tokens (file 01) and components (file 02).
 
-## 2. Score Hierarchy & Visual Layout
-- **Score as the Hero:** Display the overall score as a prominent hero metric (e.g., `98/100` in 28–32px font) paired with a semantic pill badge (`Strong answer`, `Good answer`, `Developing`, `Needs practice`).
-- **No Multi-Line Score Headers:** Never allow score titles like `Answer Score: 100/100` or method badges like `Key-Point Blend` to wrap into multiple lines.
-- **Scoring Method Disclosure:** Place method details into an expandable "Scoring info" or "How this was scored" toggle rather than prominent, confusing badge jargon.
+## 1. Score calculation (zero mismatch)
+- One source of truth: a single central function computes the overall score from the same weights shown on screen. Screens only display its result.
+- If a backend returns the score, display the backend value and verify it against the weighted formula. On a mismatch, report it with the evidence (file 05, section 7) and never hide it.
+- Interview answer weights: Accuracy 40 percent, Context 35 percent, Confidence 25 percent. Weights shown on screen add up to 100.
+- Formula: `round((accuracy * 0.40 + context * 0.35 + confidence * 0.25) * 10)`, with each dimension scored 0 to 10, giving 0 to 100.
+- No hard-coded overrides. Never show 100/100 when the weighted sum is 97.5 or 98. A fully correct answer must have every dimension at 10/10 so the math is transparent.
+- Depth penalty, for open-ended interview questions only: a one-word or very brief answer with no reasoning or constraints caps Confidence at 4/10 and Context at 3/10.
+- Objective quick-practice questions (multiple choice or a single correct term) are scored on correctness. A correct answer gets 10/10 on every dimension and the depth penalty does not apply.
+- Round once, at the end, with the same rounding on the card, in lists, in history and in exports.
 
-## 3. Metric Display: Rows Over Narrow Columns
-- **Anti-Pattern:** 3 narrow column tiles on mobile viewports (< 412px) cause label truncation (e.g., "Confidenc" clipped, "Accuracy" touching border).
-- **Rule:** Use full-width horizontal rows:
-  - Left: Metric label (`Accuracy`) with small supporting text (`· 40% weight`).
-  - Right: Numerical score with semantic color (`10/10`).
-  - Bottom: Thin progress track (`h-1.5 rounded-full`) filled according to score percentage.
+## 2. Hierarchy and layout
+- Score as the hero: the overall score is the largest element (28 to 32 px, emphasized weight), for example `98/100`, with one single-line pill: Strong answer, Good answer, Developing or Needs practice.
+- Pill bands: 80 and above Strong, 65 to 79 Good, 50 to 64 Developing, below 50 Needs practice.
+- Score headers and method names never wrap onto a second line. Put the method name (for example "Key-Point Blend") inside an expandable "How this was scored" row.
+- Use full-width metric rows, not narrow columns. Below 412 px columns clip labels ("Confidenc"). Each row has the metric label with small supporting text ("40% weight") on the left, the score (`10/10`) on the right, and a thin progress track below (4 to 6 px, full radius, filled by percentage).
+- Type: label in Label Large, score in Title Medium emphasized, supporting text in Body Small.
 
-## 4. Semantic Color Thresholds
-Never assign arbitrary accent colors (e.g., random indigo, purple, teal) across parallel metric scores. Always adhere to strict semantic thresholds paired with textual context:
-- **Score $\ge 8$ / 10 ($\ge 80\%$):** Emerald / Green (`text-emerald-700 bg-emerald-50 bar-bg-emerald-500`).
-- **Score $5 - 7$ / 10 ($50 - 79\%$):** Amber (`text-amber-700 bg-amber-50 bar-bg-amber-500`).
-- **Score $< 5$ / 10 ($< 50\%$):** Rose / Red (`text-rose-700 bg-rose-50 bar-bg-rose-500`).
+## 3. Semantic color thresholds
+- 8 to 10 out of 10 (80 percent and above): success. 5 to 7 (50 to 79 percent): warning. Below 5 (under 50 percent): error.
+- Use the semantic token roles with container and on-container pairs (file 01), reached through the project's token-backed classes. Never use raw palette classes such as emerald, amber or rose, and never use arbitrary accent colors for parallel metrics.
+- Text uses the on-container color so it passes 4.5:1. Bars use the main role color.
+- Color is never the only signal. Every score also shows its number and pill label.
 
-## 5. Tonal Surfaces (No Card Nesting Madness)
-- Eliminate harsh borders and cards-inside-cards-inside-cards.
-- Outer container uses a clean tonal background (`bg-slate-50` or `bg-gray-50`) with no harsh outline.
-- Feedback blocks use a soft tonal fill (`bg-indigo-50/70`) without thick borders.
-- Sub-cards (metric rows, concept callouts) use clean white rounded cards with subtle `shadow-2xs`.
+## 4. Surfaces
+- No cards inside cards inside cards. The outer area is the plain surface. Feedback blocks use a soft tonal container fill with no outline. Metric rows are filled low-emphasis rows with medium radius, separated by gap, not borders.
+- No heavy shadows.
 
-## 6. Action Docking & Safe Areas
-- Feedback continue actions (`Next question`, `Finish interview`) must **never** scroll with the conversation body.
-- Dock a full-width bottom bar pinned above `safe-area-inset-bottom`.
-- Include a secondary `Retry` action for learning retention.
-- Ensure $\ge 48\text{px}$ touch targets on all buttons.
+## 5. Action docking
+- Continue actions ("Next question", "Finish interview") never scroll with the conversation. Dock a full-width bar above the bottom inset with one filled button and a one-line label.
+- Add a secondary "Retry" text button for learning. All targets are at least 48 px.
+- The navigation bar stays hidden during a session (file 02). On the last question the label is "Finish interview".
 
-## 7. Accessibility & Live Announcements
-- The score and feedback card must include `aria-live="polite"` so screen readers announce scores on reveal.
-- Trigger light native haptics (`hapticLight()`) upon score reveal.
+## 6. Feedback content
+- Show "What went well", then "To improve" whenever any dimension is below 10, then a one- to three-line "Why" explanation. Offer an expandable "Model answer" for open-ended questions.
+- Keep each block to one to three lines.
+
+## 7. Resume ATS checks
+- Every check reads real data and can fail: summary length within range, skills present and not empty, links valid (empty values are omitted, never "https://none"), dates consistent, bullets with measurable results, one to two pages, contact details complete.
+- The label reads "X of Y checks passed", failed checks first, each with a fix action. Show "ATS ready" only when every check passes on real data.
+- Step progress counts completed sections, not visited steps.
+
+## 8. Accessibility, announcements and haptics
+- The score and feedback container is a polite live region so the score is announced when it appears. Numbers carry units for screen readers ("98 out of 100").
+- A light haptic plays on score reveal through the platform wrapper (file 08). It does nothing in the browser.
+- The count-up animation lasts at most 600 ms and shows the final value immediately when reduced motion is on.
+
+## 9. Checklist
+- The score equals the weighted parts everywhere it appears.
+- No wrap or clipping at 320 px and 200 percent font scale.
+- Thresholds and colors are consistent across screens.
+- The action bar is docked above the inset.
+- The live region is present.
+- Card, list and history show the same numbers.

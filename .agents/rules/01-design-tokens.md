@@ -1,11 +1,11 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Material 3 Expressive design tokens (color, type, shape, spacing, elevation, motion, icons) for the native-feel mobile UI
 ---
 
 # Design Tokens (Material 3 Expressive, Android 15/16)
 
-All visuals come from tokens. Components never contain raw hex values, pixel radii, durations or easings. Define tokens once as CSS variables on the root and reference them everywhere. Do not install anything to get them.
+All visuals come from tokens. Components never contain raw hex values, pixel radii, durations or easings. Define tokens once as CSS variables on the root and reference them everywhere. Map the project's utility classes and theme values (colors, radii, spacing) to these variables so no raw palette value is ever used.
 
 ## 1. Color roles
 Define these roles for light and dark. Names follow Material 3.
@@ -41,7 +41,7 @@ Tone mapping (tonal palette tone numbers, 0 black to 100 white):
 
 Rules:
 - Derive primary, secondary (low chroma), tertiary (shifted hue) and neutral palettes from the brand seed color. Keep the seed in one place.
-- Dynamic color (Material You, from wallpaper) needs a native bridge. If one already exists in the project, read the system accent into the primary palette. If not, use the brand seed and report dynamic color as a recommendation.
+- Dynamic color (Material You, from wallpaper) needs a native bridge. If a plugin already exists, read the system accent into the primary palette. If not, use the brand seed and offer a small custom plugin as an optional enhancement (file 08, section 8). Never block a task on it.
 - Use surface containers for hierarchy instead of shadows or borders. Cards sit on surface using container-low or highest.
 - No pure black or pure white backgrounds in dark and light themes. No gradients on buttons, bars or cards. Gradients are allowed only on brand art such as logos and illustrations.
 - Text contrast at least 4.5:1, large text and UI controls at least 3:1. Check both themes.
@@ -49,7 +49,7 @@ Rules:
 - Semantic extras (success, warning) are custom roles with container pairs, built the same way.
 
 ## 2. Typography
-- Font stack: `"Google Sans Flex", "Google Sans", Roboto, system-ui, sans-serif`. Use only fonts already present on device or already bundled. Never load fonts from a CDN. If a brand font is needed, it must be bundled and subset already.
+- Font stack: `"Google Sans Flex", "Google Sans", Roboto, system-ui, sans-serif`. Use system fonts or fonts bundled in the app. Never load fonts from a CDN. A brand font may be added as a self-hosted, subset package using the protocol in file 08.
 - Use rem with a 16 px root so system font scaling works. Never use fixed px line heights that break at scale.
 
 | Role | Size / line | Weight | Tracking |
@@ -120,7 +120,7 @@ Durations (ms): short 50, 100, 150, 200; medium 250, 300, 350, 400; long 450, 50
 
 ## 7. Icons
 - Material Symbols, Rounded style, 24 px, weight 400. Outlined for unselected, filled for selected. One icon family only.
-- Icons must be bundled or self-hosted. Never load from a CDN. No emoji as icons.
+- Icons must be bundled or self-hosted. Never load from a CDN. If the project has no Material Symbols set, a self-hosted icon package may be added (file 08). No emoji as icons.
 - Icon-only buttons need an accessible name and a 48 px target.
 - Stroke or fill weight must match across the app. Do not mix libraries.
 

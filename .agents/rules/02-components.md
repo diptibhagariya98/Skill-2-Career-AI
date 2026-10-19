@@ -1,11 +1,11 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Material 3 Expressive component specs (bars, buttons, fields, cards, lists, chips, sheets, dialogs, feedback) for the native-feel mobile UI
 ---
 
 # Component Specs (Material 3 Expressive, Android 15/16)
 
-Build each component once in the in-house component layer using tokens from file 01. Screens compose these. Do not restyle per screen. Do not install anything.
+Build each component once in the in-house component layer using tokens from file 01. Screens compose these. Do not restyle per screen. Do not add a second visual component library. Device capabilities come only from the platform wrapper (file 08).
 
 ## 1. Top app bar
 - Small: 64 px high, title Title Large, left-aligned (center-aligned allowed for a root screen only), leading icon 48 px target, up to 3 trailing actions.
@@ -38,6 +38,7 @@ Build each component once in the in-house component layer using tokens from file
 - Button group and segmented button: height 40, outlined, selected segment uses secondary-container with a leading check. Use for Edit or Preview style toggles. Max 5 segments.
 - FAB: 56 px (large 96), radius large, primary-container, 16 px from edges, above the navigation bar. Extended FAB 56 high with icon and label. Hide or shrink on scroll down.
 - "Download" style secondary actions on cards are tonal or text buttons or an icon button, not a loud filled button repeated on every card.
+- Export, download and share buttons follow the state flow in file 09: idle, preparing, saving, then success with Open and Share, or an error with Retry. Never show a success label before the file exists.
 
 ## 4. Text fields
 - Outlined default: 56 px high, 1 px outline, 2 px primary on focus, error uses error color and error container supporting text.
@@ -77,7 +78,7 @@ Build each component once in the in-house component layer using tokens from file
 - Title Headline Small, body Body Medium, actions are text buttons right-aligned (confirm on the right).
 - Use only for confirmation, short choices and errors. For anything long use a bottom sheet or a full-screen dialog.
 - Destructive confirmation names the object and the consequence ("Delete resume? This cannot be undone"). Confirm for End session or unsaved changes.
-- Prefer the native alert through the platform wrapper for simple confirm and alert. No dialog on top of a dialog.
+- Prefer the native alert through the platform wrapper for simple confirm and alert. In the browser the wrapper falls back to the app dialog. No dialog on top of a dialog.
 - Back dismisses the dialog (file 03).
 
 ## 9. Bottom sheets
