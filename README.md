@@ -1,5 +1,6 @@
 # 🎓 ResuMentor (Skill-2-Career-AI)
-### Next-Generation AI Career Companion, Scholarship Engine & Native Mobile App
+
+## Next-Generation AI Career Companion, Scholarship Engine & Native Mobile App
 
 [![Next.js](https://img.shields.io/badge/Next.js-14.2.15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Capacitor](https://img.shields.io/badge/Capacitor-8.5.3-blue?style=for-the-badge&logo=capacitor)](https://capacitorjs.com/)
@@ -274,6 +275,9 @@ Admin Control Center (only visible after admin login)
 | **React 18** | The library Next.js uses to build UI components | Industry-standard, component-based UI. Hooks make complex state (like interview threads) clean and manageable. |
 | **TypeScript** | A stricter version of JavaScript | Catches bugs before the code even runs. We use strict mode with zero `any` types, meaning every value must be clearly defined. |
 | **Tailwind CSS** | A utility-first CSS framework | Lets us style components without writing separate CSS files. Paired with Material 3 design tokens, it ensures every screen looks consistent. |
+
+| Technology | What It Is | Why We Chose It |
+| :--- | :--- | :--- |
 | **Capacitor** | Wraps the Next.js web app into a real Android APK | Unlike React Native, Capacitor uses the same web code — no rewrite needed. Provides native plugins (haptics, share, dialogs) via a simple API. |
 | **Supabase** | Backend-as-a-Service: database and authentication | Provides a managed PostgreSQL database with Row-Level Security built in. Auth (login, OTP, password reset) is handled out of the box. No need to build a separate auth server. |
 | **Google Gemini API** | The AI brain (language model) | Google Gemini 3.8 Flash is fast, accurate, and handles complex structured outputs (like JSON scoring rubrics) reliably. Used for resume scoring and interview evaluation. |
@@ -492,6 +496,7 @@ After running, log in with these credentials:
 | **Password** | `SuperAdmin@2026!` |
 
 To use custom credentials instead:
+
 ```bash
 SUPER_ADMIN_EMAIL=custom@domain.com SUPER_ADMIN_PASSWORD=MyPassword! npm run seed:admin
 ```
