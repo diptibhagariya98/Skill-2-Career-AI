@@ -56,6 +56,7 @@ import {
   ChevronUp,
   RotateCw,
   Pencil,
+  MoreVertical,
 } from "lucide-react";
 
 const ACCENT_COLORS = [
@@ -83,6 +84,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
   const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "Idle">("Saved");
   const [showDataModal, setShowDataModal] = useState(false);
+  const [showMobileMoreMenu, setShowMobileMoreMenu] = useState(false);
 
   // In-screen section navigation history stack (Spec Section handling)
   const sectionHistoryRef = useRef<SectionKey[]>([]);
@@ -630,23 +632,23 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   };
 
   return (
-    <div className="min-h-dvh bg-gray-50 flex flex-col pb-6 lg:pb-8">
-      {/* Top Action Toolbar: Clean layout without overlaps, full-width title row on mobile */}
-      <header className="bg-white border-b border-gray-200 px-3 sm:px-6 pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.625rem)] pb-2.5 sm:py-3 sticky top-0 z-20 shadow-xs flex flex-col gap-2 sm:gap-2.5">
-        {/* Row 1: Unified Back Arrow, Document Title (Full width on mobile with pencil), Save Status */}
-        <div className="flex items-center justify-between gap-2 w-full">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={() => dispatchBack()}
-              aria-label="Back"
-              className="p-2 -ml-1 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition active:scale-95 shrink-0"
-              title="Go Back"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
+    <div className="min-h-dvh bg-gray-50 flex flex-col pb-28 lg:pb-8">
+      {/* Top Action Toolbar: Unified Single Row on Mobile with zero horizontal overflow */}
+      <header className="bg-white border-b border-gray-200 px-3 sm:px-6 pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.625rem)] pb-2.5 sm:py-3 sticky top-0 z-20 shadow-xs flex items-center justify-between gap-1.5 sm:gap-2">
+        {/* Left: Back Button + Document Title + Save Dot */}
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={() => dispatchBack()}
+            aria-label="Back"
+            className="p-2 -ml-1 text-gray-700 hover:text-indigo-600 hover:bg-gray-100 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center transition active:scale-95 shrink-0"
+            title="Go Back"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
 
-            <div className="flex items-center gap-1 min-w-0 flex-1">
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-1 min-w-0">
               <input
                 type="text"
                 value={resume.meta.title}
@@ -656,93 +658,35 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
                     meta: { ...resume.meta, title: e.target.value },
                   })
                 }
-                className="font-bold text-gray-900 text-sm sm:text-base border-b border-transparent hover:border-gray-300 focus:border-indigo-600 focus:outline-none px-1 py-0.5 rounded truncate flex-1 min-w-0"
+                className="font-bold text-gray-900 text-sm sm:text-base border-b border-transparent hover:border-gray-300 focus:border-indigo-600 focus:outline-none py-0.5 rounded truncate min-w-0 w-full"
                 title="Rename Resume"
                 placeholder="My Resume"
               />
               <Pencil className="h-3 w-3 text-gray-400 shrink-0" />
             </div>
-
-            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
-              {saveStatus}
-            </span>
-          </div>
-
-          {/* Desktop Right Actions (hidden on mobile, rendered below on mobile) */}
-          <div className="hidden lg:flex items-center gap-2 shrink-0">
-            {/* AI ATS Analysis Action (Tonal Secondary) */}
-            <button
-              type="button"
-              disabled={analysisLoading}
-              onClick={triggerAnalysisPipeline}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3.5 py-2.5 rounded-xl transition shadow-2xs disabled:opacity-50 min-h-[48px]"
-              title="Evaluate ATS score and improvement tips with Gemini AI"
-            >
-              {analysisLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-              )}
-              <span>Analyze</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowDataModal(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3.5 py-2.5 rounded-xl transition min-h-[48px]"
-              title="Import/Export JSON or revision history"
-            >
-              <Database className="h-4 w-4" />
-              <span>Data</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrintBrowser}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3.5 py-2.5 rounded-xl transition min-h-[48px]"
-              title="Print via browser"
-            >
-              <Printer className="h-4 w-4" />
-              <span>Print</span>
-            </button>
-
-            {/* One-Click Export PDF Button (Primary High Emphasis) */}
-            <button
-              type="button"
-              disabled={exportState === "preparing"}
-              onClick={() => handleExportPDF(false)}
-              className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs min-h-[48px] ${
-                exportState === "failed"
-                  ? "bg-red-600 hover:bg-red-700 text-white"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
-              } disabled:opacity-50`}
-            >
-              {exportState === "preparing" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5" />
-              )}
-              <span>
-                {exportState === "preparing"
-                  ? "Generating PDF…"
-                  : exportState === "done"
-                  ? "Exported"
-                  : exportState === "failed"
-                  ? "Retry"
-                  : "Export PDF"}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  saveStatus === "Saving..."
+                    ? "bg-amber-500 animate-pulse"
+                    : "bg-emerald-500"
+                }`}
+              />
+              <span className="text-[10px] font-medium text-gray-500">
+                {saveStatus}
               </span>
-            </button>
+            </div>
           </div>
         </div>
 
-        {/* Row 2 (Mobile only): Segmented Controls & Action Buttons with horizontal scroll protection */}
-        <div className="flex lg:hidden items-center justify-between gap-1 w-full pt-1 border-t border-gray-100 overflow-x-auto no-scrollbar py-0.5 -mx-1 px-1">
-          {/* Edit vs Preview Segmented Control */}
+        {/* Mobile Right Actions: Segmented Toggle + AI Sparkles + Export + More Menu */}
+        <div className="flex lg:hidden items-center gap-1 shrink-0">
+          {/* Edit / Preview Segmented Switch */}
           <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0">
             <button
               type="button"
               onClick={() => setMobileTab("edit")}
-              className={`px-3 py-2 text-xs font-bold rounded-lg transition min-h-[48px] flex items-center justify-center ${
+              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition min-h-[36px] flex items-center justify-center ${
                 mobileTab === "edit"
                   ? "bg-white text-indigo-700 shadow-2xs"
                   : "text-gray-600 hover:text-gray-900"
@@ -753,7 +697,7 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
             <button
               type="button"
               onClick={() => setMobileTab("preview")}
-              className={`px-3 py-2 text-xs font-bold rounded-lg transition min-h-[48px] flex items-center justify-center ${
+              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition min-h-[36px] flex items-center justify-center ${
                 mobileTab === "preview"
                   ? "bg-white text-indigo-700 shadow-2xs"
                   : "text-gray-600 hover:text-gray-900"
@@ -763,59 +707,151 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* AI ATS Analysis (Tonal Outline) */}
+          {/* AI ATS Analysis (Tonal Purple Icon Button) */}
+          <button
+            type="button"
+            disabled={analysisLoading}
+            onClick={triggerAnalysisPipeline}
+            aria-label="Analyze with AI"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200/90 flex items-center justify-center transition disabled:opacity-50 active:scale-95 shrink-0"
+            title="Evaluate ATS score with Gemini AI"
+          >
+            {analysisLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+            ) : (
+              <Sparkles className="h-4 w-4 text-purple-600" />
+            )}
+          </button>
+
+          {/* Export PDF Button (Instant primary access on mobile) */}
+          <button
+            type="button"
+            disabled={exportState === "preparing"}
+            onClick={() => handleExportPDF(false)}
+            aria-label="Export PDF"
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition shadow-2xs active:scale-95 shrink-0 ${
+              exportState === "failed"
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            } disabled:opacity-50`}
+            title="Export high-resolution PDF"
+          >
+            {exportState === "preparing" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+          </button>
+
+          {/* More Options Overflow Button */}
+          <div className="relative">
             <button
               type="button"
-              disabled={analysisLoading}
-              onClick={triggerAnalysisPipeline}
-              className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-xl transition disabled:opacity-50 min-h-[48px] shrink-0"
-              title="Evaluate ATS score with Gemini AI"
+              onClick={() => setShowMobileMoreMenu(!showMobileMoreMenu)}
+              aria-label="More options"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center justify-center transition active:scale-95 shrink-0"
             >
-              {analysisLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-              )}
-              <span>Analyze</span>
+              <MoreVertical className="h-4 w-4" />
             </button>
 
-            {/* Data modal */}
-            <button
-              type="button"
-              onClick={() => setShowDataModal(true)}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl transition min-h-[48px] shrink-0"
-              title="Import/Export JSON or revision history"
-            >
-              <Database className="h-3.5 w-3.5" />
-              <span>Data</span>
-            </button>
-
-            {/* Export PDF (Sole Primary) */}
-            <button
-              type="button"
-              disabled={exportState === "preparing"}
-              onClick={() => handleExportPDF(false)}
-              className={`inline-flex items-center gap-1 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs min-h-[48px] shrink-0 ${
-                exportState === "failed"
-                  ? "bg-red-600 hover:bg-red-700 text-white"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
-              } disabled:opacity-50`}
-            >
-              {exportState === "preparing" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5" />
-              )}
-              <span>
-                {exportState === "preparing"
-                  ? "Generating…"
-                  : exportState === "failed"
-                  ? "Retry"
-                  : "Export"}
-              </span>
-            </button>
+            {/* Popup Menu */}
+            {showMobileMoreMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setShowMobileMoreMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-2xl shadow-xl border border-gray-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileMoreMenu(false);
+                      setShowDataModal(true);
+                    }}
+                    className="w-full px-3.5 py-2.5 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 min-h-[44px]"
+                  >
+                    <Database className="h-4 w-4 text-gray-500" />
+                    <span>Data & Revisions</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileMoreMenu(false);
+                      handlePrintBrowser();
+                    }}
+                    className="w-full px-3.5 py-2.5 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 min-h-[44px]"
+                  >
+                    <Printer className="h-4 w-4 text-gray-500" />
+                    <span>Print Document</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
+        </div>
+
+        {/* Desktop Right Actions */}
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            disabled={analysisLoading}
+            onClick={triggerAnalysisPipeline}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3.5 py-2.5 rounded-xl transition shadow-2xs disabled:opacity-50 min-h-[48px]"
+            title="Evaluate ATS score and improvement tips with Gemini AI"
+          >
+            {analysisLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5 text-purple-600" />
+            )}
+            <span>Analyze</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowDataModal(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3.5 py-2.5 rounded-xl transition min-h-[48px]"
+            title="Import/Export JSON or revision history"
+          >
+            <Database className="h-4 w-4" />
+            <span>Data</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrintBrowser}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3.5 py-2.5 rounded-xl transition min-h-[48px]"
+            title="Print via browser"
+          >
+            <Printer className="h-4 w-4" />
+            <span>Print</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={exportState === "preparing"}
+            onClick={() => handleExportPDF(false)}
+            className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs min-h-[48px] ${
+              exportState === "failed"
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            } disabled:opacity-50`}
+          >
+            {exportState === "preparing" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span>
+              {exportState === "preparing"
+                ? "Generating PDF…"
+                : exportState === "done"
+                ? "Exported"
+                : exportState === "failed"
+                ? "Retry"
+                : "Export PDF"}
+            </span>
+          </button>
         </div>
       </header>
 
@@ -1126,37 +1162,28 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
       </div>
 
       {/* Sticky Mobile Step Progression Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 px-3.5 py-2 pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] z-30 shadow-lg flex items-center justify-between gap-2">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-2.5 pb-[max(var(--sab,env(safe-area-inset-bottom,0px)),0.75rem)] z-30 shadow-lg flex items-center justify-between gap-3">
         <button
           type="button"
           disabled={currentStepIndex === 0}
           onClick={handlePrevStep}
-          className="inline-flex items-center gap-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:pointer-events-none transition min-h-[48px]"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-30 disabled:pointer-events-none transition min-h-[48px] shrink-0"
         >
           <ChevronLeft className="h-4 w-4" />
           <span>Previous</span>
         </button>
 
-        <div className="flex flex-col items-center justify-center text-center">
-          <span className="text-[10px] font-bold text-gray-400 tracking-wider">
-            {saveStatus}
-          </span>
-          <span className="text-[11px] font-bold text-indigo-700">
-            {SECTION_REGISTRY[activeSection]?.label || ""}
-          </span>
-        </div>
-
         <button
           type="button"
           onClick={handleNextStep}
-          className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] shadow-xs transition min-h-[48px]"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] shadow-sm transition min-h-[48px]"
         >
-          <span>
+          <span className="truncate">
             {currentStepIndex < visibleSections.length - 1
-              ? `Next: ${SECTION_REGISTRY[visibleSections[currentStepIndex + 1]]?.label?.split(" ")[0] || "Next"}`
-              : "Preview"}
+              ? `Next: ${SECTION_REGISTRY[visibleSections[currentStepIndex + 1]]?.label || "Next"}`
+              : "Preview Resume"}
           </span>
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 shrink-0" />
         </button>
       </div>
 

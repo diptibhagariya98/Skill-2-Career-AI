@@ -53,13 +53,59 @@ async function resolveBrowserExecutable(): Promise<{ executablePath: string; arg
     }
   }
 
-  // 3. Linux / Vercel Serverless: Use @sparticuz/chromium-min
+  // 3. Linux / Docker / Container: Check pre-installed Chrome or Chromium first
+  if (process.platform === "linux") {
+    const linuxPaths = [
+      "/usr/bin/google-chrome",
+      "/usr/bin/google-chrome-stable",
+      "/usr/bin/chromium",
+      "/usr/bin/chromium-browser",
+      "/snap/bin/chromium",
+    ];
+    for (const exePath of linuxPaths) {
+      if (fs.existsSync(exePath)) {
+        return {
+          executablePath: exePath,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--font-render-hinting=none",
+          ],
+        };
+      }
+    }
+  }
+
+  // 4. Linux / Vercel Serverless: Use @sparticuz/chromium-min with dynamic tarball pack
   try {
     const chromium = (await import("@sparticuz/chromium-min")).default;
-    const execPath = await chromium.executablePath();
+    const arch = process.arch === "arm64" ? "arm64" : "x64";
+    const remotePackUrl =
+      process.env.CHROMIUM_PACK_URL ||
+      `https://github.com/Sparticuz/chromium/releases/download/v153.0.0/chromium-v153.0.0-pack.${arch}.tar`;
+
+    let execPath = "";
+    try {
+      execPath = await chromium.executablePath(remotePackUrl);
+    } catch (urlErr) {
+      try {
+        execPath = await chromium.executablePath();
+      } catch {
+        throw urlErr;
+      }
+    }
+
     return {
       executablePath: execPath,
-      args: [...chromium.args, "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      args: [
+        ...chromium.args,
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
     };
   } catch (err) {
     throw new Error(
