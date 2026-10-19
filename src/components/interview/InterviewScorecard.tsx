@@ -17,6 +17,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { InterviewScorecardData } from "../../types/interview";
+import { savePdfAndShare, hapticSuccess } from "@/shared/platform";
+import { toast } from "react-hot-toast";
 
 interface InterviewScorecardProps {
   scorecard: InterviewScorecardData;
@@ -57,22 +59,46 @@ export default function InterviewScorecard({
   const handleDownloadPdf = async () => {
     if (!printableRef.current) return;
     setIsExportingPdf(true);
+    const toastId = toast.loading("Generating scorecard PDF…");
 
     try {
       // Dynamic client-side import for Capacitor & static export compatibility
       const html2pdf = (await import("html2pdf.js")).default;
+      const safeJobTitle = scorecard.targetJobTitle.trim().replace(/[^a-zA-Z0-9_-]/g, "_") || "Role";
+      const filename = `Scorecard_${safeJobTitle}.pdf`;
+
       const opt = {
         margin: [10, 10, 10, 10],
-        filename: `Mock_Interview_Scorecard_${scorecard.targetJobTitle.replace(/\s+/g, "_")}.pdf`,
+        filename,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
-      await html2pdf().set(opt).from(printableRef.current).save();
+      const worker = html2pdf().set(opt).from(printableRef.current);
+      const pdfBlob = (await worker.outputPdf("blob")) as Blob;
+
+      if (!pdfBlob || pdfBlob.size < 500) {
+        throw new Error("Generated PDF was empty or incomplete.");
+      }
+
+      const res = await savePdfAndShare(pdfBlob, filename, {
+        shareText: `Official Mock Interview Scorecard - ${scorecard.targetJobTitle} (Score: ${scorecard.overallScore}/100)`,
+        dialogTitle: `Save or share ${filename}`,
+      });
+
+      if (res.ok && res.delivered) {
+        hapticSuccess();
+        toast.success(res.message, { id: toastId });
+      } else if (res.ok) {
+        toast.dismiss(toastId);
+      } else {
+        toast.error(res.message || "Failed to deliver scorecard PDF", { id: toastId });
+      }
     } catch (err: unknown) {
-      console.error("PDF export failed:", err);
-      window.print();
+      console.error("Scorecard PDF export failed:", err);
+      const msg = err instanceof Error ? err.message : "Failed to generate scorecard PDF";
+      toast.error(msg, { id: toastId });
     } finally {
       setIsExportingPdf(false);
     }

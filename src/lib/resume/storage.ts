@@ -119,23 +119,18 @@ export function restoreRevision(revision: ResumeRevision, userId?: string): Resu
   return migrated;
 }
 
+import { saveTextFile, SaveFileResult } from "@/shared/platform";
+
 /**
  * Exports the raw resume as a portable .json data file (Section 5.4)
+ * Cross-platform compatible for Android Native (Filesystem + Share) and Web (Blob download).
  */
-export function exportResumeDataFile(data: ResumeData): void {
+export async function exportResumeDataFile(data: ResumeData): Promise<SaveFileResult> {
   const jsonStr = JSON.stringify(data, null, 2);
-  const blob = new Blob([jsonStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
   const safeName = (data.contact.fullName || "resume").replace(/[^a-zA-Z0-9_-]/g, "_");
   const filename = `${safeName}_data.json`;
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  return saveTextFile(jsonStr, filename, "application/json");
 }
 
 /**

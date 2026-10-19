@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Search, MapPin, Briefcase, Calendar, Sparkles, Filter, ExternalLink, RotateCcw } from "lucide-react";
 import { API_ROUTES } from "../constants/endpoints";
-import { hapticLight } from "@/shared/platform";
+import { hapticLight, openUrl } from "@/shared/platform";
 import { Skeleton, SkeletonCard } from "@/shared/ui";
 
 interface RawApiJob {
@@ -348,15 +348,14 @@ function JobCard({ job, isRecommended }: { job: JobItem; isRecommended: boolean 
           {isRecommended ? "Top Match" : "Direct Role"}
         </span>
         {job.url && (
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openUrl(job.url!)}
             className="inline-flex items-center justify-center gap-1.5 bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-indigo-700 text-xs sm:text-sm transition min-h-[48px] shadow-xs active:scale-[0.98]"
           >
             <span>Apply Now</span>
             <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          </button>
         )}
       </div>
     </div>

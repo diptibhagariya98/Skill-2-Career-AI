@@ -28,8 +28,17 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { getPreference, setPreference, removePreference } from "@/shared/platform";
 
-type ActiveTab = "wizard" | "results" | "directory" | "scholars" | "admin";
+export enum ScholarshipTab {
+  WIZARD = "wizard",
+  RESULTS = "results",
+  DIRECTORY = "directory",
+  SCHOLARS = "scholars",
+  ADMIN = "admin",
+}
+
+export type ActiveTab = ScholarshipTab | "wizard" | "results" | "directory" | "scholars" | "admin";
 
 const LOCAL_STORAGE_PROFILE_KEY = "resumentor_scholarship_student_profile";
 
@@ -44,7 +53,7 @@ export default function Scholarships({
   tab: controlledTab,
   onTabChange,
 }: ScholarshipsProps = {}) {
-  const [internalActiveTab, setInternalActiveTab] = useState<ActiveTab>("wizard");
+  const [internalActiveTab, setInternalActiveTab] = useState<ActiveTab>(ScholarshipTab.WIZARD);
   const activeTab = controlledTab !== undefined ? controlledTab : internalActiveTab;
   const setActiveTab = (newTab: ActiveTab) => {
     if (onTabChange) onTabChange(newTab);
@@ -64,50 +73,53 @@ export default function Scholarships({
 
   const storageKey = user?.id ? `resumentor_scholarship_student_profile_${user.id}` : LOCAL_STORAGE_PROFILE_KEY;
 
-  // Load saved profile from localStorage if exists for this user
+  // Load saved profile from persistent preference (Capacitor Preferences on native, localStorage on web)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as StudentProfile;
-        setStudentProfile(parsed);
-      }
-    } catch {
-      // Ignore localStorage read errors
-    }
+    let isCancelled = false;
+    getPreference(storageKey)
+      .then((saved) => {
+        if (!isCancelled && saved) {
+          try {
+            const parsed = JSON.parse(saved) as StudentProfile;
+            setStudentProfile(parsed);
+          } catch {
+            // Ignore invalid JSON
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isCancelled = true;
+    };
   }, [storageKey]);
 
   // Run evaluation
   const handleEvaluate = (profile: StudentProfile) => {
     setStudentProfile(profile);
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(profile));
-    } catch {
-      // Ignore storage errors
-    }
+    void setPreference(storageKey, JSON.stringify(profile));
 
     const results = evaluateAllSchemes(profile, schemes);
     setEvaluationResults(results);
-    setActiveTab("results");
+    setActiveTab(ScholarshipTab.RESULTS);
     toast.success(
       `Evaluated ${results.totalEvaluated} schemes: ${results.eligible.length} matched!`
     );
   };
 
   const handleRetake = () => {
-    setActiveTab("wizard");
+    setActiveTab(ScholarshipTab.WIZARD);
   };
 
   const handleConnectScholar = (schemeName: string) => {
     setScholarFilterScheme(schemeName);
-    setActiveTab("scholars");
+    setActiveTab(ScholarshipTab.SCHOLARS);
   };
 
   const handleClearSavedData = () => {
-    localStorage.removeItem(storageKey);
+    void removePreference(storageKey);
     setStudentProfile(null);
     setEvaluationResults(null);
-    setActiveTab("wizard");
+    setActiveTab(ScholarshipTab.WIZARD);
     toast.success("Saved eligibility profile deleted completely.");
   };
 
@@ -117,9 +129,9 @@ export default function Scholarships({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 pb-3">
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
           <button
-            onClick={() => setActiveTab("wizard")}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
-              activeTab === "wizard"
+            onClick={() => setActiveTab(ScholarshipTab.WIZARD)}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[48px] transition flex items-center gap-2 whitespace-nowrap ${
+              activeTab === ScholarshipTab.WIZARD
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
                 : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
             }`}
@@ -129,9 +141,9 @@ export default function Scholarships({
 
           {evaluationResults && (
             <button
-              onClick={() => setActiveTab("results")}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
-                activeTab === "results"
+              onClick={() => setActiveTab(ScholarshipTab.RESULTS)}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[48px] transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === ScholarshipTab.RESULTS
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
                   : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
               }`}
@@ -141,9 +153,9 @@ export default function Scholarships({
           )}
 
           <button
-            onClick={() => setActiveTab("directory")}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
-              activeTab === "directory"
+            onClick={() => setActiveTab(ScholarshipTab.DIRECTORY)}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[48px] transition flex items-center gap-2 whitespace-nowrap ${
+              activeTab === ScholarshipTab.DIRECTORY
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
                 : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
             }`}
@@ -154,10 +166,10 @@ export default function Scholarships({
           <button
             onClick={() => {
               setScholarFilterScheme(undefined);
-              setActiveTab("scholars");
+              setActiveTab(ScholarshipTab.SCHOLARS);
             }}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-2 whitespace-nowrap ${
-              activeTab === "scholars"
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[48px] transition flex items-center gap-2 whitespace-nowrap ${
+              activeTab === ScholarshipTab.SCHOLARS
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
                 : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
             }`}
@@ -167,9 +179,9 @@ export default function Scholarships({
 
           {isUserAdmin(user?.role, user?.email) && (
             <button
-              onClick={() => setActiveTab("admin")}
-              className={`px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[44px] transition flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === "admin"
+              onClick={() => setActiveTab(ScholarshipTab.ADMIN)}
+              className={`px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold min-h-[48px] transition flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === ScholarshipTab.ADMIN
                   ? "bg-purple-800 text-white shadow-md shadow-purple-200"
                   : "text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200"
               }`}
@@ -184,7 +196,7 @@ export default function Scholarships({
           <button
             onClick={handleClearSavedData}
             title="Clear all saved eligibility data from this device"
-            className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 min-h-[44px] px-2"
+            className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 min-h-[48px] px-3 rounded-lg"
           >
             <Trash2 className="w-3.5 h-3.5" /> Clear Saved Data
           </button>
@@ -193,14 +205,14 @@ export default function Scholarships({
 
       {/* Main Tab Content */}
       <div className="pt-2">
-        {activeTab === "wizard" && (
+        {activeTab === ScholarshipTab.WIZARD && (
           <EligibilityWizard
             onEvaluate={handleEvaluate}
             initialProfile={studentProfile || undefined}
           />
         )}
 
-        {activeTab === "results" && evaluationResults && (
+        {activeTab === ScholarshipTab.RESULTS && evaluationResults && (
           <EvaluationResults
             eligible={evaluationResults.eligible}
             checkDetails={evaluationResults.checkDetails}
@@ -212,25 +224,25 @@ export default function Scholarships({
           />
         )}
 
-        {activeTab === "directory" && (
+        {activeTab === ScholarshipTab.DIRECTORY && (
           <SchemeDirectory
             schemes={schemes}
             onCheckEligibilityForScheme={(scheme) => {
-              setActiveTab("wizard");
+              setActiveTab(ScholarshipTab.WIZARD);
               toast(`Enter your details to check fit for ${scheme.shortName}`);
             }}
             onAskScholar={handleConnectScholar}
           />
         )}
 
-        {activeTab === "scholars" && (
+        {activeTab === ScholarshipTab.SCHOLARS && (
           <ScholarDirectory
             scholars={scholars}
             filterSchemeName={scholarFilterScheme}
           />
         )}
 
-        {activeTab === "admin" && <AdminConsole schemes={schemes} />}
+        {activeTab === ScholarshipTab.ADMIN && <AdminConsole schemes={schemes} />}
       </div>
     </div>
   );

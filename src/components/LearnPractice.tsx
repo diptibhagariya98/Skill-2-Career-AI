@@ -29,7 +29,7 @@ import {
   Share2,
   Printer,
 } from "lucide-react";
-import { useBackHandler, BackPriority, shareContent, isNative } from "@/shared/platform";
+import { useBackHandler, BackPriority, shareContent, isNative, savePdfAndShare, openUrl, hapticSuccess } from "@/shared/platform";
 
 export interface RoadmapMilestone {
   phase: string;
@@ -119,78 +119,59 @@ export default function LearnPractice({
     setIsExportingRoadmap(true);
     const toastId = toast.loading(`Preparing ${item.fileName}...`);
     try {
-      if (isNative()) {
-        // Native mobile environment:
-        // Automatically open the formatted curriculum document
-        setSelectedRoadmapDetail(item);
-        setRoadmapModalView("document");
-
-        // Android WebView print spooler natively creates "Save as PDF" file
-        window.print();
-        toast.success(`Select 'Save as PDF' to save ${item.fileName}`, {
-          id: toastId,
-          duration: 4000,
-        });
-        setIsExportingRoadmap(false);
-        return;
-      }
-
-      // 1. Web Browser: Check if bundled static asset can be fetched directly as blob
+      // 1. Check if bundled static asset can be fetched directly as blob
+      let pdfBlob: Blob | null = null;
       try {
         const response = await fetch(item.pdfUrl);
         if (response.ok) {
           const blob = await response.blob();
           if (blob.size > 1000) {
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = blobUrl;
-            link.download = item.fileName;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-            toast.success(`Downloaded ${item.fileName}`, { id: toastId });
-            setIsExportingRoadmap(false);
-            return;
+            pdfBlob = blob;
           }
         }
       } catch (fetchErr) {
         console.warn("Direct file fetch fallback", fetchErr);
       }
 
-      // 2. Client-side dynamic PDF generation via html2pdf
-      const html2pdf = (await import("html2pdf.js")).default;
-      const element = roadmapPrintRef.current;
-      if (!element) throw new Error("Printable template not found.");
+      // 2. Client-side dynamic PDF generation via html2pdf if asset not bundled
+      if (!pdfBlob) {
+        const html2pdf = (await import("html2pdf.js")).default;
+        const element = roadmapPrintRef.current;
+        if (!element) throw new Error("Printable template not found.");
 
-      const opt = {
-        margin: 0.4,
-        filename: item.fileName,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: "in", format: "a4", orientation: "portrait" as const },
-      };
+        const opt = {
+          margin: 0.4,
+          filename: item.fileName,
+          image: { type: "jpeg" as const, quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: "in", format: "a4", orientation: "portrait" as const },
+        };
 
-      const worker = html2pdf().from(element).set(opt);
-      const pdfBlob = (await worker.outputPdf("blob")) as Blob;
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = item.fileName;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        const worker = html2pdf().from(element).set(opt);
+        pdfBlob = (await worker.outputPdf("blob")) as Blob;
+      }
 
-      toast.success(`Downloaded ${item.fileName}`, { id: toastId });
+      if (!pdfBlob || pdfBlob.size < 500) {
+        throw new Error("Unable to build roadmap document.");
+      }
+
+      const res = await savePdfAndShare(pdfBlob, item.fileName, {
+        shareText: `${item.title} Career Roadmap & Curriculum - ResuMentor`,
+        dialogTitle: `Save or share ${item.fileName}`,
+      });
+
+      if (res.ok && res.delivered) {
+        hapticSuccess();
+        toast.success(res.message, { id: toastId });
+      } else if (res.ok) {
+        toast.dismiss(toastId);
+      } else {
+        toast.error(res.message || `Failed to deliver ${item.fileName}`, { id: toastId });
+      }
     } catch (err: unknown) {
-      console.warn("Export fallback to print", err);
-      window.print();
-      toast.success(`Print preview opened for ${item.title}`, { id: toastId });
+      console.warn("Roadmap export error:", err);
+      const msg = err instanceof Error ? err.message : `Failed to export ${item.fileName}`;
+      toast.error(msg, { id: toastId });
     } finally {
       setIsExportingRoadmap(false);
     }
@@ -200,41 +181,31 @@ export default function LearnPractice({
   const handleDownloadPdf = async (url: string, fileName: string, noteTitle?: string) => {
     const toastId = toast.loading(`Preparing ${fileName}...`);
     try {
-      if (isNative()) {
-        const shared = await shareContent({
-          title: noteTitle || fileName,
-          text: `${noteTitle || fileName}\nVerified Study Notes & Curriculum Reference - ResuMentor`,
-          dialogTitle: `Share or Save ${fileName}`,
-        });
-        if (shared) {
-          toast.success("Ready to save or share", { id: toastId });
-          return;
-        }
-
-        // Native print spooler fallback to save as PDF
-        window.print();
-        toast.success(`Select 'Save as PDF' to save ${fileName}`, { id: toastId, duration: 4000 });
-        return;
-      }
-
-      // Web Browser: fetch as blob and trigger download
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to fetch PDF`);
       const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = fileName;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-      toast.success(`Downloaded ${fileName}`, { id: toastId });
-    } catch {
-      window.open(url, "_blank");
-      toast.success(`Opened ${fileName}`, { id: toastId });
+
+      const res = await savePdfAndShare(blob, fileName, {
+        shareText: `${noteTitle || fileName}\nVerified Study Notes & Curriculum Reference - ResuMentor`,
+        dialogTitle: `Save or share ${fileName}`,
+      });
+
+      if (res.ok && res.delivered) {
+        hapticSuccess();
+        toast.success(res.message, { id: toastId });
+      } else if (res.ok) {
+        toast.dismiss(toastId);
+      } else {
+        toast.error(res.message || `Failed to deliver ${fileName}`, { id: toastId });
+      }
+    } catch (err: unknown) {
+      console.warn("Fetch fallback to openUrl", err);
+      const opened = await openUrl(url);
+      if (opened) {
+        toast.success(`Opened ${fileName}`, { id: toastId });
+      } else {
+        toast.error(`Unable to open ${fileName}`, { id: toastId });
+      }
     }
   };
 
@@ -1299,14 +1270,13 @@ export default function LearnPractice({
               <h3 className="font-bold text-base text-gray-900">HTML - Semantic Structure</h3>
               <p className="text-xs text-gray-600 mt-1">Learn to build the accessible skeleton of modern web applications.</p>
               <div className="mt-3">
-                <a
-                  href="https://www.youtube.com/watch?v=kUMe1FH4CHE"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition"
+                <button
+                  type="button"
+                  onClick={() => openUrl("https://www.youtube.com/watch?v=kUMe1FH4CHE")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition min-h-[44px]"
                 >
                   <Play className="h-3.5 w-3.5 fill-red-600" /> Watch: HTML Full Course
-                </a>
+                </button>
               </div>
             </div>
 
@@ -1320,14 +1290,13 @@ export default function LearnPractice({
               <h3 className="font-bold text-base text-gray-900">CSS - Styling, Flexbox & Grid</h3>
               <p className="text-xs text-gray-600 mt-1">Master modern responsive layouts, media queries, and responsive components.</p>
               <div className="mt-3">
-                <a
-                  href="https://www.youtube.com/watch?v=OXGznpKZ_sA"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition"
+                <button
+                  type="button"
+                  onClick={() => openUrl("https://www.youtube.com/watch?v=OXGznpKZ_sA")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition min-h-[44px]"
                 >
                   <Play className="h-3.5 w-3.5 fill-red-600" /> Watch: CSS Full Course
-                </a>
+                </button>
               </div>
             </div>
 
@@ -1341,14 +1310,13 @@ export default function LearnPractice({
               <h3 className="font-bold text-base text-gray-900">JavaScript - Logic & DOM Manipulation</h3>
               <p className="text-xs text-gray-600 mt-1">Add interactivity, event handlers, asynchronous fetch requests, and state.</p>
               <div className="mt-3">
-                <a
-                  href="https://www.youtube.com/watch?v=PkZNo7MFNFg"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition"
+                <button
+                  type="button"
+                  onClick={() => openUrl("https://www.youtube.com/watch?v=PkZNo7MFNFg")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition min-h-[44px]"
                 >
                   <Play className="h-3.5 w-3.5 fill-red-600" /> Watch: JavaScript Full Course
-                </a>
+                </button>
               </div>
             </div>
 
@@ -1362,14 +1330,13 @@ export default function LearnPractice({
               <h3 className="font-bold text-base text-gray-900">React - Scalable UI Components</h3>
               <p className="text-xs text-gray-600 mt-1">Hooks, state management, props drilling, and component reusability.</p>
               <div className="mt-3">
-                <a
-                  href="https://www.youtube.com/watch?v=SqcY0GlETPk"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition"
+                <button
+                  type="button"
+                  onClick={() => openUrl("https://www.youtube.com/watch?v=SqcY0GlETPk")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition min-h-[44px]"
                 >
                   <Play className="h-3.5 w-3.5 fill-red-600" /> Watch: React Full Course
-                </a>
+                </button>
               </div>
             </div>
           </div>

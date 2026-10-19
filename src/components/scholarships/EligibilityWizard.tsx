@@ -190,7 +190,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
             <select
               value={domicileState}
               onChange={(e) => setDomicileState(e.target.value)}
-              className="w-full px-4 py-3 min-h-[44px] rounded-xl border border-gray-200 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className="w-full px-4 py-3 min-h-[48px] rounded-xl border border-gray-200 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             >
               {INDIAN_STATES.map((state) => (
                 <option key={state} value={state}>
@@ -213,7 +213,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
                   type="button"
                   key={cat}
                   onClick={() => setSocialCategory(cat)}
-                  className={`min-h-[44px] px-3 py-2.5 text-xs sm:text-sm rounded-xl border text-center font-medium transition-all ${
+                  className={`min-h-[48px] px-3 py-2.5 text-xs sm:text-sm rounded-xl border text-center font-medium transition-all ${
                     socialCategory === cat
                       ? "border-indigo-600 bg-indigo-50 text-indigo-700 font-bold shadow-sm"
                       : "border-gray-200 text-gray-700 hover:bg-gray-50"
@@ -229,7 +229,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
             <button
               type="button"
               onClick={handleNext}
-              className="w-full sm:w-auto min-h-[44px] px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+              className="w-full sm:w-auto min-h-[48px] px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition flex items-center justify-center gap-2"
             >
               Next: Academics <ChevronRight className="w-4 h-4" />
             </button>
@@ -248,7 +248,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
               {STUDY_LEVELS.map((lvl) => (
                 <label
                   key={lvl.value}
-                  className={`flex items-center min-h-[44px] p-3 rounded-xl border cursor-pointer transition ${
+                  className={`flex items-center min-h-[48px] p-3 rounded-xl border cursor-pointer transition ${
                     studyLevel === lvl.value
                       ? "border-indigo-600 bg-indigo-50/60 font-bold text-indigo-900"
                       : "border-gray-200 hover:bg-gray-50 text-gray-700"
@@ -305,7 +305,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
                   value={scoreValue}
                   onChange={(e) => setScoreValue(e.target.value)}
                   placeholder={scoreType === "percentage" ? "e.g. 85.5" : "e.g. 8.5"}
-                  className="w-full px-4 py-3 min-h-[44px] rounded-xl border border-gray-200 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
+                  className="w-full px-4 py-3 min-h-[48px] rounded-xl border border-gray-200 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
                 />
               </div>
               {scoreType === "cgpa" && (
@@ -314,7 +314,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
                   <select
                     value={cgpaScale}
                     onChange={(e) => setCgpaScale(Number(e.target.value))}
-                    className="flex-1 px-3 py-3 min-h-[44px] rounded-xl border border-gray-200 text-gray-900 bg-white font-medium"
+                    className="flex-1 px-3 py-3 min-h-[48px] rounded-xl border border-gray-200 text-gray-900 bg-white font-medium"
                   >
                     <option value={10}>Out of 10.0</option>
                     <option value={4}>Out of 4.0</option>
@@ -337,7 +337,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
                 value={courseStream}
                 onChange={(e) => setCourseStream(e.target.value)}
                 placeholder="e.g. Engineering, Medical, Arts"
-                className="w-full px-3 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-sm text-gray-900"
+                className="w-full px-3 py-2.5 min-h-[48px] rounded-xl border border-gray-200 text-sm text-gray-900"
               />
             </div>
             <div>
@@ -345,7 +345,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
               <select
                 value={institutionType}
                 onChange={(e) => setInstitutionType(e.target.value as InstitutionType)}
-                className="w-full px-3 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
+                className="w-full px-3 py-2.5 min-h-[48px] rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
               >
                 <option value="">Any / Not Specified</option>
                 <option value="government">Government College / University</option>
@@ -360,14 +360,14 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className="min-h-[44px] px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center gap-1.5"
+              className="min-h-[48px] px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
             <button
               type="button"
               onClick={handleNext}
-              className="min-h-[44px] px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 flex items-center gap-1.5"
+              className="min-h-[48px] px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 flex items-center gap-1.5"
             >
               Next: Income <ChevronRight className="w-4 h-4" />
             </button>
@@ -390,7 +390,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
               value={annualIncome}
               onChange={(e) => setAnnualIncome(e.target.value)}
               placeholder="e.g. 500000"
-              className="w-full px-4 py-3 min-h-[44px] rounded-xl border border-gray-200 text-gray-900 bg-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-3 min-h-[48px] rounded-xl border border-gray-200 text-gray-900 bg-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <div className="mt-2 p-2.5 bg-indigo-50/70 border border-indigo-100 rounded-lg text-xs font-semibold text-indigo-800">
               Preview: <span className="font-extrabold">{getIncomePreview(annualIncome)}</span>
@@ -403,7 +403,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as Gender)}
-                className="w-full px-3 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
+                className="w-full px-3 py-2.5 min-h-[48px] rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
               >
                 <option value="prefer_not_to_say">Prefer not to say</option>
                 <option value="female">Female (Matches AICTE Pragati)</option>
@@ -417,7 +417,7 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
               <select
                 value={disability}
                 onChange={(e) => setDisability(e.target.value as DisabilityStatus)}
-                className="w-full px-3 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
+                className="w-full px-3 py-2.5 min-h-[48px] rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
               >
                 <option value="no">No</option>
                 <option value="yes">Yes (40%+ disability certificate)</option>
@@ -437,13 +437,13 @@ export default function EligibilityWizard({ onEvaluate, initialProfile }: Eligib
             <button
               type="button"
               onClick={() => setCurrentStep(2)}
-              className="min-h-[44px] px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center gap-1.5"
+              className="min-h-[48px] px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
             <button
               type="submit"
-              className="min-h-[44px] px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 flex items-center gap-2 transform active:scale-95 transition"
+              className="min-h-[48px] px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 flex items-center gap-2 transform active:scale-95 transition"
             >
               Check My Matches Now <CheckCircle2 className="w-5 h-5" />
             </button>

@@ -17,6 +17,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { openUrl, useBackHandler, BackPriority } from "@/shared/platform";
 
 interface ScholarDirectoryProps {
   scholars: ScholarListing[];
@@ -37,6 +38,23 @@ export default function ScholarDirectory({
   const [reportReason, setReportReason] = useState<ScholarReport["reason"]>("asking_for_money");
   const [reportDetails, setReportDetails] = useState<string>("");
 
+  // Dismiss modals on hardware / gesture back button
+  useBackHandler(
+    BackPriority.OVERLAY,
+    () => {
+      if (requestModalScholar) {
+        setRequestModalScholar(null);
+        return true;
+      }
+      if (reportModalScholar) {
+        setReportModalScholar(null);
+        return true;
+      }
+      return false;
+    },
+    [requestModalScholar, reportModalScholar]
+  );
+
   // Filter scholars
   const filteredScholars = scholars.filter((s) => {
     const matchesScheme =
@@ -51,13 +69,13 @@ export default function ScholarDirectory({
   });
 
   // Safe WhatsApp trigger without putting phone numbers in static DOM attributes
-  const handleOpenWhatsApp = (scholar: ScholarListing) => {
+  const handleOpenWhatsApp = async (scholar: ScholarListing) => {
     // Obfuscated phone reconstruction on user gesture
     const phone = scholar.messagingNumber.replace(/\D/g, "");
     const msg = `Hi ${scholar.displayName}, I found your verified listing on ResuMentor for ${scholar.schemeName}. I would appreciate some guidance on the application process.`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
     toast.success(`Opening WhatsApp chat with ${scholar.displayName}`);
+    await openUrl(url);
   };
 
   const handleSendRequest = (e: React.FormEvent) => {
@@ -113,7 +131,7 @@ export default function ScholarDirectory({
           <select
             value={selectedSchemeFilter}
             onChange={(e) => setSelectedSchemeFilter(e.target.value)}
-            className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold text-gray-700 bg-white flex-1 sm:flex-none"
+            className="px-3 py-2 min-h-[48px] rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold text-gray-700 bg-white flex-1 sm:flex-none"
           >
             <option value="all">All Scholarship Schemes</option>
             <option value="MYSY">MYSY Gujarat</option>
@@ -125,7 +143,7 @@ export default function ScholarDirectory({
           <select
             value={selectedLanguage}
             onChange={(e) => setSelectedLanguage(e.target.value)}
-            className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold text-gray-700 bg-white"
+            className="px-3 py-2 min-h-[48px] rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold text-gray-700 bg-white"
           >
             <option value="all">All Languages</option>
             <option value="Gujarati">Gujarati</option>
@@ -167,7 +185,8 @@ export default function ScholarDirectory({
                 <button
                   onClick={() => setReportModalScholar(scholar)}
                   title="Report Listing"
-                  className="text-gray-300 hover:text-red-500 p-1 transition"
+                  aria-label="Report listing"
+                  className="text-gray-300 hover:text-red-500 p-3 min-w-[48px] min-h-[48px] flex items-center justify-center transition rounded-xl -mr-2"
                 >
                   <Flag className="w-4 h-4" />
                 </button>
@@ -201,7 +220,7 @@ export default function ScholarDirectory({
 
               {/* Ways can help tags */}
               <div className="mt-4 pt-3 border-t border-gray-100">
-                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                <span className="text-[11px] font-bold text-gray-500 tracking-wider block mb-1.5">
                   Ways I can help:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -233,14 +252,14 @@ export default function ScholarDirectory({
               {scholar.contactMode === "open_whatsapp" ? (
                 <button
                   onClick={() => handleOpenWhatsApp(scholar)}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition min-h-[44px]"
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition min-h-[48px]"
                 >
                   <MessageCircle className="w-4 h-4" /> Message on WhatsApp
                 </button>
               ) : (
                 <button
                   onClick={() => setRequestModalScholar(scholar)}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition min-h-[44px]"
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition min-h-[48px]"
                 >
                   <MessageSquare className="w-4 h-4" /> Request Guidance
                 </button>
@@ -260,7 +279,8 @@ export default function ScholarDirectory({
               </h3>
               <button
                 onClick={() => setRequestModalScholar(null)}
-                className="text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+                className="text-gray-400 hover:text-gray-600 p-2 min-w-[48px] min-h-[48px] flex items-center justify-center rounded-xl"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -289,13 +309,13 @@ export default function ScholarDirectory({
                 <button
                   type="button"
                   onClick={() => setRequestModalScholar(null)}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-3 min-h-[48px] border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 flex items-center justify-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-md flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3 min-h-[48px] bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-md flex items-center justify-center gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5" /> Send Request
                 </button>
@@ -315,7 +335,8 @@ export default function ScholarDirectory({
               </h3>
               <button
                 onClick={() => setReportModalScholar(null)}
-                className="text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+                className="text-gray-400 hover:text-gray-600 p-2 min-w-[48px] min-h-[48px] flex items-center justify-center rounded-xl"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -327,7 +348,7 @@ export default function ScholarDirectory({
                 <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value as ScholarReport["reason"])}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
+                  className="w-full px-3 py-2 min-h-[48px] rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
                 >
                   <option value="asking_for_money">Asking for money / application fee</option>
                   <option value="spam">Spam / Promotional links</option>
@@ -352,13 +373,13 @@ export default function ScholarDirectory({
                 <button
                   type="button"
                   onClick={() => setReportModalScholar(null)}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-3 min-h-[48px] border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 flex items-center justify-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 shadow-md"
+                  className="flex-1 py-3 min-h-[48px] bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 shadow-md flex items-center justify-center"
                 >
                   Submit Report
                 </button>

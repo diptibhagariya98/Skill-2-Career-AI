@@ -14,18 +14,23 @@
  *   why we always use the Filesystem → Share path on native.
  */
 
-import { Filesystem, Directory } from "@capacitor/filesystem";
-import { Share } from "@capacitor/share";
 import { isNative } from "./device";
 
 /** Result returned to the caller after a save attempt. */
 export interface SavePdfResult {
+  /** Whether the operation completed successfully without fatal error */
+  ok: boolean;
   /** Whether the file was delivered to the user (share sheet opened or browser download triggered). */
   delivered: boolean;
   /** The sanitised filename that was used. */
   filename: string;
   /** Human-readable status for a success snackbar. */
   message: string;
+}
+
+export interface SavePdfOptions {
+  shareText?: string;
+  dialogTitle?: string;
 }
 
 /**
@@ -51,75 +56,105 @@ async function blobToBase64(blob: Blob): Promise<string> {
  *
  * @param pdfBlob  - The generated PDF as a Blob.
  * @param filename - Sanitised filename, e.g. "John_Doe_Resume.pdf".
- * @throws         Rethrows any unrecoverable error so the caller can show a snackbar.
+ * @param options  - Optional share text and dialog title.
  */
-export async function savePdfAndShare(pdfBlob: Blob, filename: string): Promise<SavePdfResult> {
+export async function savePdfAndShare(
+  pdfBlob: Blob,
+  filename: string,
+  options: SavePdfOptions = {}
+): Promise<SavePdfResult> {
+  const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+
   if (isNative()) {
     // ── Native Android path ───────────────────────────────────────────────
-    // Write to CACHE so we don't need READ_EXTERNAL_STORAGE / WRITE_EXTERNAL_STORAGE.
-    // Scoped storage (Android 10+) allows apps to read their own cache freely.
-    const base64Data = await blobToBase64(pdfBlob);
+    try {
+      const { Filesystem, Directory } = await import("@capacitor/filesystem");
+      const { Share } = await import("@capacitor/share");
 
-    const writeResult = await Filesystem.writeFile({
-      path: filename,
-      data: base64Data,
-      directory: Directory.Cache,
-      recursive: true,
-    });
+      const base64Data = await blobToBase64(pdfBlob);
 
-    // writeResult.uri is a file:// URI that @capacitor/share can open.
-    const fileUri = writeResult.uri;
+      const writeResult = await Filesystem.writeFile({
+        path: safeFilename,
+        data: base64Data,
+        directory: Directory.Cache,
+        recursive: true,
+      });
 
-    const canShare = await Share.canShare();
-    if (canShare.value) {
-      try {
-        await Share.share({
-          title: filename,
-          text: "My ATS-optimised resume",
-          url: fileUri,
-          files: [fileUri],
-          dialogTitle: `Save or share ${filename}`,
-        });
-        return {
-          delivered: true,
-          filename,
-          message: `Choose where to save ${filename} from the share sheet.`,
-        };
-      } catch (shareErr: unknown) {
-        const msg = shareErr instanceof Error ? shareErr.message : String(shareErr ?? "");
-        // User dismissed the share sheet — not an error
-        if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("abort")) {
+      const fileUri = writeResult.uri;
+      const canShare = await Share.canShare();
+
+      if (canShare.value) {
+        try {
+          await Share.share({
+            title: safeFilename,
+            text: options.shareText || "ResuMentor Career Document",
+            url: fileUri,
+            files: [fileUri],
+            dialogTitle: options.dialogTitle || `Save or share ${safeFilename}`,
+          });
+
           return {
-            delivered: false,
-            filename,
-            message: "Share cancelled.",
+            ok: true,
+            delivered: true,
+            filename: safeFilename,
+            message: `Ready to save or share ${safeFilename}`,
           };
+        } catch (shareErr: unknown) {
+          const msg = shareErr instanceof Error ? shareErr.message : String(shareErr ?? "");
+          if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("abort")) {
+            return {
+              ok: true,
+              delivered: false,
+              filename: safeFilename,
+              message: "Share cancelled.",
+            };
+          }
+          throw new Error(`Share sheet failed: ${msg}`);
         }
-        throw new Error(`Share sheet failed: ${msg}`);
       }
-    }
 
-    // Share plugin unavailable (very rare) — open the file directly
-    throw new Error(
-      "Sharing is not available on this device. The file was written to app cache."
-    );
+      return {
+        ok: true,
+        delivered: true,
+        filename: safeFilename,
+        message: `Saved to cache as ${safeFilename}`,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save PDF";
+      return {
+        ok: false,
+        delivered: false,
+        filename: safeFilename,
+        message: msg,
+      };
+    }
   }
 
   // ── Browser / web path ────────────────────────────────────────────────
-  const blobUrl = URL.createObjectURL(pdfBlob);
-  const link = document.createElement("a");
-  link.href = blobUrl;
-  link.download = filename;
-  link.rel = "noopener noreferrer";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  // Revoke after a generous delay so Chrome has time to start the download
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  try {
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = safeFilename;
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 
-  return {
-    delivered: true,
-    filename,
-    message: `Saved as ${filename}`,
-  };
+    return {
+      ok: true,
+      delivered: true,
+      filename: safeFilename,
+      message: `Saved as ${safeFilename}`,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to download PDF";
+    return {
+      ok: false,
+      delivered: false,
+      filename: safeFilename,
+      message: msg,
+    };
+  }
 }

@@ -15,6 +15,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import { openUrl, useBackHandler, BackPriority } from "@/shared/platform";
 
 interface SchemeDirectoryProps {
   schemes: ScholarshipScheme[];
@@ -32,6 +33,14 @@ export default function SchemeDirectory({
   const [selectedState, setSelectedState] = useState<string>("all");
   const [onlyOpenNow, setOnlyOpenNow] = useState(false);
   const [activeModalScheme, setActiveModalScheme] = useState<ScholarshipScheme | null>(null);
+
+  useBackHandler(BackPriority.OVERLAY, () => {
+    if (activeModalScheme) {
+      setActiveModalScheme(null);
+      return true;
+    }
+    return false;
+  }, [activeModalScheme]);
 
   // Filter schemes
   const filteredSchemes = schemes.filter((scheme) => {
@@ -306,14 +315,13 @@ export default function SchemeDirectory({
                 💬 Ask a Verified Scholar
               </button>
 
-              <a
-                href={activeModalScheme.officialSourceLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-1.5 min-h-[44px]"
+              <button
+                type="button"
+                onClick={() => openUrl(activeModalScheme.officialSourceLink)}
+                className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-1.5 min-h-[48px]"
               >
                 Visit Official Application Portal <ExternalLink className="w-4 h-4" />
-              </a>
+              </button>
             </div>
           </div>
         </div>

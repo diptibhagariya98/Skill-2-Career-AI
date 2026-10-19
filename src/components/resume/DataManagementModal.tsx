@@ -41,10 +41,14 @@ export default function DataManagementModal({
   const [revisions, setRevisions] = useState<ResumeRevision[]>(() => loadRevisionHistory(userId));
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
-  const handleExportJSON = () => {
+  const handleExportJSON = async () => {
     try {
-      exportResumeDataFile(resume);
-      toast.success("Resume data exported as JSON file.");
+      const res = await exportResumeDataFile(resume);
+      if (res.ok && res.delivered) {
+        toast.success(res.message);
+      } else if (!res.ok) {
+        toast.error(res.message);
+      }
     } catch {
       toast.error("Failed to export data file.");
     }

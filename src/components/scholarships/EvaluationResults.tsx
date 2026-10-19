@@ -19,6 +19,7 @@ import {
   Clock,
   RotateCcw,
 } from "lucide-react";
+import { openUrl } from "@/shared/platform";
 
 interface EvaluationResultsProps {
   eligible: SchemeEvaluationResult[];
@@ -246,18 +247,18 @@ export default function EvaluationResults({
 
                     {/* Action buttons */}
                     <div className="flex sm:flex-col items-center sm:items-end gap-2 pt-2 sm:pt-0">
-                      <a
-                        href={res.scheme.officialSourceLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="min-h-[44px] px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                      <button
+                        type="button"
+                        onClick={() => openUrl(res.scheme.officialSourceLink)}
+                        className="min-h-[48px] px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                       >
                         Official Portal <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
+                      </button>
 
                       <button
+                        type="button"
                         onClick={() => onConnectScholar(res.scheme.name)}
-                        className="min-h-[44px] px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                        className="min-h-[48px] px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                       >
                         <MessageCircle className="w-3.5 h-3.5 text-emerald-600" /> Ask Scholar
                       </button>

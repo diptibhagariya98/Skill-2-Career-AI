@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
-import { hapticLight } from "@/shared/platform";
+import { hapticLight, useBackHandler, BackPriority } from "@/shared/platform";
 
 export interface BottomSheetProps {
   isOpen: boolean;
@@ -29,6 +29,19 @@ export function BottomSheet({
   const touchStartYRef = useRef<number | null>(null);
   const touchCurrentYRef = useRef<number | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Handle Android hardware / gesture back button to close sheet
+  useBackHandler(
+    BackPriority.OVERLAY,
+    () => {
+      if (isOpen) {
+        onClose();
+        return true;
+      }
+      return false;
+    },
+    [isOpen, onClose]
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -122,7 +135,7 @@ export function BottomSheet({
                   hapticLight();
                   onClose();
                 }}
-                className="p-1.5 -mr-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center transition"
+                className="p-2 -mr-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 min-h-[48px] min-w-[48px] flex items-center justify-center transition"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
