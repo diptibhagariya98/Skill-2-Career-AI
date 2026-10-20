@@ -21,7 +21,8 @@ import {
   TransformComponent,
   ReactZoomPanPinchContentRef,
 } from "react-zoom-pan-pinch";
-import { useBackHandler, BackPriority } from "@/shared/platform";
+import { useBackHandler, BackPriority, setAppStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
+import { Portal } from "@/shared/ui/Portal";
 
 export enum DocumentTab {
   NOTES = "notes",
@@ -80,12 +81,14 @@ export function DocumentViewerModal({
     [onClose]
   );
 
-  // Lock body scroll while modal is visible
+  // Lock body scroll and set status bar theme while modal is visible
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    void setAppStatusBarStyle(AppStatusBarStyle.LIGHT_CONTENT);
     return () => {
       document.body.style.overflow = originalOverflow;
+      void setAppStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
     };
   }, []);
 
@@ -101,14 +104,15 @@ export function DocumentViewerModal({
   const progressPercent = sections.length > 0 ? Math.round((completedCount / sections.length) * 100) : 0;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${note.title} Document Viewer`}
-      className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-slate-100 animate-fade-in select-none"
-    >
-      {/* ── Top App Bar ──────────────────────────────────────────────────────── */}
-      <header className="shrink-0 bg-slate-900/95 border-b border-slate-800/80 px-3 sm:px-6 pt-[var(--sat,env(safe-area-inset-top,0px))] min-h-[64px] flex items-center justify-between gap-2 shadow-md">
+    <Portal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${note.title} Document Viewer`}
+        className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-slate-100 select-none overflow-hidden"
+      >
+        {/* ── Top App Bar ──────────────────────────────────────────────────────── */}
+        <header className="shrink-0 bg-slate-900 border-b border-slate-800/80 px-3 sm:px-6 pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.5rem)] min-h-[calc(var(--sat,env(safe-area-inset-top,0px))+3.75rem)] pb-2 flex items-center justify-between gap-2 shadow-md z-30">
         {/* Left: Back Arrow + Document Title */}
         <div className="flex items-center gap-2.5 min-w-0">
           <button
@@ -210,7 +214,7 @@ export function DocumentViewerModal({
 
       {/* ── Main Body Content ─────────────────────────────────────────────── */}
       {activeTab === DocumentTab.NOTES ? (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 space-y-5 bg-slate-950 text-slate-200">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] space-y-5 bg-slate-950 text-slate-200">
           {/* Document Highlights Banner */}
           <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/20 border border-amber-500/20 rounded-2xl p-4 sm:p-5">
             <div className="flex items-start gap-3">
@@ -499,7 +503,8 @@ export function DocumentViewerModal({
         </div>
       )}
     </div>
-  );
+  </Portal>
+);
 }
 
 export default DocumentViewerModal;

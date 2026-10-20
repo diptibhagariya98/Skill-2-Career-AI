@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { hapticLight, useBackHandler, BackPriority } from "@/shared/platform";
+import { Portal } from "./Portal";
 
 export interface BottomSheetProps {
   isOpen: boolean;
@@ -97,7 +98,8 @@ export function BottomSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center">
+    <Portal>
+      <div className="fixed inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center">
       {/* 40-50% Black Scrim Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/45 backdrop-blur-xs transition-opacity duration-200 animate-fade-in"
@@ -150,7 +152,8 @@ export function BottomSheet({
         </div>
       </div>
     </div>
-  );
+  </Portal>
+);
 }
 
 export default BottomSheet;

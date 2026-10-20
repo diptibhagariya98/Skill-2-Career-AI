@@ -14,6 +14,8 @@ export * from "./dialogs";
 export * from "./speech";
 export * from "./speechRecognition";
 export * from "./notifications";
+export * from "./statusBar";
+export * from "./safeArea";
 
 /**
  * Feature capability detector (Rule 08 Platform Wrapper Contract)
@@ -33,6 +35,8 @@ export function has(capability: string): boolean {
     case "tts":
     case "stt":
     case "notifications":
+    case "statusBar":
+    case "safeArea":
       return true;
     case "voice":
       return true;

@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   X,
@@ -13,16 +12,19 @@ import {
   Palette,
   Check,
   FileText,
+  ChevronDown,
+  Info,
 } from "lucide-react";
 import {
   TransformWrapper,
   TransformComponent,
   ReactZoomPanPinchContentRef,
 } from "react-zoom-pan-pinch";
-import { useBackHandler, BackPriority } from "@/shared/platform";
+import { useBackHandler, BackPriority, setAppStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
+import { Portal } from "@/shared/ui/Portal";
 import { ResumeData, PageSize, TemplateId } from "@/types/resume";
 import { ACCENT_COLORS } from "@/types/resume";
-import { ResumePreview } from "./ResumePreview";
+import { ResumeDocument } from "./ResumeDocument";
 
 export interface FullScreenResumePreviewProps {
   resume: ResumeData;
@@ -53,7 +55,11 @@ export function FullScreenResumePreview({
   const [scaleReadout, setScaleReadout] = useState<number>(1.0);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState<boolean>(false);
+  const [dismissDraftBanner, setDismissDraftBanner] = useState<boolean>(false);
 
+  // Exact standard dimensions at 96 DPI:
+  // A4 = 210mm x 297mm -> 794px x 1123px
+  // US Letter = 8.5in x 11in -> 816px x 1056px
   const isA4 = (resume.meta.pageSize || "A4") === "A4";
   const baseWidth = isA4 ? 794 : 816;
   const baseHeight = isA4 ? 1123 : 1056;
@@ -99,18 +105,20 @@ export function FullScreenResumePreview({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  // Lock body scroll while full screen preview is active
+  // Lock body scroll and set status bar theme while full screen preview is active
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    void setAppStatusBarStyle(AppStatusBarStyle.LIGHT_CONTENT);
     return () => {
       document.body.style.overflow = originalOverflow;
+      void setAppStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
     };
   }, []);
 
   // Compute optimal scales for initial view and dock presets
   const availableWidth = Math.max(viewportSize.width - (viewportSize.width < 640 ? 24 : 64), 280);
-  const availableHeight = Math.max(viewportSize.height - (viewportSize.width < 640 ? 150 : 160), 300);
+  const availableHeight = Math.max(viewportSize.height - (viewportSize.width < 640 ? 140 : 160), 300);
 
   const fitPageScale = Math.min(availableHeight / baseHeight, availableWidth / baseWidth, 1.05);
   const fitWidthScale = Math.min(availableWidth / baseWidth, 1.4);
@@ -120,42 +128,61 @@ export function FullScreenResumePreview({
     setScaleReadout(fitPageScale);
   }, [fitPageScale]);
 
+  // Check if draft has content
+  const hasContact = Boolean(resume.contact.fullName?.trim() || resume.contact.email?.trim());
+  const hasSummary = Boolean(resume.summary?.trim());
+  const hasExperience = (resume.experience || []).length > 0;
+  const hasEducation = (resume.education || []).length > 0;
+  const hasSkills = Boolean(
+    (resume.skills.isGrouped && resume.skills.groups.some((g) => g.skills && g.skills.length > 0)) ||
+    (!resume.skills.isGrouped && (resume.skills.flatList || []).length > 0)
+  );
+  const isDraftEmpty = !hasContact && !hasSummary && !hasExperience && !hasEducation && !hasSkills;
+
   const handleZoomIn = () => {
     setZoomMode("manual");
-    transformRef.current?.zoomIn(0.15);
+    transformRef.current?.zoomIn(0.15, 150, "easeOut");
   };
 
   const handleZoomOut = () => {
     setZoomMode("manual");
-    transformRef.current?.zoomOut(0.15);
+    transformRef.current?.zoomOut(0.15, 150, "easeOut");
   };
 
   const handleFitPage = () => {
     setZoomMode("fit_page");
-    transformRef.current?.centerView(fitPageScale);
+    transformRef.current?.centerView(fitPageScale, 200, "easeOut");
   };
 
   const handleFitWidth = () => {
     setZoomMode("fit_width");
-    transformRef.current?.centerView(fitWidthScale);
+    if (!transformRef.current) return;
+    const clientWidth = transformRef.current.instance?.wrapperComponent?.clientWidth || viewportSize.width;
+    const targetX = (clientWidth - baseWidth * fitWidthScale) / 2;
+    // Align top of page right under header with comfortable 20px padding
+    transformRef.current.setTransform(targetX, 20, fitWidthScale, 200, "easeOut");
   };
 
   const handleResetZoom = () => {
     setZoomMode("manual");
-    transformRef.current?.centerView(1.0);
+    if (!transformRef.current) return;
+    const clientWidth = transformRef.current.instance?.wrapperComponent?.clientWidth || viewportSize.width;
+    const targetX = (clientWidth - baseWidth * 1.0) / 2;
+    transformRef.current.setTransform(targetX, 20, 1.0, 200, "easeOut");
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Full Screen PDF Preview"
-      className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white animate-fade-in select-none"
-    >
-      {/* Top App Bar */}
-      <header className="h-16 shrink-0 bg-slate-900/95 border-b border-slate-800/80 px-3 sm:px-6 pt-[var(--sat,env(safe-area-inset-top,0px))] flex items-center justify-between gap-2 shadow-md">
-        {/* Left: Back/Close Button + Title */}
-        <div className="flex items-center gap-2 min-w-0">
+    <Portal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Full Screen PDF Preview"
+        className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white select-none overflow-hidden"
+      >
+        {/* Top App Bar (Material 3 Expressive Toolbar) */}
+        <header className="shrink-0 bg-slate-900 border-b border-slate-800/80 px-3 sm:px-6 pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.5rem)] min-h-[calc(var(--sat,env(safe-area-inset-top,0px))+3.75rem)] pb-2 flex items-center justify-between gap-2 shadow-md z-30">
+        {/* Left: Close Button + Title & Subtitle */}
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={onClose}
@@ -167,7 +194,7 @@ export function FullScreenResumePreview({
           </button>
 
           <div className="flex flex-col min-w-0">
-            <h2 className="text-xs sm:text-sm font-bold text-white truncate max-w-[140px] sm:max-w-xs">
+            <h2 className="text-xs sm:text-sm font-bold text-white truncate max-w-[130px] xs:max-w-[180px] sm:max-w-xs">
               {resume.meta.title || "Resume Preview"}
             </h2>
             <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
@@ -184,9 +211,9 @@ export function FullScreenResumePreview({
           </div>
         </div>
 
-        {/* Center / Right: Template, Palette, Page Size & Download Actions */}
+        {/* Right Actions: Template Picker + Theme Color + Page Size + Export */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Template Dropdown Button */}
+          {/* Template Selector Button */}
           <div className="relative">
             <button
               type="button"
@@ -194,23 +221,24 @@ export function FullScreenResumePreview({
                 setShowTemplatePicker(!showTemplatePicker);
                 setShowColorPicker(false);
               }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition min-h-[38px]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition min-h-[38px] border border-slate-700/60"
               title="Change resume template"
             >
-              <FileText className="h-3.5 w-3.5 text-indigo-400" />
-              <span className="hidden sm:inline capitalize">
+              <FileText className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+              <span className="hidden xs:inline capitalize max-w-[65px] truncate">
                 {resume.meta.selectedTemplate}
               </span>
+              <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" />
             </button>
 
             {showTemplatePicker && (
               <>
                 <div
-                  className="fixed inset-0 z-30"
+                  className="fixed inset-0 z-40"
                   onClick={() => setShowTemplatePicker(false)}
                 />
-                <div className="absolute right-0 top-full mt-2 w-44 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl py-1.5 z-40 animate-fade-in">
-                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl py-1.5 z-50 animate-fade-in">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
                     ATS Templates
                   </div>
                   {TEMPLATE_OPTIONS.map((t) => (
@@ -249,11 +277,13 @@ export function FullScreenResumePreview({
                 setShowColorPicker(!showColorPicker);
                 setShowTemplatePicker(false);
               }}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition active:scale-95 shrink-0"
-              title="Accent Color"
+              className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition min-h-[38px] border border-slate-700/60"
+              title="Theme color palette"
+              aria-label="Change theme accent color"
             >
+              <Palette className="h-4 w-4 text-slate-300 shrink-0" />
               <span
-                className="w-4 h-4 rounded-full ring-2 ring-white/20"
+                className="w-3.5 h-3.5 rounded-full ring-1.5 ring-white/60 shrink-0 shadow-xs"
                 style={{ backgroundColor: resume.meta.accentColor || "#1e3a8a" }}
               />
             </button>
@@ -261,12 +291,13 @@ export function FullScreenResumePreview({
             {showColorPicker && (
               <>
                 <div
-                  className="fixed inset-0 z-30"
+                  className="fixed inset-0 z-40"
                   onClick={() => setShowColorPicker(false)}
                 />
-                <div className="absolute right-0 top-full mt-2 p-3 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-40 w-48 space-y-2 animate-fade-in">
+                <div className="absolute right-0 top-full mt-2 p-3.5 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 w-52 space-y-2 animate-fade-in">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Palette className="h-3 w-3" /> Accent Colors
+                    <Palette className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>Theme Colors</span>
                   </div>
                   <div className="grid grid-cols-4 gap-2 pt-1">
                     {ACCENT_COLORS.map((c) => (
@@ -281,15 +312,15 @@ export function FullScreenResumePreview({
                           setShowColorPicker(false);
                         }}
                         style={{ backgroundColor: c.hex }}
-                        className={`h-7 w-7 rounded-full transition-transform flex items-center justify-center ${
+                        className={`h-8 w-8 rounded-full transition-transform flex items-center justify-center ${
                           resume.meta.accentColor === c.hex
-                            ? "ring-2 ring-white scale-110"
+                            ? "ring-2 ring-white scale-110 shadow-md"
                             : "hover:scale-105"
                         }`}
                         title={c.name}
                       >
                         {resume.meta.accentColor === c.hex && (
-                          <Check className="h-3.5 w-3.5 text-white drop-shadow" />
+                          <Check className="h-4 w-4 text-white drop-shadow" />
                         )}
                       </button>
                     ))}
@@ -299,8 +330,8 @@ export function FullScreenResumePreview({
             )}
           </div>
 
-          {/* Page Size Segmented Toggle (A4 / Letter) */}
-          <div className="hidden sm:flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700 shrink-0">
+          {/* Page Size Segmented Toggle (A4 / Letter) on Tablets/Desktop */}
+          <div className="hidden sm:flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700/60 shrink-0">
             {(["A4", "Letter"] as PageSize[]).map((ps) => (
               <button
                 key={ps}
@@ -322,24 +353,24 @@ export function FullScreenResumePreview({
             ))}
           </div>
 
-          {/* Export High-Res PDF Button */}
+          {/* Primary High-Res PDF Export Button */}
           <button
             type="button"
             disabled={exportState === "preparing"}
             onClick={onExportPDF}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-md active:scale-95 shrink-0 ${
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition shadow-md active:scale-95 shrink-0 min-h-[38px] ${
               exportState === "failed"
                 ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-indigo-600 hover:bg-indigo-700 text-white"
-            } disabled:opacity-50 min-h-[38px]`}
-            title="Download vector PDF"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-900/50"
+            } disabled:opacity-50`}
+            title="Export vector PDF"
           >
             {exportState === "preparing" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Download className="h-4 w-4" />
             )}
-            <span className="hidden xs:inline">
+            <span>
               {exportState === "preparing"
                 ? "Generating…"
                 : exportState === "failed"
@@ -350,15 +381,35 @@ export function FullScreenResumePreview({
         </div>
       </header>
 
-      {/* Main Canvas Scroll Area with Multi-touch Gestures (Pinch-to-zoom & Smooth Pan) */}
-      <main className="flex-1 w-full h-full relative overflow-hidden bg-slate-950 select-none">
+      {/* Incomplete Draft Guidance Banner */}
+      {isDraftEmpty && !dismissDraftBanner && (
+        <div className="bg-amber-950/90 border-b border-amber-800/80 px-4 py-2 flex items-center justify-between text-xs text-amber-200 z-20">
+          <div className="flex items-center gap-2">
+            <Info className="h-4 w-4 text-amber-400 shrink-0" />
+            <span className="text-[11px] text-amber-100 font-medium">
+              Previewing blank draft. Add your contact information, experience, and skills in the editor to populate this resume.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissDraftBanner(true)}
+            aria-label="Dismiss banner"
+            className="text-amber-400 hover:text-white p-1 rounded transition"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Main Canvas with Natural Multi-touch Gestures (Pinch-to-zoom & Smooth Pan) */}
+      <main className="flex-1 w-full min-h-0 relative overflow-hidden bg-slate-950 select-none">
         <TransformWrapper
           ref={transformRef}
           initialScale={fitPageScale}
-          minScale={0.25}
-          maxScale={2.5}
+          minScale={0.2}
+          maxScale={3.0}
           centerOnInit={true}
-          centerZoomedOut={true}
+          centerZoomedOut={false}
           limitToBounds={false}
           smooth={true}
           wheel={{ step: 0.1 }}
@@ -370,47 +421,53 @@ export function FullScreenResumePreview({
           }}
         >
           <TransformComponent
-            wrapperClass="!w-full !h-full flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden"
-            contentClass="flex items-center justify-center p-4 sm:p-8"
+            wrapperClass="!w-full !h-full !block relative overflow-hidden select-none cursor-grab active:cursor-grabbing"
+            contentClass="!w-auto !h-auto !block select-none"
           >
-            <div className="relative shadow-2xl ring-1 ring-white/10 select-none">
-              <ResumePreview
-                resume={resume}
-                scale={1.0}
-                autoFit={false}
-                padding={0}
-                className="shadow-2xl"
-              />
+            <div
+              className="bg-white shadow-2xl ring-1 ring-white/10 select-none mx-auto"
+              style={{
+                width: `${baseWidth}px`,
+                minHeight: `${baseHeight}px`,
+              }}
+            >
+              <ResumeDocument resume={resume} isPrintMode={false} />
             </div>
           </TransformComponent>
         </TransformWrapper>
       </main>
 
       {/* Bottom Floating Control Dock */}
-      <footer className="shrink-0 p-3 pb-[max(var(--sab,env(safe-area-inset-bottom,0px)),0.75rem)] flex justify-center">
-        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-full px-3 py-1.5 shadow-2xl flex items-center gap-2 sm:gap-3 text-xs">
-          {/* Zoom Out */}
+      <footer className="shrink-0 p-3 pb-[max(var(--sab,env(safe-area-inset-bottom,0px)),0.75rem)] flex justify-center pointer-events-none z-30">
+        <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-full px-2 sm:px-3 py-1.5 shadow-2xl flex items-center gap-1 sm:gap-2 text-xs pointer-events-auto">
+          {/* Zoom Out Button */}
           <button
             type="button"
             onClick={handleZoomOut}
             aria-label="Zoom out"
-            className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition active:scale-90 min-w-[36px] min-h-[36px] flex items-center justify-center"
+            className="w-9 h-9 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition active:scale-90 flex items-center justify-center min-w-[36px]"
             title="Zoom out (-)"
           >
             <ZoomOut className="h-4 w-4" />
           </button>
 
-          {/* Current Scale Readout */}
-          <span className="text-[11px] font-mono font-bold text-slate-200 min-w-[42px] text-center">
+          {/* Current Scale Readout (tappable to reset to 100%) */}
+          <button
+            type="button"
+            onClick={handleResetZoom}
+            aria-label="Current zoom percentage. Tap to reset to 100%"
+            title="Tap to reset to 100%"
+            className="text-[11px] font-mono font-bold text-slate-200 px-1.5 py-1 rounded hover:bg-slate-800 transition min-w-[42px] text-center"
+          >
             {Math.round(scaleReadout * 100)}%
-          </span>
+          </button>
 
-          {/* Zoom In */}
+          {/* Zoom In Button */}
           <button
             type="button"
             onClick={handleZoomIn}
             aria-label="Zoom in"
-            className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition active:scale-90 min-w-[36px] min-h-[36px] flex items-center justify-center"
+            className="w-9 h-9 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition active:scale-90 flex items-center justify-center min-w-[36px]"
             title="Zoom in (+)"
           >
             <ZoomIn className="h-4 w-4" />
@@ -418,53 +475,57 @@ export function FullScreenResumePreview({
 
           <span className="w-px h-4 bg-slate-700 mx-0.5" />
 
-          {/* Fit to Page Button */}
-          <button
-            type="button"
-            onClick={handleFitPage}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[32px] ${
-              zoomMode === "fit_page"
-                ? "bg-indigo-600 text-white"
-                : "text-slate-400 hover:text-white hover:bg-slate-800"
-            }`}
-            title="Fit entire page vertically"
-          >
-            <Minimize2 className="h-3 w-3" />
-            <span className="hidden sm:inline">Fit Page</span>
-          </button>
+          {/* Presets Segmented Group */}
+          <div className="flex items-center bg-slate-800/80 p-0.5 rounded-full border border-slate-700/60">
+            {/* Fit to Page */}
+            <button
+              type="button"
+              onClick={handleFitPage}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[30px] ${
+                zoomMode === "fit_page"
+                  ? "bg-indigo-600 text-white shadow-xs"
+                  : "text-slate-300 hover:text-white"
+              }`}
+              title="Fit entire page vertically"
+            >
+              <Minimize2 className="h-3 w-3" />
+              <span>Fit Page</span>
+            </button>
 
-          {/* Fit to Width Button */}
-          <button
-            type="button"
-            onClick={handleFitWidth}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[32px] ${
-              zoomMode === "fit_width"
-                ? "bg-indigo-600 text-white"
-                : "text-slate-400 hover:text-white hover:bg-slate-800"
-            }`}
-            title="Fit document width to screen"
-          >
-            <Maximize2 className="h-3 w-3" />
-            <span className="hidden sm:inline">Fit Width</span>
-          </button>
+            {/* Fit to Width */}
+            <button
+              type="button"
+              onClick={handleFitWidth}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[30px] ${
+                zoomMode === "fit_width"
+                  ? "bg-indigo-600 text-white shadow-xs"
+                  : "text-slate-300 hover:text-white"
+              }`}
+              title="Fit document width to screen"
+            >
+              <Maximize2 className="h-3 w-3" />
+              <span>Fit Width</span>
+            </button>
 
-          {/* Reset to 100% */}
-          <button
-            type="button"
-            onClick={handleResetZoom}
-            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[32px] ${
-              zoomMode === "manual" && Math.round(scaleReadout * 100) === 100
-                ? "bg-indigo-600 text-white"
-                : "text-slate-400 hover:text-white hover:bg-slate-800"
-            }`}
-            title="100% actual size"
-          >
-            <RotateCcw className="h-3 w-3" />
-            <span>100%</span>
-          </button>
+            {/* 100% (1:1) */}
+            <button
+              type="button"
+              onClick={handleResetZoom}
+              className={`px-2 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[30px] ${
+                zoomMode === "manual" && Math.round(scaleReadout * 100) === 100
+                  ? "bg-indigo-600 text-white shadow-xs"
+                  : "text-slate-300 hover:text-white"
+              }`}
+              title="100% physical print size"
+            >
+              <RotateCcw className="h-3 w-3" />
+              <span>100%</span>
+            </button>
+          </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </Portal>
   );
 }
 

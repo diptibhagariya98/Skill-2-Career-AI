@@ -137,7 +137,10 @@ export function MinimalistTemplate({ resume, accentColor }: TemplateProps) {
 
         // 4. SKILLS
         if (key === "skills" && skills) {
-          const hasGroups = skills.isGrouped && skills.groups && skills.groups.length > 0;
+          const filledGroups = skills.isGrouped && skills.groups
+            ? skills.groups.filter((grp) => grp.skills && grp.skills.length > 0)
+            : [];
+          const hasGroups = filledGroups.length > 0;
           const hasFlat = !skills.isGrouped && skills.flatList && skills.flatList.length > 0;
           if (!hasGroups && !hasFlat) return null;
 
@@ -148,7 +151,7 @@ export function MinimalistTemplate({ resume, accentColor }: TemplateProps) {
               </h2>
               {hasGroups ? (
                 <div className="space-y-1 text-xs">
-                  {skills.groups.map((grp) => (
+                  {filledGroups.map((grp) => (
                     <div key={grp.id} className="flex">
                       <span className="font-medium text-gray-500 w-32 shrink-0">{grp.name}</span>
                       <span className="text-gray-800">{grp.skills.join(", ")}</span>

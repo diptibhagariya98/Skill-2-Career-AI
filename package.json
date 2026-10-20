@@ -22,6 +22,7 @@
     "test:blackbox": "tsx blackbox-testing/v1/auth/verify_auth_password_reset_blackbox.ts"
   },
   "dependencies": {
+    "@capacitor-community/safe-area": "^8.0.1",
     "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.2",
@@ -50,6 +51,7 @@
     "@sparticuz/chromium-min": "^153.0.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
+    "capacitor-plugin-safe-area": "^5.0.1",
     "class-variance-authority": "0.7.1",
     "clsx": "^2.1.1",
     "html2pdf.js": "0.14.0",

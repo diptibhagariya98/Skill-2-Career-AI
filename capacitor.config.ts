@@ -17,11 +17,15 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       overlaysWebView: true,
-      style: "DARK",
+      style: "LIGHT",
       backgroundColor: "#ffffff",
     },
     Keyboard: {
       resizeOnFullScreen: true,
+    },
+    SafeArea: {
+      detectViewportFitCoverChanges: true,
+      initialViewportFitCover: true,
     },
   },
 };

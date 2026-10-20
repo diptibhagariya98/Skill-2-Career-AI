@@ -43,6 +43,7 @@ import { APP_ROUTES } from "@/constants/endpoints";
 import { getInitials } from "../lib/imageUtils";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useBackHandler, dispatchBack, hapticLight } from "@/shared/platform";
+import { Portal } from "@/shared/ui/Portal";
 
 export default function Dashboard() {
   const [activePage, setActivePage] = useState<DashboardSection>(DashboardSection.DASHBOARD);
@@ -383,7 +384,7 @@ export default function Dashboard() {
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-7xl mx-auto flex flex-col min-w-0 overflow-x-hidden">
         {/* Compact Sticky Top App Header with Safe Area Notch padding */}
-        <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[56px] pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.625rem)] pb-2 ${activePage === DashboardSection.RESUME || isLiveInterviewSession ? "hidden md:flex" : "flex"} items-center justify-between shadow-sm`}>
+        <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-3 sm:px-6 min-h-[calc(var(--sat,env(safe-area-inset-top,0px))+3.75rem)] pt-[calc(var(--sat,env(safe-area-inset-top,0px))+0.625rem)] pb-2.5 ${activePage === DashboardSection.RESUME || isLiveInterviewSession ? "hidden md:flex" : "flex"} items-center justify-between shadow-sm`}>
           <div className="flex items-center gap-2 min-w-0">
             {activePage !== DashboardSection.DASHBOARD ? (
               <button
@@ -618,72 +619,74 @@ export default function Dashboard() {
 
       {/* Mobile "More" Sheet Modal (UX-62: Bottom sheet with smooth backdrop & safe areas) */}
       {showMoreMenu && (
-        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
-            onClick={() => setShowMoreMenu(false)}
-          />
-          <div className="relative bg-white rounded-t-2xl shadow-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-gray-200 animate-fade-in z-10">
-            <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-3" />
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <span className="text-sm font-bold text-gray-900">More tools and settings</span>
-              <button
-                type="button"
-                onClick={() => setShowMoreMenu(false)}
-                aria-label="Close menu"
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-xl min-h-[48px] min-w-[48px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="divide-y divide-gray-50 mt-1">
-              {moreMenuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activePage === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      navigateToSection(item.id);
-                      setShowMoreMenu(false);
-                    }}
-                    className={`w-full min-h-[48px] flex items-center justify-between py-3 px-2 rounded-xl text-left transition ${
-                      isActive ? "bg-indigo-50 text-indigo-600" : "hover:bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          isActive ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" />
+        <Portal>
+          <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
+            <div
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+              onClick={() => setShowMoreMenu(false)}
+            />
+            <div className="relative bg-white rounded-t-2xl shadow-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-gray-200 animate-fade-in z-10">
+              <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-3" />
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <span className="text-sm font-bold text-gray-900">More tools and settings</span>
+                <button
+                  type="button"
+                  onClick={() => setShowMoreMenu(false)}
+                  aria-label="Close menu"
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-xl min-h-[48px] min-w-[48px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="divide-y divide-gray-50 mt-1">
+                {moreMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activePage === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        navigateToSection(item.id);
+                        setShowMoreMenu(false);
+                      }}
+                      className={`w-full min-h-[48px] flex items-center justify-between py-3 px-2 rounded-xl text-left transition ${
+                        isActive ? "bg-indigo-50 text-indigo-600" : "hover:bg-gray-50 text-gray-700"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            isActive ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold">{item.label}</div>
+                          <div className="text-xs text-gray-400">{item.desc}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-sm font-semibold">{item.label}</div>
-                        <div className="text-xs text-gray-400">{item.desc}</div>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-gray-300" />
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMoreMenu(false);
-                  handleLogout();
-                }}
-                className="w-full min-h-[48px] flex items-center gap-3 py-3 px-2 text-red-600 hover:bg-red-50 rounded-xl text-left transition"
-              >
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
-                  <LogOut className="h-4 w-4" />
-                </div>
-                <div className="text-sm font-semibold">Log out of account</div>
-              </button>
+                      <ChevronRight className="h-4 w-4 text-gray-300" />
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleLogout();
+                  }}
+                  className="w-full min-h-[48px] flex items-center gap-3 py-3 px-2 text-red-600 hover:bg-red-50 rounded-xl text-left transition"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+                    <LogOut className="h-4 w-4" />
+                  </div>
+                  <div className="text-sm font-semibold">Log out of account</div>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* True Native Mobile Bottom Navigation Bar (Hidden during active live interview session and in the Resume Builder which has its own step bar) */}

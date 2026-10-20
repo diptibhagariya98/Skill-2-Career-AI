@@ -151,7 +151,10 @@ export function CreativeTemplate({ resume, accentColor }: TemplateProps) {
 
         // 4. SKILLS
         if (key === "skills" && skills) {
-          const hasGroups = skills.isGrouped && skills.groups && skills.groups.length > 0;
+          const filledGroups = skills.isGrouped && skills.groups
+            ? skills.groups.filter((grp) => grp.skills && grp.skills.length > 0)
+            : [];
+          const hasGroups = filledGroups.length > 0;
           const hasFlat = !skills.isGrouped && skills.flatList && skills.flatList.length > 0;
           if (!hasGroups && !hasFlat) return null;
 
@@ -166,7 +169,7 @@ export function CreativeTemplate({ resume, accentColor }: TemplateProps) {
               <div className="pl-4 border-l-2 border-gray-200">
                 {hasGroups ? (
                   <div className="space-y-1 text-xs">
-                    {skills.groups.map((grp) => (
+                    {filledGroups.map((grp) => (
                       <div key={grp.id} className="flex flex-wrap items-baseline gap-1.5">
                         <span className="font-bold text-gray-900 min-w-28">{grp.name}:</span>
                         <span className="text-gray-700">{grp.skills.join(", ")}</span>
