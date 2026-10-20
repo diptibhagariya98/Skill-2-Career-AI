@@ -54,14 +54,11 @@ async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /**
- * Save a PDF Blob and surface it to the user.
- *
- * @param pdfBlob  - The generated PDF as a Blob.
- * @param filename - Sanitised filename, e.g. "John_Doe_Resume.pdf".
- * @param options  - Optional share text and dialog title.
+ * Generic cross-platform file save and surface helper.
+ * Handles both binary Blobs (PDF, images) and text Blobs (JSON, TXT).
  */
-export async function savePdfAndShare(
-  pdfBlob: Blob,
+export async function saveFileAndShare(
+  fileBlob: Blob,
   filename: string,
   options: SavePdfOptions = {}
 ): Promise<SavePdfResult> {
@@ -71,10 +68,9 @@ export async function savePdfAndShare(
     // ── Native Android path ───────────────────────────────────────────────
     try {
       const { Filesystem, Directory } = await import("@capacitor/filesystem");
-      const { Share } = await import("@capacitor/share");
+      const base64Data = await blobToBase64(fileBlob);
 
-      const base64Data = await blobToBase64(pdfBlob);
-
+      // Write directly to app Cache (no storage permissions required on Android)
       const writeResult = await Filesystem.writeFile({
         path: safeFilename,
         data: base64Data,
@@ -82,65 +78,56 @@ export async function savePdfAndShare(
         recursive: true,
       });
 
-      const fileUri = writeResult.uri;
-
-      // 1. Primary delivery: Native Android Share Sheet (files array ONLY, no text/url)
-      // This enables the OS dialog allowing the user to "Save to device", Drive, WhatsApp, or open with PDF viewer.
-      const canShare = await Share.canShare();
-
-      if (canShare.value) {
-        try {
-          await Share.share({
-            title: safeFilename,
-            files: [fileUri],
-            dialogTitle: options.dialogTitle || `Save or share ${safeFilename}`,
-          });
-
-          return {
-            ok: true,
-            delivered: true,
-            filename: safeFilename,
-            message: `Ready to save or share ${safeFilename}`,
-          };
-        } catch (shareErr: unknown) {
-          const msg = shareErr instanceof Error ? shareErr.message : String(shareErr ?? "");
-          if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("abort")) {
-            return {
-              ok: true,
-              delivered: false,
-              filename: safeFilename,
-              message: "Share cancelled.",
-            };
-          }
-          console.warn("[savePdf] Share sheet failed, falling back to FileOpener:", shareErr);
-        }
+      let fileUri = writeResult.uri;
+      if (!fileUri) {
+        const uriResult = await Filesystem.getUri({
+          directory: Directory.Cache,
+          path: safeFilename,
+        });
+        fileUri = uriResult.uri;
       }
 
-      // 2. Fallback: Try native FileOpener to open directly in installed PDF viewer
+      // Present the OS Share Sheet — gives instant 1-tap options:
+      // "Open with (PDF viewer)", "Save to Drive", "Files", WhatsApp, Gmail, etc.
       try {
-        const { FileOpener } = await import("@capawesome-team/capacitor-file-opener");
-        await FileOpener.openFile({
-          path: fileUri,
-          mimeType: "application/pdf",
+        const { Share } = await import("@capacitor/share");
+        await Share.share({
+          title: safeFilename,
+          files: [fileUri],
+          dialogTitle: options.dialogTitle || `Save or share ${safeFilename}`,
         });
+
         return {
           ok: true,
           delivered: true,
           filename: safeFilename,
-          message: `Opened ${safeFilename} in PDF viewer`,
+          message: `Ready to save or share ${safeFilename}`,
         };
-      } catch (openerErr: unknown) {
-        console.warn("[savePdf] FileOpener failed:", openerErr);
+      } catch (shareErr: unknown) {
+        const msg = shareErr instanceof Error ? shareErr.message : String(shareErr ?? "");
+        if (
+          msg.toLowerCase().includes("cancel") ||
+          msg.toLowerCase().includes("abort") ||
+          msg.toLowerCase().includes("dismiss")
+        ) {
+          return {
+            ok: true,
+            delivered: false,
+            filename: safeFilename,
+            message: "Share dismissed.",
+          };
+        }
+        console.warn("[savePdf] Share sheet dismissed or failed:", shareErr);
+        return {
+          ok: true,
+          delivered: false,
+          filename: safeFilename,
+          message: `File saved: ${safeFilename}`,
+        };
       }
-
-      return {
-        ok: true,
-        delivered: true,
-        filename: safeFilename,
-        message: `Saved to cache as ${safeFilename}`,
-      };
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to save PDF";
+      const msg = err instanceof Error ? err.message : "Failed to save PDF on device";
+      console.error("[savePdf] Native save error:", err);
       return {
         ok: false,
         delivered: false,
@@ -152,7 +139,7 @@ export async function savePdfAndShare(
 
   // ── Browser / web path ────────────────────────────────────────────────
   try {
-    const blobUrl = URL.createObjectURL(pdfBlob);
+    const blobUrl = URL.createObjectURL(fileBlob);
     const link = document.createElement("a");
     link.href = blobUrl;
     link.download = safeFilename;
@@ -169,7 +156,7 @@ export async function savePdfAndShare(
       message: `Saved as ${safeFilename}`,
     };
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to download PDF";
+    const msg = err instanceof Error ? err.message : "Failed to download file";
     return {
       ok: false,
       delivered: false,
@@ -178,6 +165,9 @@ export async function savePdfAndShare(
     };
   }
 }
+
+/** Backward compatibility alias for PDF calls */
+export const savePdfAndShare = saveFileAndShare;
 
 /**
  * Calls the server-side Next.js headless rendering API (/api/resumes/export)

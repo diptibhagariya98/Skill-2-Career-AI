@@ -28,7 +28,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { getPreference, setPreference, removePreference } from "@/shared/platform";
+import { getPreference, setPreference, removePreference, useStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
 
 export enum ScholarshipTab {
   WIZARD = "wizard",
@@ -54,6 +54,8 @@ export default function Scholarships({
   onTabChange,
 }: ScholarshipsProps = {}) {
   const [internalActiveTab, setInternalActiveTab] = useState<ActiveTab>(ScholarshipTab.WIZARD);
+  // Light surface → dark icons on status bar
+  useStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
   const activeTab = controlledTab !== undefined ? controlledTab : internalActiveTab;
   const setActiveTab = (newTab: ActiveTab) => {
     if (onTabChange) onTabChange(newTab);

@@ -44,7 +44,7 @@ export default function RootLayout({
           position="top-center"
           reverseOrder={false}
           containerStyle={{
-            top: "max(68px, calc(env(safe-area-inset-top, 0px) + 20px))",
+            top: "calc(var(--sat, 0px) + 16px)",
             left: "16px",
             right: "16px",
             pointerEvents: "none",

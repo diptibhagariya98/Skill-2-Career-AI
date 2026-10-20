@@ -29,14 +29,14 @@ export function MinimalistTemplate({ resume, accentColor }: TemplateProps) {
   const visibility = meta.sectionVisibility || {};
 
   return (
-    <div className="font-sans text-gray-800 leading-normal text-xs sm:text-sm">
+    <div className="font-sans text-gray-800 leading-normal text-xs">
       {/* Swiss Clean Header */}
       <header className="mb-5 pb-2">
         <h1 className="text-3xl font-light tracking-tight text-gray-950 mb-1">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
-          <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-widest mb-2">
             {contact.headline}
           </p>
         )}
@@ -70,7 +70,7 @@ export function MinimalistTemplate({ resume, accentColor }: TemplateProps) {
               <h2 className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1">
                 {def.atsHeading}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed font-normal">{summary}</p>
+              <p className="text-xs text-gray-700 leading-relaxed font-normal">{summary}</p>
             </section>
           );
         }
@@ -137,7 +137,10 @@ export function MinimalistTemplate({ resume, accentColor }: TemplateProps) {
 
         // 4. SKILLS
         if (key === "skills" && skills) {
-          const hasGroups = skills.isGrouped && skills.groups && skills.groups.length > 0;
+          const filledGroups = skills.isGrouped && skills.groups
+            ? skills.groups.filter((grp) => grp.skills && grp.skills.length > 0)
+            : [];
+          const hasGroups = filledGroups.length > 0;
           const hasFlat = !skills.isGrouped && skills.flatList && skills.flatList.length > 0;
           if (!hasGroups && !hasFlat) return null;
 
@@ -148,7 +151,7 @@ export function MinimalistTemplate({ resume, accentColor }: TemplateProps) {
               </h2>
               {hasGroups ? (
                 <div className="space-y-1 text-xs">
-                  {skills.groups.map((grp) => (
+                  {filledGroups.map((grp) => (
                     <div key={grp.id} className="flex">
                       <span className="font-medium text-gray-500 w-32 shrink-0">{grp.name}</span>
                       <span className="text-gray-800">{grp.skills.join(", ")}</span>

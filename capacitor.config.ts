@@ -17,13 +17,20 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       overlaysWebView: true,
+      // 'DARK' = dark icons (safe default for light surfaces).
+      // Per-screen style is overridden at runtime via setAppStatusBarStyle().
+      // backgroundColor is intentionally omitted — ignored on Android 15+.
       style: "DARK",
-      backgroundColor: "#ffffff",
     },
     Keyboard: {
       resizeOnFullScreen: true,
+    },
+    SafeArea: {
+      detectViewportFitCoverChanges: true,
+      initialViewportFitCover: true,
     },
   },
 };
 
 export default config;
+

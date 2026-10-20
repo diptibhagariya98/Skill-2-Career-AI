@@ -29,17 +29,17 @@ export function CreativeTemplate({ resume, accentColor }: TemplateProps) {
   const visibility = meta.sectionVisibility || {};
 
   return (
-    <div className="font-sans text-gray-900 leading-normal text-xs sm:text-sm">
+    <div className="font-sans text-gray-900 leading-normal text-xs">
       {/* High-Impact Top Banner Header */}
       <header
-        className="rounded-lg p-4 sm:p-5 text-white mb-4 shadow-sm"
+        className="rounded-lg p-5 text-white mb-4 shadow-sm"
         style={{ backgroundColor: accentColor }}
       >
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1">
+        <h1 className="text-2xl font-extrabold tracking-tight text-white mb-1">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
-          <p className="text-xs sm:text-sm font-medium text-white/90 tracking-wide uppercase mb-3">
+          <p className="text-xs font-medium text-white/90 tracking-wide uppercase mb-3">
             {contact.headline}
           </p>
         )}
@@ -76,7 +76,7 @@ export function CreativeTemplate({ resume, accentColor }: TemplateProps) {
                   {def.atsHeading}
                 </h2>
               </div>
-              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed pl-4 border-l-2 border-gray-200">
+              <p className="text-xs text-gray-700 leading-relaxed pl-4 border-l-2 border-gray-200">
                 {summary}
               </p>
             </section>
@@ -151,7 +151,10 @@ export function CreativeTemplate({ resume, accentColor }: TemplateProps) {
 
         // 4. SKILLS
         if (key === "skills" && skills) {
-          const hasGroups = skills.isGrouped && skills.groups && skills.groups.length > 0;
+          const filledGroups = skills.isGrouped && skills.groups
+            ? skills.groups.filter((grp) => grp.skills && grp.skills.length > 0)
+            : [];
+          const hasGroups = filledGroups.length > 0;
           const hasFlat = !skills.isGrouped && skills.flatList && skills.flatList.length > 0;
           if (!hasGroups && !hasFlat) return null;
 
@@ -166,7 +169,7 @@ export function CreativeTemplate({ resume, accentColor }: TemplateProps) {
               <div className="pl-4 border-l-2 border-gray-200">
                 {hasGroups ? (
                   <div className="space-y-1 text-xs">
-                    {skills.groups.map((grp) => (
+                    {filledGroups.map((grp) => (
                       <div key={grp.id} className="flex flex-wrap items-baseline gap-1.5">
                         <span className="font-bold text-gray-900 min-w-28">{grp.name}:</span>
                         <span className="text-gray-700">{grp.skills.join(", ")}</span>

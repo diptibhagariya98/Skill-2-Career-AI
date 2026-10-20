@@ -24,6 +24,7 @@ import { generateAIInterviewPlan } from "../lib/interview/geminiService";
 import { loadLocalResume } from "../lib/resume/storage";
 import { toast } from "react-hot-toast";
 import { UserRole } from "@/constants/roles";
+import { useStatusBarStyle, AppStatusBarStyle, getPreference, setPreference } from "@/shared/platform";
 import InterviewSetup from "./interview/InterviewSetup";
 import InterviewThread from "./interview/InterviewThread";
 import InterviewScorecard from "./interview/InterviewScorecard";
@@ -45,6 +46,8 @@ export default function AIInterview({
   onTabChange,
 }: AIInterviewProps) {
   const [internalActiveTab, setInternalActiveTab] = useState<"setup" | "session" | "scorecard" | "history">("setup");
+  // Light surface → dark icons on status bar
+  useStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
   const activeTab = controlledTab !== undefined ? controlledTab : internalActiveTab;
   const setActiveTab = (newTab: "setup" | "session" | "scorecard" | "history") => {
     if (onTabChange) onTabChange(newTab);
@@ -59,27 +62,28 @@ export default function AIInterview({
 
   const historyKey = user?.id ? `resumentor_interview_history_${user.id}` : "resumentor_interview_history";
 
-  // Load past history from localStorage for this user
+  // Load past history from Capacitor Preferences (native) / localStorage (web)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(historyKey);
-      if (stored) {
-        setSessions(JSON.parse(stored));
-      } else {
-        setSessions([]);
+    const loadHistory = async () => {
+      try {
+        const stored = await getPreference(historyKey);
+        if (stored) {
+          setSessions(JSON.parse(stored) as InterviewSessionRecord[]);
+        } else {
+          setSessions([]);
+        }
+      } catch (e: unknown) {
+        console.warn("Failed to read session history", e);
       }
-    } catch (e: unknown) {
-      console.warn("Failed to read session history from localStorage", e);
-    }
+    };
+    void loadHistory();
   }, [historyKey]);
 
   const saveSessions = (updated: InterviewSessionRecord[]) => {
     setSessions(updated);
-    try {
-      localStorage.setItem(historyKey, JSON.stringify(updated));
-    } catch (e: unknown) {
+    void setPreference(historyKey, JSON.stringify(updated)).catch((e: unknown) => {
       console.warn("Failed to persist session history", e);
-    }
+    });
   };
 
   // Start new interview session

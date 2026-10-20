@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { API_ROUTES, APP_ROUTES } from "@/constants/endpoints";
 import ResuMentorBrandLogo from "@/shared/ui/ResuMentorBrandLogo";
-import { useBackHandler, dispatchBack } from "@/shared/platform";
+import { useBackHandler, dispatchBack, useStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
 import {
   AuthMode,
   AuthPurpose,
@@ -42,6 +42,8 @@ export interface AuthProps {
 
 export default function Auth({ initialMode = AuthMode.LOGIN }: AuthProps = {}) {
   const router = useRouter();
+  // Dark gradient background → status bar icons must be white
+  useStatusBarStyle(AppStatusBarStyle.LIGHT_CONTENT);
 
   // Mode state: Enforces AuthMode enum per project guidelines
   const [mode, setMode] = useState<AuthMode>(initialMode);

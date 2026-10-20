@@ -31,10 +31,10 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
   const visibility = meta.sectionVisibility || {};
 
   return (
-    <div className="font-serif text-gray-900 leading-normal text-xs sm:text-sm">
+    <div className="font-serif text-gray-900 leading-normal text-xs">
       {/* Formal Academic CV Header */}
       <header className="border-b-2 border-gray-900 pb-3 mb-4 text-center">
-        <h1 className="text-2xl sm:text-3xl font-normal tracking-wide text-gray-900 mb-1 uppercase">
+        <h1 className="text-2xl font-normal tracking-wide text-gray-900 mb-1 uppercase">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
@@ -73,7 +73,7 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
               <h2 className="text-xs uppercase font-bold tracking-widest text-gray-900 border-b border-gray-400 pb-1 mb-2">
                 {def.atsHeading}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-800 leading-relaxed text-justify">{summary}</p>
+              <p className="text-xs text-gray-800 leading-relaxed text-justify">{summary}</p>
             </section>
           );
         }
@@ -191,7 +191,10 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
 
         // 6. SKILLS & RESEARCH METHODOLOGIES
         if (key === "skills" && skills) {
-          const hasGroups = skills.isGrouped && skills.groups && skills.groups.length > 0;
+          const filledGroups = skills.isGrouped && skills.groups
+            ? skills.groups.filter((grp) => grp.skills && grp.skills.length > 0)
+            : [];
+          const hasGroups = filledGroups.length > 0;
           const hasFlat = !skills.isGrouped && skills.flatList && skills.flatList.length > 0;
           if (!hasGroups && !hasFlat) return null;
 
@@ -202,7 +205,7 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
               </h2>
               {hasGroups ? (
                 <div className="space-y-1 text-xs">
-                  {skills.groups.map((grp) => (
+                  {filledGroups.map((grp) => (
                     <div key={grp.id} className="flex">
                       <span className="font-bold w-36 shrink-0">{grp.name}:</span>
                       <span>{grp.skills.join(", ")}</span>
@@ -226,7 +229,7 @@ export function AcademicTemplate({ resume, accentColor }: TemplateProps) {
               <div className="space-y-2">
                 {projects.map((proj) => (
                   <div key={proj.id} className="page-break-avoid">
-                    <div className="flex justify-between items-baseline font-bold text-xs sm:text-sm">
+                    <div className="flex justify-between items-baseline font-bold text-sm">
                       <span>{proj.name}</span>
                       {proj.startYear && <span className="text-xs font-normal text-gray-600">{proj.startYear}</span>}
                     </div>

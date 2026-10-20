@@ -2,6 +2,9 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
+include ':capacitor-community-safe-area'
+project(':capacitor-community-safe-area').projectDir = new File('../node_modules/@capacitor-community/safe-area/android')
+
 include ':capacitor-community-text-to-speech'
 project(':capacitor-community-text-to-speech').projectDir = new File('../node_modules/@capacitor-community/text-to-speech/android')
 
@@ -47,8 +50,8 @@ project(':capacitor-text-zoom').projectDir = new File('../node_modules/@capacito
 include ':capacitor-toast'
 project(':capacitor-toast').projectDir = new File('../node_modules/@capacitor/toast/android')
 
-include ':capawesome-team-capacitor-file-opener'
-project(':capawesome-team-capacitor-file-opener').projectDir = new File('../node_modules/@capawesome-team/capacitor-file-opener/android')
-
 include ':capgo-capacitor-speech-recognition'
 project(':capgo-capacitor-speech-recognition').projectDir = new File('../node_modules/@capgo/capacitor-speech-recognition/android')
+
+include ':capacitor-plugin-safe-area'
+project(':capacitor-plugin-safe-area').projectDir = new File('../node_modules/capacitor-plugin-safe-area/android')

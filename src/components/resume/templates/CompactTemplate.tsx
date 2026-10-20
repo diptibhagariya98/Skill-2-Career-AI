@@ -32,7 +32,7 @@ export function CompactTemplate({ resume, accentColor }: TemplateProps) {
     <div className="font-sans text-gray-900 leading-tight text-xs">
       {/* High-Density Header */}
       <header className="border-b border-gray-400 pb-1.5 mb-2.5 text-center">
-        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 mb-0.5">
+        <h1 className="text-2xl font-black tracking-tight text-gray-900 mb-0.5">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
@@ -132,7 +132,10 @@ export function CompactTemplate({ resume, accentColor }: TemplateProps) {
 
         // 4. SKILLS
         if (key === "skills" && skills) {
-          const hasGroups = skills.isGrouped && skills.groups && skills.groups.length > 0;
+          const filledGroups = skills.isGrouped && skills.groups
+            ? skills.groups.filter((grp) => grp.skills && grp.skills.length > 0)
+            : [];
+          const hasGroups = filledGroups.length > 0;
           const hasFlat = !skills.isGrouped && skills.flatList && skills.flatList.length > 0;
           if (!hasGroups && !hasFlat) return null;
 
@@ -143,7 +146,7 @@ export function CompactTemplate({ resume, accentColor }: TemplateProps) {
               </h2>
               {hasGroups ? (
                 <div className="space-y-0.5 text-gray-800">
-                  {skills.groups.map((grp) => (
+                  {filledGroups.map((grp) => (
                     <div key={grp.id} className="flex">
                       <span className="font-bold w-32 shrink-0">{grp.name}:</span>
                       <span>{grp.skills.join(", ")}</span>

@@ -28,8 +28,10 @@ import {
   Maximize2,
   Share2,
   Printer,
+  Loader2,
 } from "lucide-react";
-import { useBackHandler, BackPriority, shareContent, isNative, savePdfAndShare, openUrl, hapticSuccess } from "@/shared/platform";
+import { useBackHandler, BackPriority, shareContent, isNative, savePdfAndShare, openUrl, hapticSuccess, useStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
+import DocumentViewerModal, { DownloadableNoteItem } from "./learn/DocumentViewerModal";
 
 export interface RoadmapMilestone {
   phase: string;
@@ -63,6 +65,8 @@ export default function LearnPractice({
   onChangeSubPage,
 }: LearnPracticeProps = {}) {
   const [internalSubPage, setInternalSubPage] = useState("hub");
+  // Light surface → dark icons on status bar
+  useStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
   const subPage = controlledSubPage !== undefined ? controlledSubPage : internalSubPage;
 
   const setSubPage = (page: string) => {
@@ -79,10 +83,20 @@ export default function LearnPractice({
   const [completedMilestones, setCompletedMilestones] = useState<Record<string, boolean>>({});
   const [roadmapModalView, setRoadmapModalView] = useState<"milestones" | "document">("milestones");
   const [isExportingRoadmap, setIsExportingRoadmap] = useState(false);
+  const [isExportingRoadmapId, setIsExportingRoadmapId] = useState<string | null>(null);
+  const [activeExportRoadmap, setActiveExportRoadmap] = useState<RoadmapItem | null>(null);
   const roadmapPrintRef = useRef<HTMLDivElement>(null);
 
-  // Register Back Handler for Detail Modal & Subpages
+  // In-App Document Preview Modal State for Study Notes
+  const [selectedNotePreview, setSelectedNotePreview] = useState<DownloadableNoteItem | null>(null);
+  const [isDownloadingNote, setIsDownloadingNote] = useState<boolean>(false);
+
+  // Register Back Handler for Detail Modal, Document Preview & Subpages
   useBackHandler(BackPriority.OVERLAY, () => {
+    if (selectedNotePreview) {
+      setSelectedNotePreview(null);
+      return true;
+    }
     if (quizOpen) {
       setQuizOpen(false);
       return true;
@@ -96,7 +110,23 @@ export default function LearnPractice({
       return true;
     }
     return false;
-  }, [quizOpen, selectedRoadmapDetail, subPage]);
+  }, [selectedNotePreview, quizOpen, selectedRoadmapDetail, subPage]);
+
+  // Native Share Helper for Study Notes
+  const handleShareNote = async (item: DownloadableNoteItem) => {
+    const summaryText = `${item.title}\nCategory: ${item.category} (${item.pages})\n\nTopics:\n${item.topics
+      .map((t) => `• ${t}`)
+      .join("\n")}\n\nVerified Curriculum Notes from ResuMentor`;
+
+    const shared = await shareContent({
+      title: item.title,
+      text: summaryText,
+      dialogTitle: `Share ${item.title}`,
+    });
+    if (shared) {
+      toast.success("Document shared successfully");
+    }
+  };
 
   // Native Share Helper for Roadmap Syllabi
   const handleShareRoadmap = async (item: RoadmapItem) => {
@@ -116,16 +146,19 @@ export default function LearnPractice({
 
   // Client-Side Robust Roadmap PDF Generator and Downloader
   const handleExportRoadmapPdf = async (item: RoadmapItem) => {
+    setIsExportingRoadmapId(item.id);
     setIsExportingRoadmap(true);
+    setActiveExportRoadmap(item);
     const toastId = toast.loading(`Preparing ${item.fileName}...`);
     try {
       // 1. Check if bundled static asset can be fetched directly as blob
       let pdfBlob: Blob | null = null;
       try {
-        const response = await fetch(item.pdfUrl);
+        const fetchUrl = encodeURI(item.pdfUrl);
+        const response = await fetch(fetchUrl);
         if (response.ok) {
           const blob = await response.blob();
-          if (blob.size > 1000) {
+          if (blob && blob.size > 1000) {
             pdfBlob = blob;
           }
         }
@@ -152,7 +185,7 @@ export default function LearnPractice({
           margin: 0.4,
           filename: item.fileName,
           image: { type: "jpeg" as const, quality: 0.95 },
-          html2canvas: { scale: isNative() ? 1.5 : 2, useCORS: false, logging: false },
+          html2canvas: { scale: isNative() ? 1.2 : 2, useCORS: true, logging: false },
           jsPDF: { unit: "in", format: "a4", orientation: "portrait" as const },
         };
 
@@ -183,14 +216,17 @@ export default function LearnPractice({
       toast.error(msg, { id: toastId });
     } finally {
       setIsExportingRoadmap(false);
+      setIsExportingRoadmapId(null);
     }
   };
 
   // Robust PDF Download & Native Share Helper for Study Notes
   const handleDownloadPdf = async (url: string, fileName: string, noteTitle?: string) => {
+    setIsDownloadingNote(true);
     const toastId = toast.loading(`Preparing ${fileName}...`);
     try {
-      const response = await fetch(url);
+      const fetchUrl = encodeURI(url);
+      const response = await fetch(fetchUrl);
       if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to fetch PDF`);
       const blob = await response.blob();
 
@@ -213,8 +249,10 @@ export default function LearnPractice({
       if (opened) {
         toast.success(`Opened ${fileName}`, { id: toastId });
       } else {
-        toast.error(`Unable to open ${fileName}`, { id: toastId });
+        toast.error(`Unable to deliver ${fileName}`, { id: toastId });
       }
+    } finally {
+      setIsDownloadingNote(false);
     }
   };
 
@@ -545,8 +583,8 @@ export default function LearnPractice({
     },
   ];
 
-  // Curated Downloadable Notes Catalog
-  const notesList = [
+  // Curated Downloadable Notes Catalog with Rich Structured Syllabi
+  const notesList: DownloadableNoteItem[] = [
     {
       id: "class-notes-dev",
       title: "Full Stack Web Development Master Notes",
@@ -557,6 +595,53 @@ export default function LearnPractice({
       topics: ["HTML5 Semantics", "CSS Flexbox & Grid", "DOM Scripting", "Backend APIs"],
       pdfUrl: "/ROADMAPS/Class Notes-DEV.pdf",
       fileName: "Class Notes-DEV.pdf",
+      description:
+        "Comprehensive 85+ pages syllabus covering modern semantic HTML5, CSS Flexbox & CSS Grid, JavaScript ES6+ execution context, DOM manipulation, asynchronous programming, RESTful APIs, Node.js backend architecture, and production deployment.",
+      sections: [
+        {
+          title: "Module 1: Semantic HTML5 & Web Accessibility (WCAG)",
+          summary: "Master semantic markup for SEO and screen readers, ARIA roles, landmarks, and accessible form controls.",
+          points: [
+            "Use <main>, <nav>, <article>, <section>, <aside>, <header>, <footer> instead of unsemantic <div> soup.",
+            "Always supply alt attributes on <img> and aria-label on icon-only interactive controls.",
+            "Form accessibility: Associate every <input> with <label for='id'> and explicit type, inputmode, and autocomplete.",
+          ],
+          codeSnippet: `<form aria-labelledby="login-heading">\n  <label for="user-email">Email Address</label>\n  <input id="user-email" type="email" autocomplete="email" required />\n</form>`,
+          tags: ["HTML5", "Accessibility", "SEO"],
+        },
+        {
+          title: "Module 2: Modern Responsive Layouts (Flexbox & Grid)",
+          summary: "Architect fluid, responsive layouts across mobile, tablet, and desktop without layout shifts.",
+          points: [
+            "Flexbox for 1D axis alignment (justify-content, align-items, flex-wrap: wrap).",
+            "CSS Grid for 2D complex layouts (grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))).",
+            "Mobile-first media queries: build for compact screens first, layer min-width breakpoints for larger displays.",
+          ],
+          codeSnippet: `.dashboard-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));\n  gap: 1.5rem;\n}`,
+          tags: ["CSS3", "Flexbox", "Grid"],
+        },
+        {
+          title: "Module 3: JavaScript Runtime, Event Loop & Async/Await",
+          summary: "Deep dive into JS call stack, microtask vs macrotask queues, promises, and typed error handling.",
+          points: [
+            "Call stack executes synchronous code first; Microtasks (Promises) execute before Macrotasks (setTimeout, setInterval).",
+            "Always pair async/await with try...catch and handle typed errors.",
+            "Avoid memory leaks by cleaning up event listeners and timers in component unmounts.",
+          ],
+          codeSnippet: `async function fetchUserData(userId: string): Promise<User> {\n  const res = await fetch(\`/api/users/\${userId}\`);\n  if (!res.ok) throw new Error(\`HTTP \${res.status}\`);\n  return (await res.json()) as User;\n}`,
+          tags: ["JavaScript", "EventLoop", "Async"],
+        },
+        {
+          title: "Module 4: Backend RESTful APIs & Data Architecture",
+          summary: "Engineer secure Node.js REST services, relational SQL queries, JWT authentication, and CORS.",
+          points: [
+            "HTTP status code discipline: 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Error.",
+            "Never store plain-text passwords: hash with bcrypt or argon2 with unique cryptographic salt.",
+            "Use parameterized SQL queries or ORMs to defend against SQL Injection vulnerabilities.",
+          ],
+          tags: ["Backend", "Node.js", "APIs"],
+        },
+      ],
     },
     {
       id: "ml-unit1",
@@ -568,6 +653,52 @@ export default function LearnPractice({
       topics: ["Supervised Models", "Linear & Logistic Regression", "Loss Optimization", "Gradient Descent"],
       pdfUrl: "/ROADMAPS/Unit1_Machine_Learning_Introduction_CU_3.0_.pdf",
       fileName: "Machine-Learning-Introduction.pdf",
+      description:
+        "Academic Unit 1 curriculum covering supervised learning, linear and logistic regression, cost functions, gradient descent optimization, loss surfaces, and deep neural network feedforward propagation.",
+      sections: [
+        {
+          title: "Unit 1.1: Supervised Learning & Regression Fundamentals",
+          summary: "Formulate hypothesis functions, feature matrices, and mean squared error (MSE) cost functions.",
+          points: [
+            "Hypothesis: h_θ(x) = θ₀ + θ₁x₁ + ... + θₙxₙ = θᵀx.",
+            "Cost function J(θ) measures empirical error: J(θ) = (1/2m) ∑ (h_θ(x^(i)) - y^(i))².",
+            "Feature normalization (Z-score standard scaling) accelerates convergence.",
+          ],
+          codeSnippet: `import numpy as np\n# Z-score standardization\nX_norm = (X - np.mean(X, axis=0)) / np.std(X, axis=0)`,
+          tags: ["Supervised", "Regression", "Math"],
+        },
+        {
+          title: "Unit 1.2: Gradient Descent Optimization",
+          summary: "First-order iterative optimization algorithm for finding the local minimum of a differentiable function.",
+          points: [
+            "Update rule: θⱼ := θⱼ - α * (∂/∂θⱼ) J(θ).",
+            "Learning rate α selection: too small causes slow convergence, too large causes divergence/overshoot.",
+            "Batch Gradient Descent vs Stochastic Gradient Descent (SGD) vs Mini-batch.",
+          ],
+          tags: ["Optimization", "GradientDescent"],
+        },
+        {
+          title: "Unit 1.3: Logistic Regression & Binary Classification",
+          summary: "Model classification probabilities using the Sigmoid activation function and Binary Cross-Entropy loss.",
+          points: [
+            "Sigmoid activation: σ(z) = 1 / (1 + e^(-z)), maps real values to probability interval [0, 1].",
+            "Decision boundary at σ(z) = 0.5 (where z = θᵀx = 0).",
+            "Binary Cross-Entropy Loss: -[y log(h_θ(x)) + (1-y) log(1 - h_θ(x))].",
+          ],
+          codeSnippet: `def sigmoid(z):\n    return 1 / (1 + np.exp(-np.clip(z, -500, 500)))`,
+          tags: ["Classification", "Logistic", "Loss"],
+        },
+        {
+          title: "Unit 1.4: Neural Network Perceptrons & Feedforward",
+          summary: "Multi-layer perceptron architecture, matrix weight multiplications, and non-linear activation functions.",
+          points: [
+            "Layers: Input layer, one or more hidden layers, and output layer.",
+            "Activations: ReLU (max(0, z)), GELU, Sigmoid, Softmax for multi-class probability distributions.",
+            "Forward propagation computes intermediate activations a^[l] = g(W^[l] a^[l-1] + b^[l]).",
+          ],
+          tags: ["NeuralNetworks", "DeepLearning"],
+        },
+      ],
     },
     {
       id: "frontend-beginner",
@@ -579,6 +710,41 @@ export default function LearnPractice({
       topics: ["HTML Tags", "CSS Box Model", "Selector Specificity", "Flexbox Cheat Sheet"],
       pdfUrl: "/ROADMAPS/frontend-beginner.pdf",
       fileName: "frontend-beginner-cheatsheet.pdf",
+      description:
+        "Quick-reference cheat sheet for frontend developers covering essential HTML tags, CSS box model calculations, selector specificity rules, Flexbox cheatsheet, and common JavaScript DOM manipulation patterns.",
+      sections: [
+        {
+          title: "Syntax Sheet 1: Essential HTML Structure & Semantic Elements",
+          summary: "Core tag references and correct semantic usage.",
+          points: [
+            "<header>, <nav>, <main>, <article>, <section>, <footer>.",
+            "Meta viewport: <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">.",
+            "Button vs Anchor: <button> triggers in-page actions; <a> navigates to a URL.",
+          ],
+          tags: ["HTML", "Tags", "Cheatsheet"],
+        },
+        {
+          title: "Syntax Sheet 2: CSS Box Model & Specificity Hierarchy",
+          summary: "Margin, border, padding, content box calculations and cascade specificity weights.",
+          points: [
+            "box-sizing: border-box; includes padding and border inside width calculation (standard in modern CSS).",
+            "Specificity weight: Inline styles (1,0,0,0) > IDs (0,1,0,0) > Classes/Attributes/Pseudo-classes (0,0,1,0) > Elements (0,0,0,1).",
+            "Margin collapsing: adjacent vertical margins combine into the larger of the two.",
+          ],
+          tags: ["CSS", "BoxModel", "Specificity"],
+        },
+        {
+          title: "Syntax Sheet 3: Flexbox & Centering Quick Patterns",
+          summary: "Instant recipes for centering and fluid layout spacing.",
+          points: [
+            "Perfect Center: display: flex; justify-content: center; align-items: center;",
+            "Sticky footer: display: flex; flex-direction: column; min-height: 100vh; on body, margin-top: auto on footer.",
+            "gap property applies spacing between flex items without needing margin hacks.",
+          ],
+          codeSnippet: `/* Perfect Center Container */\n.center-box {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n}`,
+          tags: ["Flexbox", "Layout", "Cheatsheet"],
+        },
+      ],
     },
   ];
 
@@ -785,24 +951,22 @@ export default function LearnPractice({
                     </button>
                     <button
                       type="button"
+                      disabled={isExportingRoadmapId === r.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isNative()) {
-                          setSelectedRoadmapDetail(r);
-                          setRoadmapModalView("document");
-                          toast.success(
-                            `Opened ${r.title} — Tap 'Save as PDF' to save locally`,
-                            { duration: 3500 }
-                          );
-                        } else {
-                          handleExportRoadmapPdf(r);
-                        }
+                        handleExportRoadmapPdf(r);
                       }}
-                      className="py-3 px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-[0.99] text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[48px] min-w-[48px]"
-                      title="Download or View PDF"
+                      className="py-3 px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-[0.99] text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[48px] min-w-[48px] disabled:opacity-60"
+                      title="Download PDF"
                     >
-                      <Download className="w-4 h-4" />
-                      <span className="text-[11px]">PDF</span>
+                      {isExportingRoadmapId === r.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      <span className="text-[11px]">
+                        {isExportingRoadmapId === r.id ? "Saving…" : "PDF"}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -978,7 +1142,7 @@ export default function LearnPractice({
                     </>
                   ) : (
                     /* In-App Formatted Printable Curriculum Document */
-                    <div className="bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-200 space-y-5 text-gray-900">
+                    <div ref={roadmapPrintRef} className="bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-200 space-y-5 text-gray-900">
                       <div className="border-b border-gray-200 pb-3">
                         <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
                           Verified Career Track Syllabus
@@ -1121,11 +1285,11 @@ export default function LearnPractice({
                     </div>
                   </div>
 
-                  {/* Actions: Open Notes + Download (48px targets) */}
+                  {/* Actions: Open Notes (In-App Document Viewer) + Download (48px targets) */}
                   <div className="flex items-center gap-2 pt-2 border-t border-gray-100 mt-2">
                     <button
                       type="button"
-                      onClick={() => handleDownloadPdf(n.pdfUrl, n.fileName)}
+                      onClick={() => setSelectedNotePreview(n)}
                       className="flex-1 py-3 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 active:scale-[0.99] text-amber-900 border border-amber-200 font-bold text-xs transition flex items-center justify-center gap-1.5 min-h-[48px]"
                     >
                       <Eye className="w-4 h-4" />
@@ -1133,8 +1297,9 @@ export default function LearnPractice({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDownloadPdf(n.pdfUrl, n.fileName)}
-                      className="py-3 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 min-h-[48px]"
+                      disabled={isDownloadingNote}
+                      onClick={() => handleDownloadPdf(n.pdfUrl, n.fileName, n.title)}
+                      className="py-3 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 min-h-[48px] disabled:opacity-60"
                       title="Download PDF Notes"
                     >
                       <Download className="w-4 h-4" />
@@ -1431,7 +1596,7 @@ export default function LearnPractice({
       )}
 
       {/* Dedicated Offscreen Printable Container for html2pdf Roadmap Generation */}
-      {selectedRoadmapDetail && (
+      {(activeExportRoadmap || selectedRoadmapDetail) && (
         <div
           ref={roadmapPrintRef}
           className="printable-document fixed -left-[9999px] top-0 pointer-events-none opacity-0 w-[800px] z-[-100] bg-white p-8 text-gray-900 font-sans"
@@ -1443,19 +1608,19 @@ export default function LearnPractice({
                 ResuMentor Official Career Roadmap
               </span>
               <span className="text-xs font-semibold text-gray-500">
-                {selectedRoadmapDetail.duration} · {selectedRoadmapDetail.level}
+                {(activeExportRoadmap || selectedRoadmapDetail)?.duration} · {(activeExportRoadmap || selectedRoadmapDetail)?.level}
               </span>
             </div>
             <h1 className="text-2xl font-black text-gray-900 mb-1.5">
-              {selectedRoadmapDetail.title}
+              {(activeExportRoadmap || selectedRoadmapDetail)?.title}
             </h1>
             <p className="text-xs text-gray-600 leading-relaxed">
-              {selectedRoadmapDetail.description}
+              {(activeExportRoadmap || selectedRoadmapDetail)?.description}
             </p>
           </div>
 
           <div className="space-y-5">
-            {selectedRoadmapDetail.milestones.map((m, idx) => (
+            {(activeExportRoadmap || selectedRoadmapDetail)?.milestones.map((m, idx) => (
               <div key={idx} className="border-l-2 border-indigo-300 pl-4 py-1">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <h2 className="text-sm font-bold text-gray-900">{m.phase}</h2>
@@ -1483,6 +1648,17 @@ export default function LearnPractice({
             <span>resumentor.app</span>
           </div>
         </div>
+      )}
+
+      {/* Interactive Mobile-Native In-App Document & Notes Viewer Modal */}
+      {selectedNotePreview && (
+        <DocumentViewerModal
+          note={selectedNotePreview}
+          onClose={() => setSelectedNotePreview(null)}
+          onDownload={(note) => handleDownloadPdf(note.pdfUrl, note.fileName, note.title)}
+          onShare={handleShareNote}
+          isDownloading={isDownloadingNote}
+        />
       )}
     </div>
   );

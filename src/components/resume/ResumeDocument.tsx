@@ -25,6 +25,7 @@ export function ResumeDocument({ resume, isPrintMode = false }: ResumeDocumentPr
   const containerStyle: React.CSSProperties = {
     width: isA4 ? "210mm" : "8.5in",
     minHeight: isA4 ? "297mm" : "11in",
+    maxWidth: "100%",
     padding: template === "compact" ? "8mm 10mm" : "12mm 14mm",
     backgroundColor: "#ffffff",
     boxSizing: "border-box",

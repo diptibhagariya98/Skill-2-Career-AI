@@ -35,11 +35,11 @@ export function ClassicTemplate({ resume, accentColor }: TemplateProps) {
     <div className="font-serif text-gray-900 leading-relaxed text-sm">
       {/* Centered Executive Header */}
       <header className="text-center border-b-2 pb-4 mb-4" style={{ borderColor: accentColor }}>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 mb-1">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-1">
           {contact.fullName || "Your Full Name"}
         </h1>
         {isCleanString(contact.headline) && (
-          <p className="text-sm sm:text-base font-medium text-gray-700 italic mb-2">
+          <p className="text-sm font-medium text-gray-700 italic mb-2">
             {contact.headline}
           </p>
         )}
@@ -74,7 +74,7 @@ export function ClassicTemplate({ resume, accentColor }: TemplateProps) {
               <h2 className="text-xs uppercase font-bold tracking-widest text-gray-800 border-b border-gray-300 pb-1 mb-2">
                 {def.atsHeading}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-700 leading-normal text-justify">
+              <p className="text-xs text-gray-700 leading-normal text-justify">
                 {summary}
               </p>
             </section>
@@ -91,7 +91,7 @@ export function ClassicTemplate({ resume, accentColor }: TemplateProps) {
               <div className="space-y-3">
                 {experience.map((exp) => (
                   <div key={exp.id} className="page-break-avoid">
-                    <div className="flex justify-between items-baseline text-xs sm:text-sm font-bold text-gray-900">
+                    <div className="flex justify-between items-baseline text-sm font-bold text-gray-900">
                       <span>{exp.title}</span>
                       <span className="text-xs font-normal text-gray-600">
                         {exp.startMonth} {exp.startYear} — {exp.isCurrent ? "Present" : `${exp.endMonth || ""} ${exp.endYear || ""}`}
@@ -125,7 +125,7 @@ export function ClassicTemplate({ resume, accentColor }: TemplateProps) {
               <div className="space-y-2">
                 {education.map((edu) => (
                   <div key={edu.id} className="page-break-avoid">
-                    <div className="flex justify-between items-baseline text-xs sm:text-sm font-bold text-gray-900">
+                    <div className="flex justify-between items-baseline text-sm font-bold text-gray-900">
                       <span>{edu.institution}</span>
                       <span className="text-xs font-normal text-gray-600">
                         {edu.startMonth} {edu.startYear} — {edu.isExpected ? "Expected " : ""}{edu.endMonth || ""} {edu.endYear || ""}
@@ -144,7 +144,10 @@ export function ClassicTemplate({ resume, accentColor }: TemplateProps) {
 
         // 4. SKILLS
         if (key === "skills" && skills) {
-          const hasGroups = skills.isGrouped && skills.groups && skills.groups.length > 0;
+          const filledGroups = skills.isGrouped && skills.groups
+            ? skills.groups.filter((grp) => grp.skills && grp.skills.length > 0)
+            : [];
+          const hasGroups = filledGroups.length > 0;
           const hasFlat = !skills.isGrouped && skills.flatList && skills.flatList.length > 0;
           if (!hasGroups && !hasFlat) return null;
 
@@ -155,7 +158,7 @@ export function ClassicTemplate({ resume, accentColor }: TemplateProps) {
               </h2>
               {hasGroups ? (
                 <div className="space-y-1 text-xs text-gray-800">
-                  {skills.groups.map((grp) => (
+                  {filledGroups.map((grp) => (
                     <div key={grp.id} className="flex">
                       <span className="font-bold w-36 shrink-0">{grp.name}:</span>
                       <span>{grp.skills.join(", ")}</span>
@@ -179,7 +182,7 @@ export function ClassicTemplate({ resume, accentColor }: TemplateProps) {
               <div className="space-y-2">
                 {projects.map((proj) => (
                   <div key={proj.id} className="page-break-avoid">
-                    <div className="flex justify-between items-baseline text-xs sm:text-sm font-bold text-gray-900">
+                    <div className="flex justify-between items-baseline text-sm font-bold text-gray-900">
                       <span>{proj.name}</span>
                       {proj.startYear && (
                         <span className="text-xs font-normal text-gray-600">

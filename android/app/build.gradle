@@ -14,8 +14,8 @@ android {
         applicationId "com.resumentor.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -42,6 +42,11 @@ android {
             }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     lintOptions {
@@ -75,9 +80,9 @@ configurations.all {
         force "androidx.activity:activity:1.9.3"
         force "androidx.activity:activity-ktx:1.9.3"
         force "androidx.browser:browser:1.8.0"
-        force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
-        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
-        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+        force "org.jetbrains.kotlin:kotlin-stdlib:2.1.10"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.10"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.10"
     }
 }
 
