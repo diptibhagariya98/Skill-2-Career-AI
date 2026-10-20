@@ -75,9 +75,9 @@ configurations.all {
         force "androidx.activity:activity:1.9.3"
         force "androidx.activity:activity-ktx:1.9.3"
         force "androidx.browser:browser:1.8.0"
-        force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
-        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
-        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+        force "org.jetbrains.kotlin:kotlin-stdlib:2.1.10"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.10"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.10"
     }
 }
 

@@ -70,110 +70,61 @@ export async function saveFileAndShare(
       const { Filesystem, Directory } = await import("@capacitor/filesystem");
       const base64Data = await blobToBase64(fileBlob);
 
-      // Strategy 1: Save directly to public Documents directory (accessible to user)
-      let savedUri = "";
-      let targetDir = Directory.Documents;
+      // Write directly to app Cache (no storage permissions required on Android)
+      const writeResult = await Filesystem.writeFile({
+        path: safeFilename,
+        data: base64Data,
+        directory: Directory.Cache,
+        recursive: true,
+      });
 
-      try {
-        const docWrite = await Filesystem.writeFile({
-          path: safeFilename,
-          data: base64Data,
-          directory: Directory.Documents,
-          recursive: true,
-        });
-        savedUri = docWrite.uri;
-        targetDir = Directory.Documents;
-      } catch (docErr: unknown) {
-        console.warn("[savePdf] Documents directory write failed, falling back to Cache:", docErr);
-        // Fallback: Internal app cache directory
-        const cacheWrite = await Filesystem.writeFile({
-          path: safeFilename,
-          data: base64Data,
+      let fileUri = writeResult.uri;
+      if (!fileUri) {
+        const uriResult = await Filesystem.getUri({
           directory: Directory.Cache,
-          recursive: true,
+          path: safeFilename,
         });
-        savedUri = cacheWrite.uri;
-        targetDir = Directory.Cache;
+        fileUri = uriResult.uri;
       }
 
-      // If we couldn't get a valid URI, check with getUri
-      if (!savedUri) {
-        try {
-          const uriResult = await Filesystem.getUri({
-            directory: targetDir,
-            path: safeFilename,
-          });
-          savedUri = uriResult.uri;
-        } catch {
-          // If getUri fails, file is still written to disk
-        }
-      }
+      // Present the OS Share Sheet — gives instant 1-tap options:
+      // "Open with (PDF viewer)", "Save to Drive", "Files", WhatsApp, Gmail, etc.
+      try {
+        const { Share } = await import("@capacitor/share");
+        await Share.share({
+          title: safeFilename,
+          files: [fileUri],
+          dialogTitle: options.dialogTitle || `Save or share ${safeFilename}`,
+        });
 
-      // ── Step 2: Attempt to open the saved file with native PDF viewer ──
-      // This is the cleanest, most reliable UX on Android without invoking buggy broadcast choosers.
-      let openedInViewer = false;
-      if (savedUri) {
-        try {
-          const { FileOpener } = await import("@capawesome-team/capacitor-file-opener");
-          await FileOpener.openFile({
-            path: savedUri,
-            mimeType: "application/pdf",
-          });
-          openedInViewer = true;
+        return {
+          ok: true,
+          delivered: true,
+          filename: safeFilename,
+          message: `Ready to save or share ${safeFilename}`,
+        };
+      } catch (shareErr: unknown) {
+        const msg = shareErr instanceof Error ? shareErr.message : String(shareErr ?? "");
+        if (
+          msg.toLowerCase().includes("cancel") ||
+          msg.toLowerCase().includes("abort") ||
+          msg.toLowerCase().includes("dismiss")
+        ) {
           return {
             ok: true,
-            delivered: true,
+            delivered: false,
             filename: safeFilename,
-            message: `PDF saved and opened in viewer.`,
+            message: "Share dismissed.",
           };
-        } catch (openerErr: unknown) {
-          console.warn("[savePdf] FileOpener failed (device may lack default PDF viewer):", openerErr);
         }
+        console.warn("[savePdf] Share sheet dismissed or failed:", shareErr);
+        return {
+          ok: true,
+          delivered: false,
+          filename: safeFilename,
+          message: `File saved: ${safeFilename}`,
+        };
       }
-
-      // ── Step 3: Attempt Share Sheet (defensively isolated) ───────────────
-      // If FileOpener was unavailable, try Share Sheet with defensive isolation
-      if (!openedInViewer && savedUri) {
-        try {
-          const { Share } = await import("@capacitor/share");
-          const canShare = await Share.canShare();
-          if (canShare.value) {
-            await Share.share({
-              title: safeFilename,
-              files: [savedUri],
-              dialogTitle: options.dialogTitle || `Save or share ${safeFilename}`,
-            });
-
-            return {
-              ok: true,
-              delivered: true,
-              filename: safeFilename,
-              message: `Ready to save or share ${safeFilename}`,
-            };
-          }
-        } catch (shareErr: unknown) {
-          const msg = shareErr instanceof Error ? shareErr.message : String(shareErr ?? "");
-          if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("abort")) {
-            return {
-              ok: true,
-              delivered: false,
-              filename: safeFilename,
-              message: "Share cancelled.",
-            };
-          }
-          console.warn("[savePdf] Share sheet failed, file remains saved in storage:", shareErr);
-        }
-      }
-
-      // ── Step 4: Success confirmation ────────────────────────────────────
-      // The file was written to disk successfully!
-      const destinationLabel = targetDir === Directory.Documents ? "Documents folder" : "Device storage";
-      return {
-        ok: true,
-        delivered: true,
-        filename: safeFilename,
-        message: `Saved ${safeFilename} to ${destinationLabel}`,
-      };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save PDF on device";
       console.error("[savePdf] Native save error:", err);

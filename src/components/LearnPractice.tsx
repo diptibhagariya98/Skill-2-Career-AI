@@ -152,7 +152,7 @@ export default function LearnPractice({
           margin: 0.4,
           filename: item.fileName,
           image: { type: "jpeg" as const, quality: 0.95 },
-          html2canvas: { scale: isNative() ? 1.5 : 2, useCORS: false, logging: false },
+          html2canvas: { scale: isNative() ? 1.2 : 2, useCORS: false, logging: false },
           jsPDF: { unit: "in", format: "a4", orientation: "portrait" as const },
         };
 

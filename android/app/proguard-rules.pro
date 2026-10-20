@@ -16,6 +16,11 @@
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
 
-# If you keep the line number information, uncomment this to
+# If you keep the line information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep Kotlin coroutines reflection & spilling internals safe from R8 shrinking
+-keep class kotlin.coroutines.jvm.internal.** { *; }
+-dontwarn kotlin.**
+
