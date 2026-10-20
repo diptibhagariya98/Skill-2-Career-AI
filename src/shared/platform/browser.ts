@@ -18,7 +18,20 @@ export async function openUrl(url: string): Promise<boolean> {
     return false;
   }
 
-  const cleanUrl = url.trim();
+  let cleanUrl = url.trim();
+  if (
+    typeof window !== "undefined" &&
+    !cleanUrl.startsWith("http://") &&
+    !cleanUrl.startsWith("https://") &&
+    !cleanUrl.startsWith("mailto:") &&
+    !cleanUrl.startsWith("tel:")
+  ) {
+    try {
+      cleanUrl = new URL(cleanUrl, window.location.origin).href;
+    } catch {
+      // Ignore if URL resolution fails
+    }
+  }
 
   if (isNative()) {
     try {

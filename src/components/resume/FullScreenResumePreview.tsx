@@ -14,6 +14,12 @@ import {
   Check,
   FileText,
 } from "lucide-react";
+import {
+  TransformWrapper,
+  TransformComponent,
+  ReactZoomPanPinchContentRef,
+} from "react-zoom-pan-pinch";
+import { useBackHandler, BackPriority } from "@/shared/platform";
 import { ResumeData, PageSize, TemplateId } from "@/types/resume";
 import { ACCENT_COLORS } from "@/types/resume";
 import { ResumePreview } from "./ResumePreview";
@@ -42,9 +48,9 @@ export function FullScreenResumePreview({
   exportState,
   onClose,
 }: FullScreenResumePreviewProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const transformRef = useRef<ReactZoomPanPinchContentRef>(null);
   const [zoomMode, setZoomMode] = useState<"fit_width" | "fit_page" | "manual">("fit_page");
-  const [manualZoom, setManualZoom] = useState<number>(1.0);
+  const [scaleReadout, setScaleReadout] = useState<number>(1.0);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState<boolean>(false);
 
@@ -72,6 +78,16 @@ export function FullScreenResumePreview({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Android System Back Button Priority Handler
+  useBackHandler(
+    BackPriority.OVERLAY,
+    () => {
+      onClose();
+      return true;
+    },
+    [onClose]
+  );
+
   // Keyboard navigation: Escape key closes preview
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -92,109 +108,41 @@ export function FullScreenResumePreview({
     };
   }, []);
 
-  // Calculate effective zoom scale
+  // Compute optimal scales for initial view and dock presets
   const availableWidth = Math.max(viewportSize.width - (viewportSize.width < 640 ? 24 : 64), 280);
   const availableHeight = Math.max(viewportSize.height - (viewportSize.width < 640 ? 150 : 160), 300);
 
-  let currentZoom = manualZoom;
-  if (zoomMode === "fit_page") {
-    const scaleByHeight = availableHeight / baseHeight;
-    const scaleByWidth = availableWidth / baseWidth;
-    currentZoom = Math.min(scaleByHeight, scaleByWidth, 1.1);
-  } else if (zoomMode === "fit_width") {
-    currentZoom = Math.min(availableWidth / baseWidth, 1.4);
-  }
+  const fitPageScale = Math.min(availableHeight / baseHeight, availableWidth / baseWidth, 1.05);
+  const fitWidthScale = Math.min(availableWidth / baseWidth, 1.4);
+
+  // Synchronize initial scale readout
+  useEffect(() => {
+    setScaleReadout(fitPageScale);
+  }, [fitPageScale]);
 
   const handleZoomIn = () => {
     setZoomMode("manual");
-    setManualZoom((prev) => Math.min(Number((prev + 0.15).toFixed(2)), 2.0));
+    transformRef.current?.zoomIn(0.15);
   };
 
   const handleZoomOut = () => {
     setZoomMode("manual");
-    setManualZoom((prev) => Math.max(Number((prev - 0.15).toFixed(2)), 0.3));
+    transformRef.current?.zoomOut(0.15);
+  };
+
+  const handleFitPage = () => {
+    setZoomMode("fit_page");
+    transformRef.current?.centerView(fitPageScale);
+  };
+
+  const handleFitWidth = () => {
+    setZoomMode("fit_width");
+    transformRef.current?.centerView(fitWidthScale);
   };
 
   const handleResetZoom = () => {
     setZoomMode("manual");
-    setManualZoom(1.0);
-  };
-
-  // Touch Gesture Handling (Pinch-to-Zoom & Finger Panning)
-  const pinchStartDistRef = useRef<number | null>(null);
-  const pinchStartZoomRef = useRef<number>(1.0);
-  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
-  const lastTapTimeRef = useRef<number>(0);
-  const isPinchingRef = useRef<boolean>(false);
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 2) {
-      // Two-finger pinch start
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      pinchStartDistRef.current = dist;
-      pinchStartZoomRef.current = currentZoom;
-      isPinchingRef.current = true;
-    } else if (e.touches.length === 1) {
-      // Single-finger: check double tap or start pan
-      const now = Date.now();
-      if (now - lastTapTimeRef.current < 300) {
-        // Quick double tap -> Toggle zoom between fit_page and 1.35x
-        if (zoomMode === "fit_page") {
-          setZoomMode("manual");
-          setManualZoom(1.35);
-        } else {
-          setZoomMode("fit_page");
-          setManualZoom(1.0);
-        }
-        lastTapTimeRef.current = 0;
-        return;
-      }
-      lastTapTimeRef.current = now;
-
-      if (containerRef.current) {
-        panStartRef.current = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-          scrollLeft: containerRef.current.scrollLeft,
-          scrollTop: containerRef.current.scrollTop,
-        };
-      }
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 2 && pinchStartDistRef.current && isPinchingRef.current) {
-      // Two-finger pinch-to-zoom calculation
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const factor = dist / pinchStartDistRef.current;
-      const targetZoom = Number((pinchStartZoomRef.current * factor).toFixed(2));
-      const clampedZoom = Math.min(Math.max(targetZoom, 0.35), 2.5);
-
-      setZoomMode("manual");
-      setManualZoom(clampedZoom);
-    } else if (e.touches.length === 1 && panStartRef.current && containerRef.current && !isPinchingRef.current) {
-      // Smooth finger pan
-      const dx = e.touches[0].clientX - panStartRef.current.x;
-      const dy = e.touches[0].clientY - panStartRef.current.y;
-      containerRef.current.scrollLeft = panStartRef.current.scrollLeft - dx;
-      containerRef.current.scrollTop = panStartRef.current.scrollTop - dy;
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length < 2) {
-      pinchStartDistRef.current = null;
-      isPinchingRef.current = false;
-    }
-    if (e.touches.length === 0) {
-      panStartRef.current = null;
-    }
+    transformRef.current?.centerView(1.0);
   };
 
   return (
@@ -403,27 +351,39 @@ export function FullScreenResumePreview({
       </header>
 
       {/* Main Canvas Scroll Area with Multi-touch Gestures (Pinch-to-zoom & Smooth Pan) */}
-      <main
-        ref={containerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-        className="flex-1 overflow-auto bg-slate-950 flex justify-center items-start p-3 sm:p-8 overscroll-contain select-none"
-        style={{
-          touchAction: "pan-x pan-y pinch-zoom",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        <div className="relative flex flex-col items-center justify-start min-w-full pb-28 pt-2">
-          <ResumePreview
-            resume={resume}
-            scale={currentZoom}
-            autoFit={false}
-            padding={0}
-            className="shadow-2xl ring-1 ring-white/10"
-          />
-        </div>
+      <main className="flex-1 w-full h-full relative overflow-hidden bg-slate-950 select-none">
+        <TransformWrapper
+          ref={transformRef}
+          initialScale={fitPageScale}
+          minScale={0.25}
+          maxScale={2.5}
+          centerOnInit={true}
+          centerZoomedOut={true}
+          limitToBounds={false}
+          smooth={true}
+          wheel={{ step: 0.1 }}
+          pinch={{ step: 5 }}
+          doubleClick={{ mode: "toggle", step: 0.5 }}
+          panning={{ disabled: false, velocityDisabled: false }}
+          onTransform={(_, state) => {
+            setScaleReadout(state.scale);
+          }}
+        >
+          <TransformComponent
+            wrapperClass="!w-full !h-full flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden"
+            contentClass="flex items-center justify-center p-4 sm:p-8"
+          >
+            <div className="relative shadow-2xl ring-1 ring-white/10 select-none">
+              <ResumePreview
+                resume={resume}
+                scale={1.0}
+                autoFit={false}
+                padding={0}
+                className="shadow-2xl"
+              />
+            </div>
+          </TransformComponent>
+        </TransformWrapper>
       </main>
 
       {/* Bottom Floating Control Dock */}
@@ -434,7 +394,7 @@ export function FullScreenResumePreview({
             type="button"
             onClick={handleZoomOut}
             aria-label="Zoom out"
-            className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition active:scale-90"
+            className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition active:scale-90 min-w-[36px] min-h-[36px] flex items-center justify-center"
             title="Zoom out (-)"
           >
             <ZoomOut className="h-4 w-4" />
@@ -442,7 +402,7 @@ export function FullScreenResumePreview({
 
           {/* Current Scale Readout */}
           <span className="text-[11px] font-mono font-bold text-slate-200 min-w-[42px] text-center">
-            {Math.round(currentZoom * 100)}%
+            {Math.round(scaleReadout * 100)}%
           </span>
 
           {/* Zoom In */}
@@ -450,7 +410,7 @@ export function FullScreenResumePreview({
             type="button"
             onClick={handleZoomIn}
             aria-label="Zoom in"
-            className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition active:scale-90"
+            className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition active:scale-90 min-w-[36px] min-h-[36px] flex items-center justify-center"
             title="Zoom in (+)"
           >
             <ZoomIn className="h-4 w-4" />
@@ -461,8 +421,8 @@ export function FullScreenResumePreview({
           {/* Fit to Page Button */}
           <button
             type="button"
-            onClick={() => setZoomMode("fit_page")}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 ${
+            onClick={handleFitPage}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[32px] ${
               zoomMode === "fit_page"
                 ? "bg-indigo-600 text-white"
                 : "text-slate-400 hover:text-white hover:bg-slate-800"
@@ -476,8 +436,8 @@ export function FullScreenResumePreview({
           {/* Fit to Width Button */}
           <button
             type="button"
-            onClick={() => setZoomMode("fit_width")}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 ${
+            onClick={handleFitWidth}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[32px] ${
               zoomMode === "fit_width"
                 ? "bg-indigo-600 text-white"
                 : "text-slate-400 hover:text-white hover:bg-slate-800"
@@ -492,8 +452,8 @@ export function FullScreenResumePreview({
           <button
             type="button"
             onClick={handleResetZoom}
-            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 ${
-              zoomMode === "manual" && manualZoom === 1.0
+            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 min-h-[32px] ${
+              zoomMode === "manual" && Math.round(scaleReadout * 100) === 100
                 ? "bg-indigo-600 text-white"
                 : "text-slate-400 hover:text-white hover:bg-slate-800"
             }`}
