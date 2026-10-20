@@ -30,7 +30,7 @@ import {
   Printer,
   Loader2,
 } from "lucide-react";
-import { useBackHandler, BackPriority, shareContent, isNative, savePdfAndShare, openUrl, hapticSuccess } from "@/shared/platform";
+import { useBackHandler, BackPriority, shareContent, isNative, savePdfAndShare, openUrl, hapticSuccess, useStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
 import DocumentViewerModal, { DownloadableNoteItem } from "./learn/DocumentViewerModal";
 
 export interface RoadmapMilestone {
@@ -65,6 +65,8 @@ export default function LearnPractice({
   onChangeSubPage,
 }: LearnPracticeProps = {}) {
   const [internalSubPage, setInternalSubPage] = useState("hub");
+  // Light surface → dark icons on status bar
+  useStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
   const subPage = controlledSubPage !== undefined ? controlledSubPage : internalSubPage;
 
   const setSubPage = (page: string) => {

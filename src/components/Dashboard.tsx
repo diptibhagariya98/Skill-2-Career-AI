@@ -42,10 +42,15 @@ import {
 import { APP_ROUTES } from "@/constants/endpoints";
 import { getInitials } from "../lib/imageUtils";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
-import { useBackHandler, dispatchBack, hapticLight } from "@/shared/platform";
+import { useBackHandler, dispatchBack, hapticLight, useStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
+import { useRouter } from "next/navigation";
 import { Portal } from "@/shared/ui/Portal";
 
 export default function Dashboard() {
+  const router = useRouter();
+  // Dark gradient header → status bar icons must be light (white)
+  useStatusBarStyle(AppStatusBarStyle.LIGHT_CONTENT);
+
   const [activePage, setActivePage] = useState<DashboardSection>(DashboardSection.DASHBOARD);
   const [learnSubPage, setLearnSubPage] = useState<LearnSubPageState | string>(LearnSubPageState.HUB);
   const [interviewTab, setInterviewTab] = useState<InterviewTabState | "setup" | "session" | "scorecard" | "history">(InterviewTabState.SETUP);
@@ -197,9 +202,9 @@ export default function Dashboard() {
       }
       await supabase.auth.signOut();
       toast.success("Successfully logged out!");
-      window.location.href = APP_ROUTES.AUTH;
+      router.replace(APP_ROUTES.AUTH);
     } catch (error: unknown) {
-      window.location.href = APP_ROUTES.AUTH;
+      router.replace(APP_ROUTES.AUTH);
     }
   };
 

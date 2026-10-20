@@ -30,6 +30,7 @@ import {
   AUTH_CONSTANTS,
   MobileProfileTab,
 } from "@/constants/auth";
+import { useStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
 
 interface ProfileProps {
   userData: UserData | null;
@@ -39,6 +40,8 @@ interface ProfileProps {
 export default function Profile({ userData, onUpdateUserData }: ProfileProps) {
   const [showTourModal, setShowTourModal] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileProfileTab>(MobileProfileTab.ACCOUNT);
+  // Light surface → dark icons on status bar
+  useStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
 
   // Form field states
   const [fullName, setFullName] = useState(userData?.name || "");

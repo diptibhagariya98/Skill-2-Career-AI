@@ -24,6 +24,7 @@ import { extractJobDescriptionSkills } from "../../lib/interview/engine";
 import { ROLE_PROFILES } from "../../constants/interviewData";
 import { PickerSelect, PickerOption, BottomSheet } from "@/shared/ui";
 import { toast } from "react-hot-toast";
+import { getPreference, setPreference } from "@/shared/platform";
 
 const EXPERIENCE_OPTIONS: readonly PickerOption<ExperienceLevel>[] = [
   { value: "fresher", label: "Student / Fresher (0 years)", description: "Core concepts, academic projects & fundamentals" },
@@ -71,16 +72,19 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [hasConsented, setHasConsented] = useState(false);
 
-  // Check consent from localStorage
+  // Check consent from Capacitor Preferences (native) / localStorage (web)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("resumentor_ai_interview_consent");
-      if (stored === "true") {
-        setHasConsented(true);
+    const loadConsent = async () => {
+      try {
+        const stored = await getPreference("resumentor_ai_interview_consent");
+        if (stored === "true") {
+          setHasConsented(true);
+        }
+      } catch {
+        // fallback: no consent stored
       }
-    } catch {
-      // localStorage guard
-    }
+    };
+    void loadConsent();
   }, []);
 
   // Live extract skills when JD changes
@@ -121,11 +125,9 @@ export default function InterviewSetup({ onStartSession, initialRole = "" }: Int
   };
 
   const handleAgreeConsent = () => {
-    try {
-      localStorage.setItem("resumentor_ai_interview_consent", "true");
-    } catch {
-      // guard
-    }
+    void setPreference("resumentor_ai_interview_consent", "true").catch(() => {
+      // Best-effort: consent flag saving failed, allow anyway
+    });
     setHasConsented(true);
     setShowConsentModal(false);
 

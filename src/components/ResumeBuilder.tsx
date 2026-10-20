@@ -40,6 +40,8 @@ import {
   shareContent,
   isNative,
   exportResumeFromServer,
+  useStatusBarStyle,
+  AppStatusBarStyle,
 } from "@/shared/platform";
 import { SECTION_REGISTRY } from "@/lib/resume/registry";
 
@@ -77,6 +79,8 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps = {}) {
   const [resume, setResume] = useState<ResumeData>(() =>
     loadLocalResume(user?.id, { name: user?.name, email: user?.email })
   );
+  // Light surface → dark icons on status bar
+  useStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
   const [activeSection, setActiveSection] = useState<SectionKey>("contact");
   const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
   const [isFullScreenPreviewOpen, setIsFullScreenPreviewOpen] = useState<boolean>(false);

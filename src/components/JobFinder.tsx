@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Search, MapPin, Briefcase, Calendar, Sparkles, Filter, ExternalLink, RotateCcw } from "lucide-react";
 import { API_ROUTES } from "../constants/endpoints";
-import { hapticLight, openUrl } from "@/shared/platform";
+import { hapticLight, openUrl, useStatusBarStyle, AppStatusBarStyle } from "@/shared/platform";
 import { Skeleton, SkeletonCard } from "@/shared/ui";
 
 interface RawApiJob {
@@ -43,6 +43,8 @@ export default function JobFinder() {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
   const [jobs, setJobs] = useState<JobItem[]>([]);
+  // Light surface → dark icons on status bar
+  useStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>("all");

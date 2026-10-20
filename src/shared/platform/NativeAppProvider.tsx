@@ -6,6 +6,7 @@ import { useAndroidBackButton } from "./backButton";
 import { ensurePlatformListeners } from "./backNavigation";
 import { KeyboardProvider } from "./keyboard";
 import { initSafeAreaSynchronization } from "./safeArea";
+import { setAppStatusBarStyle, AppStatusBarStyle } from "./statusBar";
 import { OfflineBanner } from "../ui/OfflineBanner";
 
 export interface NativeAppProviderProps {
@@ -18,6 +19,8 @@ export interface NativeAppProviderProps {
  * - Tracks virtual keyboard state globally across all pages
  * - Renders floating offline/reconnected alert banner
  * - Injects hardware safe area insets (--sat, --sab) and sets data-platform on Android
+ * - Sets status bar icon style on boot (DARK_CONTENT = dark icons for light-surface app default)
+ *   Individual screens override this via useStatusBarStyle() on their own mount.
  */
 export function NativeAppProvider({ children }: NativeAppProviderProps) {
   // Wire global Android back button and platform listeners
@@ -35,6 +38,10 @@ export function NativeAppProvider({ children }: NativeAppProviderProps) {
     } catch {
       // Graceful fallback for non-native web
     }
+
+    // Set initial status bar style: dark icons on light surface (app default).
+    // Individual screens override this via useStatusBarStyle() on mount.
+    void setAppStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
 
     // Initialize unified Option A + Option C safe area detection and live synchronization
     const cleanupSafeArea = initSafeAreaSynchronization();

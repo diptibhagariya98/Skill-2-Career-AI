@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 
@@ -24,8 +27,26 @@ export async function setAppStatusBarStyle(style: AppStatusBarStyle): Promise<vo
       await StatusBar.setStyle({ style: Style.Light });
     }
   } catch (error: unknown) {
-    // Graceful fallback for web/unsupported runtimes
     const message = error instanceof Error ? error.message : String(error);
     console.warn("setAppStatusBarStyle error:", message);
   }
+}
+
+/**
+ * React hook: declare the status bar icon style for the current screen on mount.
+ * Automatically restores DARK_CONTENT (safe default for light-surface app) on unmount.
+ *
+ * Usage (one line per screen):
+ *   useStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);  // light-surface screens
+ *   useStatusBarStyle(AppStatusBarStyle.LIGHT_CONTENT); // dark-surface screens / modals
+ */
+export function useStatusBarStyle(style: AppStatusBarStyle): void {
+  useEffect(() => {
+    void setAppStatusBarStyle(style);
+    return () => {
+      // Restore safe default when leaving the screen
+      void setAppStatusBarStyle(AppStatusBarStyle.DARK_CONTENT);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }
